@@ -174,7 +174,7 @@ export default function Keyboard() {
     true
   );
 
-  const [keymapScale, setKeymapScale] = useLocalStorageState<LayoutZoom>("keymapScale", "auto", {
+  const [keymapScale, setKeymapScale] = useLocalStorageState<LayoutZoom>("keymapScale", 1, {
     deserialize: deserializeLayoutZoom,
   });
 
@@ -541,7 +541,7 @@ export default function Keyboard() {
             onKeyPositionClicked={setSelectedKeyPosition}
           />
           <select
-            className="absolute top-2 right-2 h-8 rounded px-2"
+            className="absolute top-2 right-2 h-8 rounded px-2 text-sm"
             value={keymapScale}
             onChange={(e) => {
               const value = deserializeLayoutZoom(e.target.value);
@@ -549,13 +549,13 @@ export default function Keyboard() {
             }}
           >
             <option value="auto">Auto</option>
-            <option value={0.25}>25%</option>
             <option value={0.5}>50%</option>
             <option value={0.75}>75%</option>
             <option value={1}>100%</option>
-            <option value={1.25}>125%</option>
             <option value={1.5}>150%</option>
             <option value={2}>200%</option>
+            <option value={2.5}>250%</option>
+            <option value={3}>300%</option>
           </select>
         </div>
       )}

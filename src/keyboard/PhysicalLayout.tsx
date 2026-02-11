@@ -74,7 +74,7 @@ function scalePosition(
 export const PhysicalLayout = ({
   positions,
   selectedPosition,
-  oneU = 48,
+  oneU = 128,
   onPositionClicked,
   ...props
 }: PhysicalLayoutProps) => {

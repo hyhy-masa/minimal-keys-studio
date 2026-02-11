@@ -22,6 +22,7 @@ html {
 body {
   margin: 0;
   min-width: 320px;
+  font-size: 14px;
 
   width: 100vw;
   height: 100vh;

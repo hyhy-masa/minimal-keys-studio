@@ -11,15 +11,11 @@ import { ConnectModal, TransportFactory } from "./ConnectModal";
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { connect as gatt_connect } from "@zmkfirmware/zmk-studio-ts-client/transport/gatt";
 import { connect as serial_connect } from "@zmkfirmware/zmk-studio-ts-client/transport/serial";
-import {
-  connect as tauri_ble_connect,
-  list_devices as ble_list_devices,
-} from "./tauri/ble";
-import {
-  connect as tauri_serial_connect,
-  list_devices as serial_list_devices,
-} from "./tauri/serial";
 import Keyboard from "./keyboard/Keyboard";
+import { TrackballSettings } from "./trackball/TrackballSettings";
+import { BleManagement } from "./bluetooth/BleManagement";
+import { BatteryHistory } from "./battery/BatteryHistory";
+import { DeviceSettings } from "./settings/DeviceSettings";
 import { UndoRedoContext, useUndoRedo } from "./undoRedo";
 import { usePub, useSub } from "./usePubSub";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
@@ -30,39 +26,10 @@ import { AppFooter } from "./AppFooter";
 import { AboutModal } from "./AboutModal";
 import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
 
-declare global {
-  interface Window {
-    __TAURI_INTERNALS__?: object;
-  }
-}
-
 const TRANSPORTS: TransportFactory[] = [
   navigator.serial && { label: "USB", connect: serial_connect },
-  ...(navigator.bluetooth && navigator.userAgent.indexOf("Linux") >= 0
+  ...(navigator.bluetooth
     ? [{ label: "BLE", connect: gatt_connect }]
-    : []),
-  ...(window.__TAURI_INTERNALS__
-    ? [
-        {
-          label: "BLE",
-          isWireless: true,
-          pick_and_connect: {
-            connect: tauri_ble_connect,
-            list: ble_list_devices,
-          },
-        },
-      ]
-    : []),
-  ...(window.__TAURI_INTERNALS__
-    ? [
-        {
-          label: "USB",
-          pick_and_connect: {
-            connect: tauri_serial_connect,
-            list: serial_list_devices,
-          },
-        },
-      ]
     : []),
 ].filter((t) => t !== undefined);
 
@@ -160,6 +127,16 @@ async function connect(
   setConn({ conn });
 }
 
+type ActiveTab = "keymap" | "trackball" | "bluetooth" | "battery" | "settings";
+
+const TABS: { id: ActiveTab; label: string }[] = [
+  { id: "keymap", label: "Keymap" },
+  { id: "trackball", label: "Trackball" },
+  { id: "bluetooth", label: "Bluetooth" },
+  { id: "battery", label: "Battery" },
+  { id: "settings", label: "Settings" },
+];
+
 function App() {
   const [conn, setConn] = useState<ConnectionState>({ conn: null });
   const [connectedDeviceName, setConnectedDeviceName] = useState<
@@ -169,6 +146,7 @@ function App() {
   const [showAbout, setShowAbout] = useState(false);
   const [showLicenseNotice, setShowLicenseNotice] = useState(false);
   const [connectionAbort, setConnectionAbort] = useState(new AbortController());
+  const [activeTab, setActiveTab] = useState<ActiveTab>("keymap");
 
   const [lockState, setLockState] = useState<LockState>(
     LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED
@@ -295,7 +273,7 @@ function App() {
             open={showLicenseNotice}
             onClose={() => setShowLicenseNotice(false)}
           />
-          <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_1fr_auto] overflow-hidden">
+          <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_auto_1fr_auto] overflow-hidden">
             <AppHeader
               connectedDeviceLabel={connectedDeviceName}
               canUndo={canUndo}
@@ -307,7 +285,30 @@ function App() {
               onDisconnect={disconnect}
               onResetSettings={resetSettings}
             />
-            <Keyboard />
+            {conn.conn && (
+              <nav className="flex gap-0 border-b border-base-300 px-2">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    className={`px-4 py-2 text-sm transition-colors border-b-2 ${
+                      activeTab === tab.id
+                        ? "border-primary text-primary font-medium"
+                        : "border-transparent text-base-content/60 hover:text-base-content hover:border-base-300"
+                    }`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+            )}
+            <div className="min-h-0 overflow-hidden">
+              {activeTab === "keymap" && <Keyboard />}
+              {activeTab === "trackball" && <TrackballSettings />}
+              {activeTab === "bluetooth" && <BleManagement />}
+              {activeTab === "battery" && <BatteryHistory />}
+              {activeTab === "settings" && <DeviceSettings />}
+            </div>
             <AppFooter
               onShowAbout={() => setShowAbout(true)}
               onShowLicenseNotice={() => setShowLicenseNotice(true)}

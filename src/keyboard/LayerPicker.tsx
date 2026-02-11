@@ -168,7 +168,7 @@ export const LayerPicker = ({
   return (
     <div className="flex flex-col min-w-40">
       <div className="grid grid-cols-[1fr_auto_auto] items-center">
-        <Label className="after:content-[':'] text-sm">Layers</Label>
+        <Label className="after:content-[':'] text-base font-medium">Layers</Label>
         {onRemoveClicked && (
           <button
             type="button"
@@ -218,7 +218,7 @@ export const LayerPicker = ({
             textValue={layer_item.name}
             className="p-1 b-1 my-1 group grid grid-cols-[1fr_auto] items-center aria-selected:bg-primary aria-selected:text-primary-content border rounded border-transparent border-solid hover:bg-base-300"
           >
-            <span>{layer_item.name}</span>
+            <span className="text-sm">{layer_item.name}</span>
             <Pencil
               className="h-4 w-4 mx-1 invisible group-hover:visible"
               onClick={() =>
