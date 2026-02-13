@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "react-aria-components";
 import {
   useCustomSubsystem,
@@ -8,14 +8,26 @@ import * as RIP from "../proto/rip";
 
 export function TrackballSettings() {
   const subsystem = useCustomSubsystem(RIP.SUBSYSTEM_ID);
-  const [processorInfo, setProcessorInfo] =
-    useState<RIP.InputProcessorInfo | null>(null);
+  const [processors, setProcessors] = useState<RIP.InputProcessorInfo[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Local form state (editable copy of processorInfo)
+  // Local form state (editable copy of selected processor)
+  // Speed is represented as multiplier/divisor. We use divisor=2 as base
+  // so 0.5 steps work: 0.5x=1/2, 1.0x=2/2, 1.5x=3/2, 2.0x=4/2, etc.
   const [multiplier, setMultiplier] = useState(1);
   const [divisor, setDivisor] = useState(1);
   const [rotation, setRotation] = useState(0);
+
+  // Derived speed value for slider (in 0.5 steps)
+  const speedValue = divisor > 0 ? multiplier / divisor : 1;
+  const setSpeed = useCallback((speed: number) => {
+    // Convert speed to multiplier/divisor with divisor=2
+    // speed 0.5 → 1/2, speed 1.0 → 2/2=1/1, speed 1.5 → 3/2, etc.
+    const newMultiplier = Math.round(speed * 2);
+    setMultiplier(newMultiplier);
+    setDivisor(2);
+  }, []);
   const [xInvert, setXInvert] = useState(false);
   const [yInvert, setYInvert] = useState(false);
   const [xySwap, setXySwap] = useState(false);
@@ -24,40 +36,61 @@ export function TrackballSettings() {
   const [axisSnapThreshold, setAxisSnapThreshold] = useState(0);
   const [axisSnapTimeout, setAxisSnapTimeout] = useState(0);
 
-  // Load current config from device
+  // Discover processors via listInputProcessors (data arrives via notifications)
   useEffect(() => {
-    if (!subsystem) return;
-    let ignore = false;
+    if (!subsystem) {
+      setProcessors([]);
+      setSelectedId(null);
+      return;
+    }
 
-    async function load() {
+    async function discover() {
       if (!subsystem) return;
       try {
-        const payload = RIP.encodeGetInputProcessor(0);
-        const resp = RIP.decodeResponse(await subsystem.callRPC(payload));
-        if (!ignore && resp.getInputProcessor) {
-          applyProcessorInfo(resp.getInputProcessor);
-        }
+        console.log("[Trackball] Discovering processors...");
+        await subsystem.callRPC(RIP.encodeListInputProcessors());
+        // Response is empty; processor info arrives via notifications
       } catch (e) {
-        console.error("Failed to load trackball config:", e);
+        console.error("Failed to discover processors:", e);
       }
     }
 
-    load();
-    return () => {
-      ignore = true;
-    };
+    discover();
   }, [subsystem]);
 
-  // Listen for real-time notifications
+  // Listen for notifications (processor discovery + real-time updates)
+  const formDirty = useRef(false);
+
   useCustomNotification(subsystem?.subsystemIndex, (payload) => {
     const notif = RIP.decodeNotification(payload);
     if (notif.inputProcessorChanged) {
-      applyProcessorInfo(notif.inputProcessorChanged);
+      const proc = notif.inputProcessorChanged;
+      console.log("[Trackball] Notification: processor", proc.id, proc.name, proc);
+
+      // Always update processor list
+      setProcessors((prev) => {
+        const idx = prev.findIndex((p) => p.id === proc.id);
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = proc;
+          return updated;
+        }
+        return [...prev, proc];
+      });
+
+      // Auto-select first processor on initial discovery
+      setSelectedId((currentId) => {
+        if (currentId === null) {
+          applyProcessorInfo(proc);
+          formDirty.current = false;
+          return proc.id;
+        }
+        return currentId;
+      });
     }
   });
 
   function applyProcessorInfo(info: RIP.InputProcessorInfo) {
-    setProcessorInfo(info);
     setMultiplier(info.scaleMultiplier);
     setDivisor(info.scaleDivisor);
     setRotation(info.rotationDegrees);
@@ -70,53 +103,56 @@ export function TrackballSettings() {
     setAxisSnapTimeout(info.axisSnapTimeoutMs);
   }
 
+  const selectedProcessor = processors.find((p) => p.id === selectedId) ?? null;
+
+  const callWithTimeout = useCallback(
+    async (label: string, payload: Uint8Array) => {
+      if (!subsystem) throw new Error("No subsystem");
+      console.log(`[Trackball] RPC: ${label}`);
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`RPC timeout: ${label}`)), 5000)
+      );
+      await Promise.race([subsystem.callRPC(payload), timeout]);
+    },
+    [subsystem]
+  );
+
   const handleApply = useCallback(async () => {
-    if (!subsystem || !processorInfo) return;
+    if (!subsystem || selectedId === null || !selectedProcessor) return;
     setSaving(true);
     try {
-      const id = processorInfo.id;
-      // Send each changed setting individually
-      if (multiplier !== processorInfo.scaleMultiplier) {
-        await subsystem.callRPC(RIP.encodeSetScaleMultiplier(id, multiplier));
+      const id = selectedId;
+      if (multiplier !== selectedProcessor.scaleMultiplier) {
+        await callWithTimeout("setScaleMultiplier", RIP.encodeSetScaleMultiplier(id, multiplier));
       }
-      if (divisor !== processorInfo.scaleDivisor) {
-        await subsystem.callRPC(RIP.encodeSetScaleDivisor(id, divisor));
+      if (divisor !== selectedProcessor.scaleDivisor) {
+        await callWithTimeout("setScaleDivisor", RIP.encodeSetScaleDivisor(id, divisor));
       }
-      if (rotation !== processorInfo.rotationDegrees) {
-        await subsystem.callRPC(RIP.encodeSetRotation(id, rotation));
+      if (rotation !== selectedProcessor.rotationDegrees) {
+        await callWithTimeout("setRotation", RIP.encodeSetRotation(id, rotation));
       }
-      if (xInvert !== processorInfo.xInvert) {
-        await subsystem.callRPC(RIP.encodeSetXInvert(id, xInvert));
+      if (xInvert !== selectedProcessor.xInvert) {
+        await callWithTimeout("setXInvert", RIP.encodeSetXInvert(id, xInvert));
       }
-      if (yInvert !== processorInfo.yInvert) {
-        await subsystem.callRPC(RIP.encodeSetYInvert(id, yInvert));
+      if (yInvert !== selectedProcessor.yInvert) {
+        await callWithTimeout("setYInvert", RIP.encodeSetYInvert(id, yInvert));
       }
-      if (xySwap !== processorInfo.xySwapEnabled) {
-        await subsystem.callRPC(RIP.encodeSetXySwapEnabled(id, xySwap));
+      if (xySwap !== selectedProcessor.xySwapEnabled) {
+        await callWithTimeout("setXySwapEnabled", RIP.encodeSetXySwapEnabled(id, xySwap));
       }
-      if (xyToScroll !== processorInfo.xyToScrollEnabled) {
-        await subsystem.callRPC(RIP.encodeSetXyToScrollEnabled(id, xyToScroll));
+      if (xyToScroll !== selectedProcessor.xyToScrollEnabled) {
+        await callWithTimeout("setXyToScrollEnabled", RIP.encodeSetXyToScrollEnabled(id, xyToScroll));
       }
-      if (axisSnapMode !== processorInfo.axisSnapMode) {
-        await subsystem.callRPC(RIP.encodeSetAxisSnapMode(id, axisSnapMode));
+      if (axisSnapMode !== selectedProcessor.axisSnapMode) {
+        await callWithTimeout("setAxisSnapMode", RIP.encodeSetAxisSnapMode(id, axisSnapMode));
       }
-      if (axisSnapThreshold !== processorInfo.axisSnapThreshold) {
-        await subsystem.callRPC(
-          RIP.encodeSetAxisSnapThreshold(id, axisSnapThreshold)
-        );
+      if (axisSnapThreshold !== selectedProcessor.axisSnapThreshold) {
+        await callWithTimeout("setAxisSnapThreshold", RIP.encodeSetAxisSnapThreshold(id, axisSnapThreshold));
       }
-      if (axisSnapTimeout !== processorInfo.axisSnapTimeoutMs) {
-        await subsystem.callRPC(
-          RIP.encodeSetAxisSnapTimeout(id, axisSnapTimeout)
-        );
+      if (axisSnapTimeout !== selectedProcessor.axisSnapTimeoutMs) {
+        await callWithTimeout("setAxisSnapTimeout", RIP.encodeSetAxisSnapTimeout(id, axisSnapTimeout));
       }
-      // Reload to confirm
-      const resp = RIP.decodeResponse(
-        await subsystem.callRPC(RIP.encodeGetInputProcessor(id))
-      );
-      if (resp.getInputProcessor) {
-        applyProcessorInfo(resp.getInputProcessor);
-      }
+      formDirty.current = false;
     } catch (e) {
       console.error("Failed to apply trackball config:", e);
     } finally {
@@ -124,7 +160,9 @@ export function TrackballSettings() {
     }
   }, [
     subsystem,
-    processorInfo,
+    callWithTimeout,
+    selectedId,
+    selectedProcessor,
     multiplier,
     divisor,
     rotation,
@@ -138,24 +176,17 @@ export function TrackballSettings() {
   ]);
 
   const handleReset = useCallback(async () => {
-    if (!subsystem || !processorInfo) return;
+    if (!subsystem || selectedId === null) return;
     setSaving(true);
     try {
-      await subsystem.callRPC(
-        RIP.encodeResetInputProcessor(processorInfo.id)
-      );
-      const resp = RIP.decodeResponse(
-        await subsystem.callRPC(RIP.encodeGetInputProcessor(processorInfo.id))
-      );
-      if (resp.getInputProcessor) {
-        applyProcessorInfo(resp.getInputProcessor);
-      }
+      await subsystem.callRPC(RIP.encodeResetInputProcessor(selectedId));
+      formDirty.current = false;
     } catch (e) {
       console.error("Failed to reset trackball config:", e);
     } finally {
       setSaving(false);
     }
-  }, [subsystem, processorInfo]);
+  }, [subsystem, selectedId]);
 
   if (!subsystem) {
     return (
@@ -173,44 +204,55 @@ export function TrackballSettings() {
     <div className="p-4 flex flex-col gap-4 overflow-y-auto max-h-full">
       <h2 className="text-lg font-semibold">
         Trackball Settings{" "}
-        {processorInfo && (
+        {selectedProcessor && (
           <span className="text-sm font-normal text-base-content/60">
-            ({processorInfo.name})
+            ({selectedProcessor.name})
           </span>
         )}
       </h2>
 
-      {/* Scaling */}
+      {/* Processor selector (if multiple) */}
+      {processors.length > 1 && (
+        <section className="flex gap-2">
+          {processors.map((p) => (
+            <Button
+              key={p.id}
+              className={`rounded px-3 py-1 text-sm ${selectedId === p.id ? "bg-primary text-primary-content" : "bg-base-300"}`}
+              onPress={() => {
+                setSelectedId(p.id);
+                applyProcessorInfo(p);
+              }}
+            >
+              {p.name}
+            </Button>
+          ))}
+        </section>
+      )}
+
+      {processors.length === 0 && (
+        <p className="text-base-content/50 text-sm">Discovering processors...</p>
+      )}
+
+      {/* Speed */}
       <section className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-base-content/70">
-          Speed Scaling
+          Speed
         </h3>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-xs">Multiplier</span>
-            <input
-              type="number"
-              min={1}
-              max={255}
-              value={multiplier}
-              onChange={(e) => setMultiplier(parseInt(e.target.value) || 1)}
-              className="rounded px-2 py-1 bg-base-100 border border-base-300"
-            />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs">Divisor</span>
-            <input
-              type="number"
-              min={1}
-              max={255}
-              value={divisor}
-              onChange={(e) => setDivisor(parseInt(e.target.value) || 1)}
-              className="rounded px-2 py-1 bg-base-100 border border-base-300"
-            />
-          </label>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-base-content/50 w-8">0.5x</span>
+          <input
+            type="range"
+            min={0.5}
+            max={5}
+            step={0.5}
+            value={speedValue}
+            onChange={(e) => setSpeed(parseFloat(e.target.value))}
+            className="flex-1 accent-primary"
+          />
+          <span className="text-xs text-base-content/50 w-8">5.0x</span>
         </div>
-        <p className="text-xs text-base-content/50">
-          Effective speed: {(multiplier / divisor).toFixed(2)}x
+        <p className="text-sm font-medium text-center">
+          {speedValue.toFixed(1)}x
         </p>
       </section>
 

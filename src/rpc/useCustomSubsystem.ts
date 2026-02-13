@@ -35,12 +35,19 @@ export function useCustomSubsystem(
         });
         if (ignore) return;
 
-        const found = resp.custom?.listCustomSubsystems?.subsystems?.find(
+        const allSubsystems = resp.custom?.listCustomSubsystems?.subsystems ?? [];
+        console.log(`[CustomSubsystem] Available subsystems:`, allSubsystems.map(s => s.identifier));
+        const found = allSubsystems.find(
           (s) => s.identifier === identifier
         );
+        if (found) {
+          console.log(`[CustomSubsystem] Found '${identifier}' at index ${found.index}`);
+        } else {
+          console.warn(`[CustomSubsystem] '${identifier}' not found in available subsystems`);
+        }
         setSubsystem(found ?? null);
       } catch (e) {
-        console.error(`Failed to discover custom subsystem ${identifier}:`, e);
+        console.error(`[CustomSubsystem] Failed to discover '${identifier}':`, e);
         if (!ignore) setSubsystem(null);
       }
     }

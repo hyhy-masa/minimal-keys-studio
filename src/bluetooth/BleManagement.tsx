@@ -3,6 +3,13 @@ import { Button } from "react-aria-components";
 import { useCustomSubsystem } from "../rpc/useCustomSubsystem";
 import * as BLE from "../proto/ble";
 
+function rpcWithTimeout(label: string, promise: Promise<Uint8Array>, timeoutMs = 5000): Promise<Uint8Array> {
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`[BLE] RPC timeout: ${label}`)), timeoutMs)
+  );
+  return Promise.race([promise, timeout]);
+}
+
 export function BleManagement() {
   const subsystem = useCustomSubsystem(BLE.SUBSYSTEM_ID);
   const [profiles, setProfiles] = useState<BLE.ProfileInfo[]>([]);
@@ -24,24 +31,28 @@ export function BleManagement() {
     async function load() {
       if (!subsystem) return;
       try {
+        console.log("[BLE] Loading profiles, split info, output priority...");
         const [profilesResp, splitResp, priorityResp] = await Promise.all([
-          subsystem.callRPC(BLE.encodeGetProfiles()),
-          subsystem.callRPC(BLE.encodeGetSplitInfo()),
-          subsystem.callRPC(BLE.encodeGetOutputPriority()),
+          rpcWithTimeout("getProfiles", subsystem.callRPC(BLE.encodeGetProfiles())),
+          rpcWithTimeout("getSplitInfo", subsystem.callRPC(BLE.encodeGetSplitInfo())),
+          rpcWithTimeout("getOutputPriority", subsystem.callRPC(BLE.encodeGetOutputPriority())),
         ]);
         if (ignore) return;
 
         const pd = BLE.decodeResponse(profilesResp);
+        console.log("[BLE] getProfiles response:", pd);
         if (pd.getProfiles) setProfiles(pd.getProfiles.profiles);
 
         const sd = BLE.decodeResponse(splitResp);
+        console.log("[BLE] getSplitInfo response:", sd);
         if (sd.getSplitInfo) setSplitInfo(sd.getSplitInfo);
 
         const od = BLE.decodeResponse(priorityResp);
+        console.log("[BLE] getOutputPriority response:", od);
         if (od.getOutputPriority !== undefined)
           setOutputPriority(od.getOutputPriority);
       } catch (e) {
-        console.error("Failed to load BLE info:", e);
+        console.error("[BLE] Failed to load BLE info:", e);
       }
     }
 
@@ -55,11 +66,12 @@ export function BleManagement() {
     if (!subsystem) return;
     try {
       const resp = BLE.decodeResponse(
-        await subsystem.callRPC(BLE.encodeGetProfiles())
+        await rpcWithTimeout("getProfiles", subsystem.callRPC(BLE.encodeGetProfiles()))
       );
+      console.log("[BLE] refreshProfiles:", resp);
       if (resp.getProfiles) setProfiles(resp.getProfiles.profiles);
     } catch (e) {
-      console.error("Failed to refresh profiles:", e);
+      console.error("[BLE] Failed to refresh profiles:", e);
     }
   }, [subsystem]);
 
@@ -71,7 +83,7 @@ export function BleManagement() {
         await subsystem.callRPC(BLE.encodeSwitchProfile(index));
         await refreshProfiles();
       } catch (e) {
-        console.error("Failed to switch profile:", e);
+        console.error("[BLE] Failed to switch profile:", e);
       } finally {
         setLoading(false);
       }
@@ -88,7 +100,7 @@ export function BleManagement() {
         await subsystem.callRPC(BLE.encodeUnpairProfile(index));
         await refreshProfiles();
       } catch (e) {
-        console.error("Failed to unpair profile:", e);
+        console.error("[BLE] Failed to unpair profile:", e);
       } finally {
         setLoading(false);
       }
@@ -103,7 +115,7 @@ export function BleManagement() {
         await subsystem.callRPC(BLE.encodeSetProfileName(index, nameValue));
         await refreshProfiles();
       } catch (e) {
-        console.error("Failed to set profile name:", e);
+        console.error("[BLE] Failed to set profile name:", e);
       }
       setEditingName(null);
     },
@@ -117,13 +129,14 @@ export function BleManagement() {
         await subsystem.callRPC(BLE.encodeSetOutputPriority(priority));
         setOutputPriority(priority);
       } catch (e) {
-        console.error("Failed to set output priority:", e);
+        console.error("[BLE] Failed to set output priority:", e);
       }
     },
     [subsystem]
   );
 
   if (!subsystem) {
+    console.log("[BLE] Subsystem 'cormoran_ble' not found");
     return (
       <div className="p-4 text-base-content/60">
         <p>BLE management module is not available.</p>
