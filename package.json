@@ -16,7 +16,7 @@
     "@fortawesome/free-brands-svg-icons": "^6.7.1",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@tailwindcss/container-queries": "^0.1.1",
-    "@zmkfirmware/zmk-studio-ts-client": "github:cormoran/zmk-studio-ts-client#custom-studio-protocol",
+    "@zmkfirmware/zmk-studio-ts-client": "github:hyhy-masa/zmk-studio-ts-client#custom-studio-protocol",
     "emittery": "^1.0.3",
     "immer": "^10.1.1",
     "lucide-react": "^0.445.0",

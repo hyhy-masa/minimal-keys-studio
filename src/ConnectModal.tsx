@@ -15,12 +15,12 @@ export type TransportFactory = {
 export interface ConnectModalProps {
   open?: boolean;
   transports: TransportFactory[];
-  onTransportCreated: (t: RpcTransport) => void;
+  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void;
 }
 
 function simpleDevicePicker(
   transports: TransportFactory[],
-  onTransportCreated: (t: RpcTransport) => void
+  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void
 ) {
   const [selectedTransport, setSelectedTransport] = useState<
     TransportFactory | undefined
@@ -39,7 +39,7 @@ function simpleDevicePicker(
 
         if (!ignore) {
           if (transport) {
-            onTransportCreated(transport);
+            onTransportCreated(transport, selectedTransport?.isWireless);
           }
           setSelectedTransport(undefined);
         }

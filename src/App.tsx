@@ -9,8 +9,94 @@ import { Dispatch, useCallback, useEffect, useState } from "react";
 import { ConnectModal, TransportFactory } from "./ConnectModal";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
-import { connect as gatt_connect } from "@zmkfirmware/zmk-studio-ts-client/transport/gatt";
 import { connect as serial_connect } from "@zmkfirmware/zmk-studio-ts-client/transport/serial";
+import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
+
+const ZMK_STUDIO_SERVICE_UUID = '00000000-0196-6107-c967-c5cfb1c2482a';
+const ZMK_STUDIO_RPC_CHRC_UUID = '00000001-0196-6107-c967-c5cfb1c2482a';
+
+async function gatt_connect(): Promise<RpcTransport> {
+  console.log("[BLE] Starting device scan...");
+
+  let dev = await navigator.bluetooth.requestDevice({
+    acceptAllDevices: true,
+    optionalServices: [ZMK_STUDIO_SERVICE_UUID],
+  }).catch((e) => {
+    if (e instanceof DOMException && e.name === "NotFoundError") {
+      throw new UserCancelledError("User cancelled the connection attempt", { cause: e });
+    }
+    throw e;
+  });
+
+  console.log("[BLE] Device selected:", dev.name, "id:", dev.id);
+
+  if (!dev.gatt) {
+    throw new Error("No GATT service on selected device");
+  }
+
+  let abortController = new AbortController();
+  let label = dev.name || "Unknown";
+
+  if (!dev.gatt.connected) {
+    console.log("[BLE] Connecting to GATT server...");
+    await dev.gatt.connect();
+    console.log("[BLE] GATT connected");
+  }
+
+  console.log("[BLE] Getting primary service:", ZMK_STUDIO_SERVICE_UUID);
+  let svc: BluetoothRemoteGATTService;
+  try {
+    svc = await dev.gatt.getPrimaryService(ZMK_STUDIO_SERVICE_UUID);
+    console.log("[BLE] Service found!");
+  } catch (e) {
+    console.error("[BLE] Service NOT found! This device does not expose ZMK Studio GATT service.", e);
+    dev.gatt.disconnect();
+    throw new Error(
+      `Device "${label}" does not have ZMK Studio GATT service. ` +
+      `Ensure CONFIG_ZMK_STUDIO=y and CONFIG_ZMK_STUDIO_TRANSPORT_BLE=y in firmware.`
+    );
+  }
+
+  console.log("[BLE] Getting RPC characteristic:", ZMK_STUDIO_RPC_CHRC_UUID);
+  let char = await svc.getCharacteristic(ZMK_STUDIO_RPC_CHRC_UUID);
+  console.log("[BLE] Characteristic found! Setting up streams...");
+
+  let readable = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      await char.stopNotifications();
+      await char.startNotifications();
+      let vc = (ev: Event) => {
+        let buf = (ev.target as BluetoothRemoteGATTCharacteristic)?.value?.buffer;
+        if (!buf) return;
+        controller.enqueue(new Uint8Array(buf));
+      };
+      char.addEventListener("characteristicvaluechanged", vc);
+      let cb = async () => {
+        char.removeEventListener("characteristicvaluechanged", vc);
+        dev.removeEventListener("gattserverdisconnected", cb);
+        controller.close();
+      };
+      dev.addEventListener("gattserverdisconnected", cb);
+    },
+  });
+
+  let writable = new WritableStream<Uint8Array>({
+    write(chunk) {
+      console.log("[BLE] Writing", chunk.length, "bytes");
+      return char.writeValueWithResponse(chunk);
+    },
+  });
+
+  let sig = abortController.signal;
+  let abort_cb = async () => {
+    sig.removeEventListener("abort", abort_cb);
+    dev.gatt?.disconnect();
+  };
+  sig.addEventListener("abort", abort_cb);
+
+  console.log("[BLE] Connection fully established!");
+  return { label, abortController, readable, writable };
+}
 import Keyboard from "./keyboard/Keyboard";
 import { TrackballSettings } from "./trackball/TrackballSettings";
 import { BleManagement } from "./bluetooth/BleManagement";
@@ -29,7 +115,7 @@ import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
 const TRANSPORTS: TransportFactory[] = [
   navigator.serial && { label: "USB", connect: serial_connect },
   ...(navigator.bluetooth
-    ? [{ label: "BLE", connect: gatt_connect }]
+    ? [{ label: "BLE", isWireless: true, connect: gatt_connect }]
     : []),
 ].filter((t) => t !== undefined);
 
@@ -93,9 +179,13 @@ async function connect(
   transport: RpcTransport,
   setConn: Dispatch<ConnectionState>,
   setConnectedDeviceName: Dispatch<string | undefined>,
-  signal: AbortSignal
+  signal: AbortSignal,
+  isWireless?: boolean
 ) {
   let conn = await create_rpc_connection(transport, { signal });
+
+  const timeout = isWireless ? 5000 : 1000;
+  console.log(`[Connect] Waiting for getDeviceInfo (timeout: ${timeout}ms, wireless: ${isWireless})`);
 
   let details = await Promise.race([
     call_rpc(conn, { core: { getDeviceInfo: true } })
@@ -104,7 +194,7 @@ async function connect(
         console.error("Failed first RPC call", e);
         return undefined;
       }),
-    valueAfter(undefined, 1000),
+    valueAfter(undefined, timeout),
   ]);
 
   if (!details) {
@@ -250,10 +340,10 @@ function App() {
   }, [conn]);
 
   const onConnect = useCallback(
-    (t: RpcTransport) => {
+    (t: RpcTransport, isWireless?: boolean) => {
       const ac = new AbortController();
       setConnectionAbort(ac);
-      connect(t, setConn, setConnectedDeviceName, ac.signal);
+      connect(t, setConn, setConnectedDeviceName, ac.signal, isWireless);
     },
     [setConn, setConnectedDeviceName, setConnectedDeviceName]
   );
