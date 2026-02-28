@@ -73,7 +73,7 @@ export const ParameterValuePicker = ({
       );
     }
   } else {
-    console.log("Not sure how to handle", values);
+    console.warn("Unhandled parameter value type", values);
     return (
       <>
         <p>Some composite?</p>

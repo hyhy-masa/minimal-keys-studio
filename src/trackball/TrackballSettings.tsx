@@ -47,7 +47,6 @@ export function TrackballSettings() {
     async function discover() {
       if (!subsystem) return;
       try {
-        console.log("[Trackball] Discovering processors...");
         await subsystem.callRPC(RIP.encodeListInputProcessors());
         // Response is empty; processor info arrives via notifications
       } catch (e) {
@@ -65,8 +64,6 @@ export function TrackballSettings() {
     const notif = RIP.decodeNotification(payload);
     if (notif.inputProcessorChanged) {
       const proc = notif.inputProcessorChanged;
-      console.log("[Trackball] Notification: processor", proc.id, proc.name, proc);
-
       // Always update processor list
       setProcessors((prev) => {
         const idx = prev.findIndex((p) => p.id === proc.id);
@@ -108,7 +105,6 @@ export function TrackballSettings() {
   const callWithTimeout = useCallback(
     async (label: string, payload: Uint8Array) => {
       if (!subsystem) throw new Error("No subsystem");
-      console.log(`[Trackball] RPC: ${label}`);
       const timeout = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error(`RPC timeout: ${label}`)), 5000)
       );

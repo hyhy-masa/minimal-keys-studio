@@ -11,11 +11,23 @@ import { ConnectModal, TransportFactory } from "./ConnectModal";
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { connect as serial_connect } from "@zmkfirmware/zmk-studio-ts-client/transport/serial";
 import { connect as gatt_connect } from "./transport/gatt";
+import {
+  connect as tauri_ble_connect,
+  list_devices as ble_list_devices,
+} from "./tauri/ble";
+import {
+  connect as tauri_serial_connect,
+  list_devices as serial_list_devices,
+} from "./tauri/serial";
 import Keyboard from "./keyboard/Keyboard";
 import { TrackballSettings } from "./trackball/TrackballSettings";
+import { EncoderSettings } from "./encoder/EncoderSettings";
 import { BleManagement } from "./bluetooth/BleManagement";
 import { BatteryHistory } from "./battery/BatteryHistory";
 import { DeviceSettings } from "./settings/DeviceSettings";
+import { HoldTapSettings } from "./holdtap/HoldTapSettings";
+import { BehaviorsProvider } from "./behaviors/BehaviorsContext";
+import { CustomSubsystemsProvider } from "./rpc/useCustomSubsystem";
 import { UndoRedoContext, useUndoRedo } from "./undoRedo";
 import { usePub, useSub } from "./usePubSub";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
@@ -25,10 +37,41 @@ import { valueAfter } from "./misc/async";
 import { AppFooter } from "./AppFooter";
 import { AboutModal } from "./AboutModal";
 import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
+import { ToastProvider, useToast } from "./misc/Toast";
+
+declare global {
+  interface Window {
+    __TAURI_INTERNALS__?: object;
+  }
+}
 
 const TRANSPORTS: TransportFactory[] = [
-  navigator.serial && { label: "USB", connect: serial_connect },
-  ...(navigator.bluetooth
+  // Tauri native transports (pick_and_connect pattern)
+  ...(window.__TAURI_INTERNALS__
+    ? [
+        {
+          label: "BLE",
+          isWireless: true,
+          pick_and_connect: {
+            list: ble_list_devices,
+            connect: tauri_ble_connect,
+          },
+        },
+        {
+          label: "USB",
+          pick_and_connect: {
+            list: serial_list_devices,
+            connect: tauri_serial_connect,
+          },
+        },
+      ]
+    : []),
+  // Browser Web Serial (only when not in Tauri)
+  ...(!window.__TAURI_INTERNALS__ && navigator.serial
+    ? [{ label: "USB", connect: serial_connect }]
+    : []),
+  // Browser Web Bluetooth (only when not in Tauri)
+  ...(!window.__TAURI_INTERNALS__ && navigator.bluetooth
     ? [{ label: "BLE", isWireless: true, connect: gatt_connect }]
     : []),
 ].filter((t) => t !== undefined);
@@ -56,7 +99,6 @@ async function listen_for_notifications(
         continue;
       }
 
-      console.log("Notification", value);
       pub("rpc_notification", value);
 
       const subsystem = Object.entries(value).find(
@@ -94,26 +136,22 @@ async function connect(
   setConn: Dispatch<ConnectionState>,
   setConnectedDeviceName: Dispatch<string | undefined>,
   signal: AbortSignal,
+  onError: (msg: string) => void,
   isWireless?: boolean
 ) {
   let conn = await create_rpc_connection(transport, { signal });
 
   const timeout = isWireless ? 5000 : 1000;
-  console.log(`[Connect] Waiting for getDeviceInfo (timeout: ${timeout}ms, wireless: ${isWireless})`);
 
   let details = await Promise.race([
     call_rpc(conn, { core: { getDeviceInfo: true } })
       .then((r) => r?.core?.getDeviceInfo)
-      .catch((e) => {
-        console.error("Failed first RPC call", e);
-        return undefined;
-      }),
+      .catch(() => undefined),
     valueAfter(undefined, timeout),
   ]);
 
   if (!details) {
-    // TODO: Show a proper toast/alert not using `window.alert`
-    window.alert("Failed to connect to the chosen device");
+    onError("Failed to connect to the chosen device");
     return;
   }
 
@@ -131,17 +169,20 @@ async function connect(
   setConn({ conn });
 }
 
-type ActiveTab = "keymap" | "trackball" | "bluetooth" | "battery" | "settings";
+type ActiveTab = "keymap" | "trackball" | "encoder" | "bluetooth" | "battery" | "holdtap" | "settings";
 
 const TABS: { id: ActiveTab; label: string }[] = [
   { id: "keymap", label: "Keymap" },
   { id: "trackball", label: "Trackball" },
+  { id: "encoder", label: "Encoder" },
+  { id: "holdtap", label: "Hold-Tap" },
   { id: "bluetooth", label: "Bluetooth" },
   { id: "battery", label: "Battery" },
   { id: "settings", label: "Settings" },
 ];
 
-function App() {
+function AppInner() {
+  const { toast } = useToast();
   const [conn, setConn] = useState<ConnectionState>({ conn: null });
   const [connectedDeviceName, setConnectedDeviceName] = useState<
     string | undefined
@@ -151,6 +192,7 @@ function App() {
   const [showLicenseNotice, setShowLicenseNotice] = useState(false);
   const [connectionAbort, setConnectionAbort] = useState(new AbortController());
   const [activeTab, setActiveTab] = useState<ActiveTab>("keymap");
+  const [mountedTabs, setMountedTabs] = useState<Set<ActiveTab>>(new Set(["keymap"]));
 
   const [lockState, setLockState] = useState<LockState>(
     LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED
@@ -164,6 +206,8 @@ function App() {
     if (!conn) {
       reset();
       setLockState(LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED);
+      setMountedTabs(new Set(["keymap"]));
+      setActiveTab("keymap");
     }
 
     async function updateLockState() {
@@ -192,12 +236,14 @@ function App() {
 
       let resp = await call_rpc(conn.conn, { keymap: { saveChanges: true } });
       if (!resp.keymap?.saveChanges || resp.keymap?.saveChanges.err) {
-        console.error("Failed to save changes", resp.keymap?.saveChanges);
+        toast("Failed to save changes", "error");
+      } else {
+        toast("Changes saved", "success");
       }
     }
 
     doSave();
-  }, [conn]);
+  }, [conn, toast]);
 
   const discard = useCallback(() => {
     async function doDiscard() {
@@ -209,7 +255,9 @@ function App() {
         keymap: { discardChanges: true },
       });
       if (!resp.keymap?.discardChanges) {
-        console.error("Failed to discard changes", resp);
+        toast("Failed to discard changes", "error");
+      } else {
+        toast("Changes discarded", "info");
       }
 
       reset();
@@ -217,7 +265,7 @@ function App() {
     }
 
     doDiscard();
-  }, [conn]);
+  }, [conn, toast]);
 
   const resetSettings = useCallback(() => {
     async function doReset() {
@@ -229,7 +277,9 @@ function App() {
         core: { resetSettings: true },
       });
       if (!resp.core?.resetSettings) {
-        console.error("Failed to settings reset", resp);
+        toast("Failed to reset settings", "error");
+      } else {
+        toast("Settings reset", "success");
       }
 
       reset();
@@ -237,7 +287,7 @@ function App() {
     }
 
     doReset();
-  }, [conn]);
+  }, [conn, toast]);
 
   const disconnect = useCallback(() => {
     async function doDisconnect() {
@@ -257,15 +307,17 @@ function App() {
     (t: RpcTransport, isWireless?: boolean) => {
       const ac = new AbortController();
       setConnectionAbort(ac);
-      connect(t, setConn, setConnectedDeviceName, ac.signal, isWireless);
+      connect(t, setConn, setConnectedDeviceName, ac.signal, (msg) => toast(msg, "error"), isWireless);
     },
-    [setConn, setConnectedDeviceName, setConnectedDeviceName]
+    [setConn, setConnectedDeviceName, toast]
   );
 
   return (
     <ConnectionContext.Provider value={conn}>
       <LockStateContext.Provider value={lockState}>
         <UndoRedoContext.Provider value={doIt}>
+          <BehaviorsProvider>
+          <CustomSubsystemsProvider>
           <UnlockModal />
           <ConnectModal
             open={!conn.conn}
@@ -299,7 +351,10 @@ function App() {
                         ? "border-primary text-primary font-medium"
                         : "border-transparent text-base-content/60 hover:text-base-content hover:border-base-300"
                     }`}
-                    onClick={() => setActiveTab(tab.id)}
+                    onClick={() => {
+                      setActiveTab(tab.id);
+                      setMountedTabs((prev) => new Set(prev).add(tab.id));
+                    }}
                   >
                     {tab.label}
                   </button>
@@ -307,20 +362,32 @@ function App() {
               </nav>
             )}
             <div className="min-h-0 overflow-hidden">
-              {activeTab === "keymap" && <Keyboard />}
-              {activeTab === "trackball" && <TrackballSettings />}
-              {activeTab === "bluetooth" && <BleManagement />}
-              {activeTab === "battery" && <BatteryHistory />}
-              {activeTab === "settings" && <DeviceSettings />}
+              <div className={activeTab === "keymap" ? "h-full" : "hidden"}><Keyboard /></div>
+              {mountedTabs.has("trackball") && <div className={activeTab === "trackball" ? "h-full" : "hidden"}><TrackballSettings /></div>}
+              {mountedTabs.has("encoder") && <div className={activeTab === "encoder" ? "h-full" : "hidden"}><EncoderSettings /></div>}
+              {mountedTabs.has("bluetooth") && <div className={activeTab === "bluetooth" ? "h-full" : "hidden"}><BleManagement /></div>}
+              {mountedTabs.has("holdtap") && <div className={activeTab === "holdtap" ? "h-full" : "hidden"}><HoldTapSettings /></div>}
+              {mountedTabs.has("battery") && <div className={activeTab === "battery" ? "h-full" : "hidden"}><BatteryHistory /></div>}
+              {mountedTabs.has("settings") && <div className={activeTab === "settings" ? "h-full" : "hidden"}><DeviceSettings /></div>}
             </div>
             <AppFooter
               onShowAbout={() => setShowAbout(true)}
               onShowLicenseNotice={() => setShowLicenseNotice(true)}
             />
           </div>
+        </CustomSubsystemsProvider>
+        </BehaviorsProvider>
         </UndoRedoContext.Provider>
       </LockStateContext.Provider>
     </ConnectionContext.Provider>
+  );
+}
+
+function App() {
+  return (
+    <ToastProvider>
+      <AppInner />
+    </ToastProvider>
   );
 }
 

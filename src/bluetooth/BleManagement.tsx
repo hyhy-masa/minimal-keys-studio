@@ -31,7 +31,6 @@ export function BleManagement() {
     async function load() {
       if (!subsystem) return;
       try {
-        console.log("[BLE] Loading profiles, split info, output priority...");
         const [profilesResp, splitResp, priorityResp] = await Promise.all([
           rpcWithTimeout("getProfiles", subsystem.callRPC(BLE.encodeGetProfiles())),
           rpcWithTimeout("getSplitInfo", subsystem.callRPC(BLE.encodeGetSplitInfo())),
@@ -40,15 +39,12 @@ export function BleManagement() {
         if (ignore) return;
 
         const pd = BLE.decodeResponse(profilesResp);
-        console.log("[BLE] getProfiles response:", pd);
         if (pd.getProfiles) setProfiles(pd.getProfiles.profiles);
 
         const sd = BLE.decodeResponse(splitResp);
-        console.log("[BLE] getSplitInfo response:", sd);
         if (sd.getSplitInfo) setSplitInfo(sd.getSplitInfo);
 
         const od = BLE.decodeResponse(priorityResp);
-        console.log("[BLE] getOutputPriority response:", od);
         if (od.getOutputPriority !== undefined)
           setOutputPriority(od.getOutputPriority);
       } catch (e) {
@@ -68,7 +64,6 @@ export function BleManagement() {
       const resp = BLE.decodeResponse(
         await rpcWithTimeout("getProfiles", subsystem.callRPC(BLE.encodeGetProfiles()))
       );
-      console.log("[BLE] refreshProfiles:", resp);
       if (resp.getProfiles) setProfiles(resp.getProfiles.profiles);
     } catch (e) {
       console.error("[BLE] Failed to refresh profiles:", e);
@@ -136,7 +131,6 @@ export function BleManagement() {
   );
 
   if (!subsystem) {
-    console.log("[BLE] Subsystem 'cormoran_ble' not found");
     return (
       <div className="p-4 text-base-content/60">
         <p>BLE management module is not available.</p>

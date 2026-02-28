@@ -69,12 +69,12 @@ async function discoverService(
   }
 
   if (!device.gatt.connected) {
-    console.log("[BLE] Connecting to GATT server...");
+    console.debug("[BLE] Connecting to GATT server...");
     await device.gatt.connect();
-    console.log("[BLE] GATT connected");
+    console.debug("[BLE] GATT connected");
   }
 
-  console.log("[BLE] Discovering service:", ZMK_STUDIO_SERVICE_UUID);
+  console.debug("[BLE] Discovering service:", ZMK_STUDIO_SERVICE_UUID);
   let service: BluetoothRemoteGATTService;
   try {
     service = await device.gatt.getPrimaryService(ZMK_STUDIO_SERVICE_UUID);
@@ -89,7 +89,7 @@ async function discoverService(
   const characteristic = await service.getCharacteristic(
     ZMK_STUDIO_RPC_CHRC_UUID,
   );
-  console.log("[BLE] Service and characteristic found");
+  console.debug("[BLE] Service and characteristic found");
 
   return { device, service, characteristic };
 }
@@ -109,7 +109,7 @@ function setupStreams(
       await characteristic.startNotifications();
       // Wait for encryption handshake and CCCD write to complete
       await delay(POST_NOTIFY_DELAY_MS);
-      console.log("[BLE] Notifications started (after %dms delay)", POST_NOTIFY_DELAY_MS);
+      console.debug("[BLE] Notifications started (after %dms delay)", POST_NOTIFY_DELAY_MS);
 
       const onValue = (ev: Event) => {
         const buf = (ev.target as BluetoothRemoteGATTCharacteristic)?.value
@@ -151,7 +151,7 @@ function setupStreams(
  * - Automatic reconnection on disconnection (exponential backoff, max 3 retries)
  */
 export async function connect(): Promise<RpcTransport> {
-  console.log("[BLE] Starting device scan...");
+  console.debug("[BLE] Starting device scan...");
 
   const device = await navigator.bluetooth
     .requestDevice({
@@ -168,7 +168,7 @@ export async function connect(): Promise<RpcTransport> {
       throw e;
     });
 
-  console.log("[BLE] Device selected:", device.name, "id:", device.id);
+  console.debug("[BLE] Device selected:", device.name, "id:", device.id);
 
   const abortController = new AbortController();
   const label = device.name || "Unknown";
@@ -184,13 +184,13 @@ export async function connect(): Promise<RpcTransport> {
 
     for (let attempt = 0; attempt < RECONNECT_MAX_RETRIES; attempt++) {
       const waitMs = RECONNECT_INITIAL_DELAY_MS * Math.pow(2, attempt);
-      console.log(
+      console.debug(
         `[BLE] Reconnect attempt ${attempt + 1}/${RECONNECT_MAX_RETRIES} in ${waitMs}ms`,
       );
       await delay(waitMs);
 
       if (abortController.signal.aborted) {
-        console.log("[BLE] Reconnection aborted by user");
+        console.debug("[BLE] Reconnection aborted by user");
         return;
       }
 
@@ -199,7 +199,7 @@ export async function connect(): Promise<RpcTransport> {
         const streams = setupStreams(conn, writeQueue);
         readable = streams.readable;
         writable = streams.writable;
-        console.log("[BLE] Reconnected successfully");
+        console.debug("[BLE] Reconnected successfully");
         return;
       } catch (e) {
         console.warn(`[BLE] Reconnect attempt ${attempt + 1} failed:`, e);
@@ -216,6 +216,6 @@ export async function connect(): Promise<RpcTransport> {
   };
   sig.addEventListener("abort", abortCb);
 
-  console.log("[BLE] Connection fully established!");
+  console.debug("[BLE] Connection fully established!");
   return { label, abortController, readable, writable };
 }

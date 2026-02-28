@@ -7,7 +7,6 @@ import React, {
   useState,
 } from "react";
 
-import { Request } from "@zmkfirmware/zmk-studio-ts-client";
 import { call_rpc } from "../rpc/logging";
 import {
   PhysicalLayout,
@@ -17,7 +16,6 @@ import {
   BehaviorBinding,
   Layer,
 } from "@zmkfirmware/zmk-studio-ts-client/keymap";
-import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 
 import { LayerPicker } from "./LayerPicker";
 import { PhysicalLayoutPicker } from "./PhysicalLayoutPicker";
@@ -26,78 +24,12 @@ import { useConnectedDeviceData } from "../rpc/useConnectedDeviceData";
 import { ConnectionContext } from "../rpc/ConnectionContext";
 import { UndoRedoContext } from "../undoRedo";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
+import { useBehaviorMap } from "../behaviors/BehaviorsContext";
 import { produce } from "immer";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
-
-type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
-
-function useBehaviors(): BehaviorMap {
-  let connection = useContext(ConnectionContext);
-  let lockState = useContext(LockStateContext);
-
-  const [behaviors, setBehaviors] = useState<BehaviorMap>({});
-
-  useEffect(() => {
-    if (
-      !connection.conn ||
-      lockState != LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED
-    ) {
-      setBehaviors({});
-      return;
-    }
-
-    async function startRequest() {
-      setBehaviors({});
-
-      if (!connection.conn) {
-        return;
-      }
-
-      let get_behaviors: Request = {
-        behaviors: { listAllBehaviors: true },
-        requestId: 0,
-      };
-
-      let behavior_list = await call_rpc(connection.conn, get_behaviors);
-      if (!ignore) {
-        let behavior_map: BehaviorMap = {};
-        for (let behaviorId of behavior_list.behaviors?.listAllBehaviors
-          ?.behaviors || []) {
-          if (ignore) {
-            break;
-          }
-          let details_req = {
-            behaviors: { getBehaviorDetails: { behaviorId } },
-            requestId: 0,
-          };
-          let behavior_details = await call_rpc(connection.conn, details_req);
-          let dets: GetBehaviorDetailsResponse | undefined =
-            behavior_details?.behaviors?.getBehaviorDetails;
-
-          if (dets) {
-            behavior_map[dets.id] = dets;
-          }
-        }
-
-        if (!ignore) {
-          setBehaviors(behavior_map);
-        }
-      }
-    }
-
-    let ignore = false;
-    startRequest();
-
-    return () => {
-      ignore = true;
-    };
-  }, [connection, lockState]);
-
-  return behaviors;
-}
 
 function useLayouts(): [
   PhysicalLayout[] | undefined,
@@ -167,10 +99,7 @@ export default function Keyboard() {
   ] = useLayouts();
   const [keymap, setKeymap] = useConnectedDeviceData<Keymap>(
     { keymap: { getKeymap: true } },
-    (keymap) => {
-      console.log("Got the keymap!");
-      return keymap?.keymap?.getKeymap;
-    },
+    (keymap) => keymap?.keymap?.getKeymap,
     true
   );
 
@@ -182,7 +111,7 @@ export default function Keyboard() {
   const [selectedKeyPosition, setSelectedKeyPosition] = useState<
     number | undefined
   >(undefined);
-  const behaviors = useBehaviors();
+  const behaviors = useBehaviorMap();
 
   const conn = useContext(ConnectionContext);
   const undoRedo = useContext(UndoRedoContext);
@@ -362,7 +291,6 @@ export default function Keyboard() {
         keymap: { removeLayer: { layerIndex } },
       });
 
-      console.log(resp);
       if (resp.keymap?.removeLayer?.ok) {
         setKeymap(
           produce((draft: any) => {
@@ -421,7 +349,6 @@ export default function Keyboard() {
         keymap: { restoreLayer: { layerId, atIndex } },
       });
 
-      console.log(resp);
       if (resp.keymap?.restoreLayer?.ok) {
         setKeymap(
           produce((draft: any) => {
