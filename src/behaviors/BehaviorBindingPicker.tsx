@@ -6,6 +6,7 @@ import type {
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { BehaviorParametersPicker } from "./BehaviorParametersPicker";
 import { validateValue } from "./parameters";
+import { getBehaviorDescription } from "./behavior-descriptions";
 import { PickerTabs } from "./picker/PickerTabs";
 
 export interface BehaviorBindingPickerProps {
@@ -111,8 +112,23 @@ export const BehaviorBindingPicker = ({
     setParam2(0);
   };
 
+  // Current binding display
+  const currentBehavior = behaviors.find((b) => b.id === binding.behaviorId);
+  const currentDesc = currentBehavior
+    ? getBehaviorDescription(currentBehavior.displayName)
+    : null;
+
   return (
     <div className="flex flex-col gap-2">
+      {currentDesc && (
+        <div className="flex items-center gap-2 px-2 py-1.5 bg-base-200 rounded text-sm">
+          <span className="text-base-content/50">現在:</span>
+          <span className="font-medium">{currentDesc.label}</span>
+          {currentDesc.label !== currentBehavior!.displayName && (
+            <span className="text-xs text-base-content/40">({currentBehavior!.displayName})</span>
+          )}
+        </div>
+      )}
       <PickerTabs
         keyPosition={keyPosition ?? -1}
         behaviors={behaviors}
