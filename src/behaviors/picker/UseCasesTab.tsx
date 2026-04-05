@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
-import { useCaseCategories } from "../use-cases";
+import { getUseCaseCategories, detectOS } from "../use-cases";
 import { resolveBehaviorId } from "../resolve-behavior";
 
 interface UseCasesTabProps {
@@ -11,13 +11,16 @@ interface UseCasesTabProps {
 }
 
 export function UseCasesTab({ behaviors, onApplyBinding, onSelectBehavior }: UseCasesTabProps) {
-  const [selectedCategoryId, setSelectedCategoryId] = useState(useCaseCategories[0]?.id);
-  const selectedCategory = useCaseCategories.find((c) => c.id === selectedCategoryId);
+  const os = detectOS();
+  const categories = getUseCaseCategories(os);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(categories[0]?.id);
+  const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-1 flex-wrap">
-        {useCaseCategories.map((cat) => (
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-base-content/40 px-1">{os === "mac" ? "Mac" : "Windows"}</span>
+        {categories.map((cat) => (
           <button
             key={cat.id}
             className={`px-3 py-1 text-sm rounded-md transition-all ${
