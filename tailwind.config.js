@@ -5,12 +5,13 @@ import contQueries from "@tailwindcss/container-queries";
 export default {
   content: ["./index.html", "./download.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
-    fontSize: {
-      xs: "0.4rem",
-    },
     extend: {
+      fontSize: {
+        xs: "0.4rem",
+      },
       fontFamily: {
         sans: ["Inter", "system-ui"],
+        keycap: ["Inter", "system-ui"],
       },
       colors: {
         primary:
@@ -25,11 +26,8 @@ export default {
         "base-100": "light-dark(oklch(100% 0 0), #1d232a)",
         "base-200": "light-dark(#F2F2F2, #191e24)",
         "base-300": "light-dark(#E5E6E6, #15191e)",
+        success: "light-dark(oklch(64.8% 0.15 160), oklch(64.8% 0.15 160))",
       },
-    },
-
-    fontFamily: {
-      keycap: ["Inter", "system-ui"],
     },
   },
   plugins: [contQueries, trac({ prefix: "rac" })],

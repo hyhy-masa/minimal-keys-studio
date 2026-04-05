@@ -7,6 +7,12 @@ import {
 import { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { BehaviorParametersPicker } from "./BehaviorParametersPicker";
 import { validateValue } from "./parameters";
+import {
+  getBehaviorDescription,
+  categoryLabels,
+  categoryOrder,
+  BehaviorCategory,
+} from "./behavior-descriptions";
 
 export interface BehaviorBindingPickerProps {
   binding: BehaviorBinding;
@@ -28,7 +34,7 @@ function validateBinding(
     return true;
   }
 
-  let matchingSet = metadata.find((s) =>
+  const matchingSet = metadata.find((s) =>
     validateValue(layerIds, param1, s.param1)
   );
 
@@ -54,10 +60,43 @@ export const BehaviorBindingPicker = ({
     [behaviorId, behaviors]
   );
 
-  const sortedBehaviors = useMemo(
-    () => behaviors.sort((a, b) => a.displayName.localeCompare(b.displayName)),
-    [behaviors]
-  );
+  const groupedBehaviors = useMemo(() => {
+    const groups = new Map<
+      BehaviorCategory,
+      GetBehaviorDetailsResponse[]
+    >();
+
+    for (const cat of categoryOrder) {
+      groups.set(cat, []);
+    }
+
+    for (const b of behaviors) {
+      const desc = getBehaviorDescription(b.displayName);
+      const list = groups.get(desc.category);
+      if (list) {
+        list.push(b);
+      } else {
+        groups.get("other")!.push(b);
+      }
+    }
+
+    // Sort within each group by label
+    for (const [, list] of groups) {
+      list.sort((a, b) => {
+        const descA = getBehaviorDescription(a.displayName);
+        const descB = getBehaviorDescription(b.displayName);
+        return descA.label.localeCompare(descB.label);
+      });
+    }
+
+    return groups;
+  }, [behaviors]);
+
+  const selectedDescription = useMemo(() => {
+    const selected = behaviors.find((b) => b.id === behaviorId);
+    if (!selected) return null;
+    return getBehaviorDescription(selected.displayName);
+  }, [behaviorId, behaviors]);
 
   useEffect(() => {
     if (
@@ -100,23 +139,42 @@ export const BehaviorBindingPicker = ({
 
   return (
     <div className="flex flex-col gap-2">
-      <div>
-        <label>Behavior: </label>
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium">機能:</label>
         <select
           value={behaviorId}
-          className="h-8 rounded"
+          className="h-8 rounded px-2"
           onChange={(e) => {
             setBehaviorId(parseInt(e.target.value));
             setParam1(0);
             setParam2(0);
           }}
         >
-          {sortedBehaviors.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.displayName}
-            </option>
-          ))}
+          {categoryOrder.map((cat) => {
+            const list = groupedBehaviors.get(cat);
+            if (!list || list.length === 0) return null;
+            return (
+              <optgroup key={cat} label={categoryLabels[cat]}>
+                {list.map((b) => {
+                  const desc = getBehaviorDescription(b.displayName);
+                  return (
+                    <option key={b.id} value={b.id}>
+                      {desc.label}
+                      {desc.label !== b.displayName
+                        ? ` (${b.displayName})`
+                        : ""}
+                    </option>
+                  );
+                })}
+              </optgroup>
+            );
+          })}
         </select>
+        {selectedDescription?.description && (
+          <p className="text-sm text-base-content/60 mt-0.5 leading-relaxed">
+            {selectedDescription.description}
+          </p>
+        )}
       </div>
       {metadata && (
         <BehaviorParametersPicker

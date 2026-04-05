@@ -65,9 +65,9 @@ export const AppHeader = ({
   );
 
   return (
-    <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-10 max-w-full">
-      <div className="flex px-3 items-center gap-1">
-        <img src="/zmk.svg" alt="Logo" className="h-8 rounded" />
+    <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-12 max-w-full border-b border-base-300/50">
+      <div className="flex px-3 items-center gap-2">
+        <img src={`${import.meta.env.BASE_URL}zmk.svg`} alt="Logo" className="h-8 rounded" />
         <p className="font-semibold text-base">minimal-keys Studio</p>
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">
@@ -102,6 +102,7 @@ export const AppHeader = ({
           className="text-center rac-disabled:opacity-0 hover:bg-base-300 transition-all duration-100 p-1 pl-2 rounded-lg"
           isDisabled={!connectedDeviceLabel}
         >
+          <span className="w-2 h-2 rounded-full bg-success inline-block" />
           {connectedDeviceLabel}
           <ChevronDown className="inline-block w-4" />
         </Button>

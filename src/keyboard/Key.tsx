@@ -46,18 +46,29 @@ export const Key = ({
   const pixelWidth = width * oneU - 2;
   const pixelHeight = height * oneU - 2;
 
+  const radius = Math.max(4, oneU * 0.08);
+
   return (
     <button
-      className={`group rounded relative flex justify-center items-center cursor-pointer transition-all hover:shadow-xl hover:ring-1 hover:ring-gray-300 hover:scale-110 text-sm ${selected ? "bg-primary text-primary-content" : "bg-base-100 text-base-content"
-        }`}
+      className={`keycap group relative flex flex-col justify-center items-center cursor-pointer transition-all duration-150 text-sm border ${
+        selected
+          ? "bg-primary text-primary-content border-primary/30 shadow-[inset_0_-2px_0_0_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.2)] scale-[0.97]"
+          : "bg-base-100 text-base-content border-base-300/60 shadow-[inset_0_-3px_0_0_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[inset_0_-3px_0_0_rgba(0,0,0,0.12),0_3px_8px_rgba(0,0,0,0.12)] hover:scale-105 hover:-translate-y-0.5"
+      }`}
       style={{
         width: `${pixelWidth}px`,
         height: `${pixelHeight}px`,
         fontSize: `${Math.max(11, oneU * 0.22)}px`,
+        borderRadius: `${radius}px`,
       }}
       onClick={onClick}
     >
-      <div className={`absolute ${selected ? "text-primary-content" : "text-base-content"} opacity-80 top-1 text-nowrap left-1/2 font-light -translate-x-1/2 text-center`} style={{ fontSize: `${Math.max(10, oneU * 0.18)}px` }}>{shortenHeader(header)}</div>
+      <div
+        className={`absolute ${selected ? "text-primary-content" : "text-base-content"} opacity-70 top-1 text-nowrap left-1/2 font-light -translate-x-1/2 text-center`}
+        style={{ fontSize: `${Math.max(10, oneU * 0.18)}px` }}
+      >
+        {shortenHeader(header)}
+      </div>
       {children}
     </button>
   );

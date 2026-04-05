@@ -89,17 +89,17 @@ async function listen_for_notifications(
   notification_stream: ReadableStream<Notification>,
   signal: AbortSignal
 ): Promise<void> {
-  let reader = notification_stream.getReader();
+  const reader = notification_stream.getReader();
   const onAbort = () => {
     reader.cancel();
     reader.releaseLock();
   };
   signal.addEventListener("abort", onAbort, { once: true });
   do {
-    let pub = usePub();
+    const pub = usePub();
 
     try {
-      let { done, value } = await reader.read();
+      const { done, value } = await reader.read();
       if (done) {
         break;
       }
@@ -148,11 +148,11 @@ async function connect(
   onError: (msg: string) => void,
   isWireless?: boolean
 ) {
-  let conn = await create_rpc_connection(transport, { signal });
+  const conn = await create_rpc_connection(transport, { signal });
 
   const timeout = isWireless ? 5000 : 1000;
 
-  let details = await Promise.race([
+  const details = await Promise.race([
     call_rpc(conn, { core: { getDeviceInfo: true } })
       .then((r) => r?.core?.getDeviceInfo)
       .catch(() => undefined),
@@ -235,7 +235,7 @@ function AppInner() {
         return;
       }
 
-      let locked_resp = await call_rpc(conn.conn, {
+      const locked_resp = await call_rpc(conn.conn, {
         core: { getLockState: true },
       });
 
@@ -254,7 +254,7 @@ function AppInner() {
         return;
       }
 
-      let resp = await call_rpc(conn.conn, { keymap: { saveChanges: true } });
+      const resp = await call_rpc(conn.conn, { keymap: { saveChanges: true } });
       if (!resp.keymap?.saveChanges || resp.keymap?.saveChanges.err) {
         toast("Failed to save changes", "error");
       } else {
@@ -271,7 +271,7 @@ function AppInner() {
         return;
       }
 
-      let resp = await call_rpc(conn.conn, {
+      const resp = await call_rpc(conn.conn, {
         keymap: { discardChanges: true },
       });
       if (!resp.keymap?.discardChanges) {
@@ -293,7 +293,7 @@ function AppInner() {
         return;
       }
 
-      let resp = await call_rpc(conn.conn, {
+      const resp = await call_rpc(conn.conn, {
         core: { resetSettings: true },
       });
       if (!resp.core?.resetSettings) {

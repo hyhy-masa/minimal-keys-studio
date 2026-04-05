@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "react-aria-components";
+import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
 import {
   useCustomSubsystem,
   useCustomNotification,
@@ -268,13 +269,11 @@ export function BatteryHistory() {
 
   if (!subsystem) {
     return (
-      <div className="p-4 text-base-content/60">
-        <p>Battery history module is not available.</p>
-        <p className="text-sm mt-2">
-          Firmware needs{" "}
-          <code>CONFIG_ZMK_BATTERY_HISTORY_STUDIO_RPC=y</code>
-        </p>
-      </div>
+      <SubsystemUnavailable
+        featureName="バッテリー情報"
+        explanation="キーボードのファームウェアがこの機能に対応していないか、接続方法を確認してください。"
+        technicalDetails="CONFIG_ZMK_BATTERY_HISTORY_STUDIO_RPC=y"
+      />
     );
   }
 

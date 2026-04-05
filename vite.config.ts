@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 
-const isTauri = !!process.env.TAURI_PLATFORM;
+const isTauri = !!process.env.TAURI_ENV_PLATFORM || !!process.env.TAURI_PLATFORM;
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -22,11 +22,11 @@ export default defineConfig({
   ],
   build: {
     target: isTauri
-      ? process.env.TAURI_PLATFORM == "windows"
+      ? (process.env.TAURI_ENV_PLATFORM || process.env.TAURI_PLATFORM) == "windows"
         ? "chrome105"
         : "safari13"
       : "es2022",
-    minify: !process.env.TAURI_DEBUG ? "esbuild" : false,
-    sourcemap: !!process.env.TAURI_DEBUG,
+    minify: !(process.env.TAURI_ENV_DEBUG || process.env.TAURI_DEBUG) ? "esbuild" : false,
+    sourcemap: !!(process.env.TAURI_ENV_DEBUG || process.env.TAURI_DEBUG),
   },
 });
