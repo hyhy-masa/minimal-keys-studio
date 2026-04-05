@@ -9,14 +9,27 @@ let allDevices: Array<AvailableDevice> = [];
 
 export async function list_devices(): Promise<Array<AvailableDevice>> {
   allDevices = await invoke("gatt_list_devices");
-  // Deduplicate by label - multiple BLE profiles of the same keyboard
-  // all appear as separate entries with the same name
-  const seen = new Set<string>();
-  return allDevices.filter((d) => {
-    if (seen.has(d.label)) return false;
-    seen.add(d.label);
-    return true;
-  });
+  // Group by label to detect duplicate names (multiple profiles or multiple keyboards)
+  const byLabel = new Map<string, Array<AvailableDevice>>();
+  for (const d of allDevices) {
+    const group = byLabel.get(d.label) || [];
+    group.push(d);
+    byLabel.set(d.label, group);
+  }
+  // If a name appears once, show as-is. If duplicates, add short ID suffix.
+  const result: Array<AvailableDevice> = [];
+  for (const [label, devices] of byLabel) {
+    if (devices.length === 1) {
+      result.push(devices[0]);
+    } else {
+      for (const d of devices) {
+        // Extract short ID (last 4 chars of UUID) for distinction
+        const shortId = d.id.replace(/[^a-f0-9]/gi, "").slice(-4);
+        result.push({ ...d, label: `${label} (${shortId})` });
+      }
+    }
+  }
+  return result;
 }
 
 async function tryConnect(dev: AvailableDevice): Promise<boolean> {
