@@ -41,8 +41,15 @@ async function tryConnect(dev: AvailableDevice): Promise<boolean> {
 }
 
 export async function connect(dev: AvailableDevice): Promise<RpcTransport> {
-  // Try the selected device first, then fall back to other profiles with the same name
-  const candidates = allDevices.filter((d) => d.label === dev.label);
+  // Try the selected device first (by id), then fall back to other profiles
+  // with the same original name
+  const originalLabel = dev.label.replace(/\s*\([a-f0-9]+\)$/, "");
+  const candidates = [
+    // Put the exact device first
+    ...allDevices.filter((d) => d.id === dev.id),
+    // Then other profiles with the same base name
+    ...allDevices.filter((d) => d.id !== dev.id && d.label === originalLabel),
+  ];
   let connected = false;
 
   for (const candidate of candidates) {
