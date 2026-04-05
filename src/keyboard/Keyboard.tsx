@@ -26,6 +26,7 @@ import { UndoRedoContext } from "../undoRedo";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import { useBehaviorMap } from "../behaviors/BehaviorsContext";
 import { produce } from "immer";
+import { useToast } from "../misc/Toast";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
@@ -115,6 +116,7 @@ export default function Keyboard() {
 
   const conn = useContext(ConnectionContext);
   const undoRedo = useContext(UndoRedoContext);
+  const { toast } = useToast();
 
   useEffect(() => {
     setSelectedLayerIndex(0);
@@ -192,6 +194,7 @@ export default function Keyboard() {
           );
         } else {
           console.error("Failed to set binding", resp.keymap?.setLayerBinding);
+          toast("Failed to set key binding", "error");
         }
 
         return async () => {
@@ -214,6 +217,7 @@ export default function Keyboard() {
               })
             );
           } else {
+            toast("Failed to undo key binding change", "error");
           }
         };
       });

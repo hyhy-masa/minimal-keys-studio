@@ -1,4 +1,13 @@
 import { AppHeader } from "./AppHeader";
+import {
+  Grid3x3,
+  Timer,
+  RotateCw,
+  MousePointer2,
+  Bluetooth,
+  BatteryMedium,
+  SlidersHorizontal,
+} from "lucide-react";
 
 import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
 import { call_rpc } from "./rpc/logging";
@@ -171,14 +180,25 @@ async function connect(
 
 type ActiveTab = "keymap" | "trackball" | "encoder" | "bluetooth" | "battery" | "holdtap" | "settings";
 
-const TABS: { id: ActiveTab; label: string }[] = [
-  { id: "keymap", label: "Keymap" },
-  { id: "trackball", label: "Trackball" },
-  { id: "encoder", label: "Encoder" },
-  { id: "holdtap", label: "Hold-Tap" },
-  { id: "bluetooth", label: "Bluetooth" },
-  { id: "battery", label: "Battery" },
-  { id: "settings", label: "Settings" },
+type TabDef = { id: ActiveTab; label: string; icon: React.ReactNode };
+type TabGroup = { tabs: TabDef[] };
+
+const TAB_GROUPS: TabGroup[] = [
+  {
+    tabs: [
+      { id: "keymap", label: "キーマップ", icon: <Grid3x3 className="w-4 h-4" /> },
+      { id: "holdtap", label: "長押し設定", icon: <Timer className="w-4 h-4" /> },
+      { id: "encoder", label: "エンコーダー", icon: <RotateCw className="w-4 h-4" /> },
+    ],
+  },
+  {
+    tabs: [
+      { id: "trackball", label: "トラックボール", icon: <MousePointer2 className="w-4 h-4" /> },
+      { id: "bluetooth", label: "Bluetooth", icon: <Bluetooth className="w-4 h-4" /> },
+      { id: "battery", label: "バッテリー", icon: <BatteryMedium className="w-4 h-4" /> },
+      { id: "settings", label: "設定", icon: <SlidersHorizontal className="w-4 h-4" /> },
+    ],
+  },
 ];
 
 function AppInner() {
@@ -342,22 +362,28 @@ function AppInner() {
               onResetSettings={resetSettings}
             />
             {conn.conn && (
-              <nav className="flex gap-0 border-b border-base-300 px-2">
-                {TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    className={`px-4 py-2 text-sm transition-colors border-b-2 ${
-                      activeTab === tab.id
-                        ? "border-primary text-primary font-medium"
-                        : "border-transparent text-base-content/60 hover:text-base-content hover:border-base-300"
-                    }`}
-                    onClick={() => {
-                      setActiveTab(tab.id);
-                      setMountedTabs((prev) => new Set(prev).add(tab.id));
-                    }}
-                  >
-                    {tab.label}
-                  </button>
+              <nav className="flex items-center gap-1 border-b border-base-300 px-3 py-1">
+                {TAB_GROUPS.map((group, gi) => (
+                  <div key={gi} className="flex items-center gap-0.5">
+                    {gi > 0 && <div className="w-px h-6 bg-base-300 mx-2" />}
+                    {group.tabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all ${
+                          activeTab === tab.id
+                            ? "bg-primary/10 text-primary font-medium"
+                            : "text-base-content/60 hover:text-base-content hover:bg-base-200"
+                        }`}
+                        onClick={() => {
+                          setActiveTab(tab.id);
+                          setMountedTabs((prev) => new Set(prev).add(tab.id));
+                        }}
+                      >
+                        {tab.icon}
+                        <span className="hidden sm:inline">{tab.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 ))}
               </nav>
             )}
