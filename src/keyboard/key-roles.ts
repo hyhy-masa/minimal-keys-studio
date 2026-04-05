@@ -28,7 +28,9 @@ const HID = {
   Delete: 76,
 };
 
-// Thumb key position indices (placeholders — will be corrected with real device)
+// Thumb key position indices (from minimal-keys.dtsi physical layout)
+// Row 3: pos 34-39 (left), 40-41 (right), 42 (right pinky)
+// Thumb keys: 37-39 (left inner), 40-41 (right inner)
 export const keyRoleMap: KeyRoleMap = {
   37: {
     roleLabel: "左手親指・外側",
@@ -116,7 +118,7 @@ export const keyRoleMap: KeyRoleMap = {
     ],
   },
   41: {
-    roleLabel: "右手親指・中央",
+    roleLabel: "右手親指・外側",
     recommendations: [
       {
         label: "Enter",
@@ -127,30 +129,17 @@ export const keyRoleMap: KeyRoleMap = {
         popular: true,
       },
       {
-        label: "スペース",
-        description: "スペースキー",
-        behaviorDisplayName: "Key Press",
-        param1: key(HID.Space),
-        param2: 0,
-      },
-    ],
-  },
-  42: {
-    roleLabel: "右手親指・外側",
-    recommendations: [
-      {
         label: "一時レイヤー",
         description: "押している間だけレイヤー切替",
         behaviorDisplayName: "Momentary Layer",
         param1: 1,
         param2: 0,
-        popular: true,
       },
       {
-        label: "レイヤー切替",
-        description: "ON/OFFで切り替える",
-        behaviorDisplayName: "Toggle Layer",
-        param1: 1,
+        label: "スペース",
+        description: "スペースキー",
+        behaviorDisplayName: "Key Press",
+        param1: key(HID.Space),
         param2: 0,
       },
     ],
