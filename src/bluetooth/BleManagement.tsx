@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "react-aria-components";
+import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
 import { useCustomSubsystem } from "../rpc/useCustomSubsystem";
+import { useToast } from "../misc/Toast";
 import * as BLE from "../proto/ble";
 
 function rpcWithTimeout(label: string, promise: Promise<Uint8Array>, timeoutMs = 5000): Promise<Uint8Array> {
@@ -12,6 +14,7 @@ function rpcWithTimeout(label: string, promise: Promise<Uint8Array>, timeoutMs =
 
 export function BleManagement() {
   const subsystem = useCustomSubsystem(BLE.SUBSYSTEM_ID);
+  const { toast } = useToast();
   const [profiles, setProfiles] = useState<BLE.ProfileInfo[]>([]);
   const [splitInfo, setSplitInfo] = useState<BLE.SplitInfo | null>(null);
   const [outputPriority, setOutputPriority] = useState<BLE.OutputPriority>(0);
@@ -49,6 +52,7 @@ export function BleManagement() {
           setOutputPriority(od.getOutputPriority);
       } catch (e) {
         console.error("[BLE] Failed to load BLE info:", e);
+        toast("Failed to load Bluetooth info", "error");
       }
     }
 
@@ -67,6 +71,7 @@ export function BleManagement() {
       if (resp.getProfiles) setProfiles(resp.getProfiles.profiles);
     } catch (e) {
       console.error("[BLE] Failed to refresh profiles:", e);
+      toast("Failed to refresh profiles", "error");
     }
   }, [subsystem]);
 
@@ -79,6 +84,7 @@ export function BleManagement() {
         await refreshProfiles();
       } catch (e) {
         console.error("[BLE] Failed to switch profile:", e);
+        toast("Failed to switch profile", "error");
       } finally {
         setLoading(false);
       }
@@ -96,6 +102,7 @@ export function BleManagement() {
         await refreshProfiles();
       } catch (e) {
         console.error("[BLE] Failed to unpair profile:", e);
+        toast("Failed to unpair profile", "error");
       } finally {
         setLoading(false);
       }
@@ -111,6 +118,7 @@ export function BleManagement() {
         await refreshProfiles();
       } catch (e) {
         console.error("[BLE] Failed to set profile name:", e);
+        toast("Failed to set profile name", "error");
       }
       setEditingName(null);
     },
@@ -125,6 +133,7 @@ export function BleManagement() {
         setOutputPriority(priority);
       } catch (e) {
         console.error("[BLE] Failed to set output priority:", e);
+        toast("Failed to set output priority", "error");
       }
     },
     [subsystem]
@@ -132,13 +141,11 @@ export function BleManagement() {
 
   if (!subsystem) {
     return (
-      <div className="p-4 text-base-content/60">
-        <p>BLE management module is not available.</p>
-        <p className="text-sm mt-2">
-          Firmware needs{" "}
-          <code>CONFIG_ZMK_BLE_MANAGEMENT_STUDIO_RPC=y</code>
-        </p>
-      </div>
+      <SubsystemUnavailable
+        featureName="Bluetooth設定"
+        explanation="キーボードのファームウェアがこの機能に対応していないか、接続方法を確認してください。"
+        technicalDetails="CONFIG_ZMK_BLE_MANAGEMENT_STUDIO_RPC=y"
+      />
     );
   }
 

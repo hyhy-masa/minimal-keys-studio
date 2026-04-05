@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 
 // Extract the deduplication logic for testing
 // This mirrors the logic in list_devices()

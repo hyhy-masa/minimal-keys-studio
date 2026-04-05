@@ -1,12 +1,15 @@
 import { useCallback, useRef, useState } from "react";
 import { Button } from "react-aria-components";
+import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
 import {
   useCustomSubsystem,
   useCustomNotification,
 } from "../rpc/useCustomSubsystem";
+import { useToast } from "../misc/Toast";
 import * as SETTINGS from "../proto/settings";
 
 export function DeviceSettings() {
+  const { toast } = useToast();
   const subsystem = useCustomSubsystem(SETTINGS.SUBSYSTEM_ID);
   const [deviceSettings, setDeviceSettings] = useState<
     Map<number, SETTINGS.ActivitySettings>
@@ -41,9 +44,10 @@ export function DeviceSettings() {
     loadedRef.current = true;
     subsystem
       .callRPC(SETTINGS.encodeGetAllActivitySettings())
-      .catch((e: unknown) =>
-        console.error("Failed to request all activity settings:", e)
-      );
+      .catch((e: unknown) => {
+        console.error("Failed to request all activity settings:", e);
+        toast("Failed to load device settings", "error");
+      });
   }
   if (!subsystem) loadedRef.current = false;
   prevSubsystem.current = subsystem;
@@ -76,6 +80,7 @@ export function DeviceSettings() {
       setFeedback("Settings applied");
     } catch (e) {
       console.error("Failed to apply settings:", e);
+      toast("Failed to apply device settings", "error");
       setFeedback("Failed to apply settings");
     } finally {
       setSaving(false);
@@ -101,6 +106,7 @@ export function DeviceSettings() {
       setFeedback("All devices synced");
     } catch (e) {
       console.error("Failed to sync settings:", e);
+      toast("Failed to sync device settings", "error");
       setFeedback("Failed to sync settings");
     } finally {
       setSaving(false);
@@ -109,12 +115,11 @@ export function DeviceSettings() {
 
   if (!subsystem) {
     return (
-      <div className="p-4 text-base-content/60">
-        <p>Settings module is not available.</p>
-        <p className="text-sm mt-2">
-          Firmware needs <code>CONFIG_ZMK_SETTINGS_RPC_STUDIO=y</code>
-        </p>
-      </div>
+      <SubsystemUnavailable
+        featureName="デバイス設定"
+        explanation="キーボードのファームウェアがこの機能に対応していないか、接続方法を確認してください。"
+        technicalDetails="CONFIG_ZMK_SETTINGS_RPC_STUDIO=y"
+      />
     );
   }
 

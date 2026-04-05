@@ -1,8 +1,10 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "react-aria-components";
+import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
 import {
   useCustomSubsystem,
 } from "../rpc/useCustomSubsystem";
+import { useToast } from "../misc/Toast";
 import * as RSR from "../proto/rsr";
 import { ConnectionContext } from "../rpc/ConnectionContext";
 import { LockStateContext } from "../rpc/LockStateContext";
@@ -60,6 +62,7 @@ function useLayers(): LayerDisplay[] {
 
 export function EncoderSettings() {
   const subsystem = useCustomSubsystem(RSR.SUBSYSTEM_ID);
+  const { toast } = useToast();
   const behaviors = useBehaviorList();
   const layers = useLayers();
 
@@ -138,6 +141,7 @@ export function EncoderSettings() {
       } catch (e) {
         if (version === discoveryVersionRef.current) {
           console.error("[Encoder] Failed to discover sensors:", e);
+          toast("Failed to discover encoder", "error");
         }
       } finally {
         if (version === discoveryVersionRef.current) setLoading(false);
@@ -161,6 +165,7 @@ export function EncoderSettings() {
       }
     } catch (e) {
       console.error("[Encoder] Failed to load bindings:", e);
+      toast("Failed to load encoder bindings", "error");
     } finally {
       setLoading(false);
     }
@@ -203,6 +208,7 @@ export function EncoderSettings() {
       console.debug("[Encoder] CW set response:", JSON.stringify(cwResp));
       if (cwResp.error) {
         console.error("[Encoder] CW set error:", cwResp.error);
+        toast("Failed to set clockwise binding", "error");
       }
 
       const ccwResp = await callWithTimeout(
@@ -212,6 +218,7 @@ export function EncoderSettings() {
       console.debug("[Encoder] CCW set response:", JSON.stringify(ccwResp));
       if (ccwResp.error) {
         console.error("[Encoder] CCW set error:", ccwResp.error);
+        toast("Failed to set counter-clockwise binding", "error");
       }
 
       // Reload bindings to confirm saved values
@@ -228,6 +235,7 @@ export function EncoderSettings() {
       }
     } catch (e) {
       console.error("[Encoder] Failed to save:", e);
+      toast("Failed to save encoder settings", "error");
     } finally {
       setSaving(false);
     }
@@ -235,18 +243,11 @@ export function EncoderSettings() {
 
   if (!subsystem) {
     return (
-      <div className="p-4 text-base-content/60">
-        <p>Encoder runtime configuration module is not available.</p>
-        <p className="text-sm mt-2">
-          Firmware needs{" "}
-          <code>CONFIG_ZMK_RUNTIME_SENSOR_ROTATE=y</code> and{" "}
-          <code>CONFIG_ZMK_RUNTIME_SENSOR_ROTATE_STUDIO_RPC=y</code>
-        </p>
-        <p className="text-sm mt-1">
-          Note: Split keyboards require Studio RPC transport on the encoder side.
-          Currently only the central (right) side has Studio RPC.
-        </p>
-      </div>
+      <SubsystemUnavailable
+        featureName="エンコーダー設定"
+        explanation="キーボードのファームウェアがこの機能に対応していないか、接続方法を確認してください。"
+        technicalDetails="CONFIG_ZMK_RUNTIME_SENSOR_ROTATE=y, CONFIG_ZMK_RUNTIME_SENSOR_ROTATE_STUDIO_RPC=y"
+      />
     );
   }
 

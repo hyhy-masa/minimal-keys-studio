@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "react-aria-components";
 import { useCustomSubsystem } from "../rpc/useCustomSubsystem";
+import { useToast } from "../misc/Toast";
+import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
+import { SettingsCard } from "../misc/SettingsCard";
+import { LoadingSkeleton } from "../misc/LoadingSkeleton";
 import * as HT from "../proto/holdtap";
 
 // -1 as uint32 in protobuf = "not configured in device tree" = effectively 0ms
@@ -9,8 +13,24 @@ function sanitizeMs(v: number): number {
   return v >= SENTINEL ? 0 : v;
 }
 
+function tappingTermDescription(ms: number): string {
+  if (ms <= 120) return "とても速い - 上級者向け";
+  if (ms <= 180) return "速い - 慣れた人向け";
+  if (ms <= 250) return "標準 - おすすめ";
+  if (ms <= 350) return "ゆっくり - 初心者向け";
+  return "とてもゆっくり";
+}
+
+function msDescription(ms: number): string {
+  if (ms === 0) return "無効";
+  if (ms <= 100) return "短い";
+  if (ms <= 200) return "標準";
+  return "長い";
+}
+
 export function HoldTapSettings() {
   const subsystem = useCustomSubsystem(HT.SUBSYSTEM_ID);
+  const { toast } = useToast();
   const [holdTaps, setHoldTaps] = useState<HT.HoldTapInfo[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -72,6 +92,7 @@ export function HoldTapSettings() {
       } catch (e) {
         if (version === discoveryVersionRef.current) {
           console.error("[HoldTap] Discovery failed:", e);
+          toast("Failed to discover hold-tap settings", "error");
         }
       } finally {
         if (version === discoveryVersionRef.current) setLoading(false);
@@ -133,6 +154,7 @@ export function HoldTapSettings() {
       }
     } catch (e) {
       console.error("[HoldTap] Failed to save:", e);
+      toast("Failed to save hold-tap settings", "error");
     } finally {
       setSaving(false);
     }
@@ -169,6 +191,7 @@ export function HoldTapSettings() {
       }
     } catch (e) {
       console.error("[HoldTap] Failed to reset:", e);
+      toast("Failed to reset hold-tap settings", "error");
     } finally {
       setSaving(false);
     }
@@ -176,23 +199,20 @@ export function HoldTapSettings() {
 
   if (!subsystem) {
     return (
-      <div className="p-4 text-base-content/60">
-        <p>Hold-tap runtime configuration module is not available.</p>
-        <p className="text-sm mt-2">
-          Firmware needs{" "}
-          <code>CONFIG_ZMK_RUNTIME_HOLD_TAP=y</code> and{" "}
-          <code>CONFIG_ZMK_RUNTIME_HOLD_TAP_STUDIO_RPC=y</code>
-        </p>
-      </div>
+      <SubsystemUnavailable
+        featureName="長押し設定"
+        explanation="キーボードのファームウェアがこの機能に対応していないか、接続方法を確認してください。"
+        technicalDetails="CONFIG_ZMK_RUNTIME_HOLD_TAP=y, CONFIG_ZMK_RUNTIME_HOLD_TAP_STUDIO_RPC=y"
+      />
     );
   }
 
   return (
     <div className="p-4 flex flex-col gap-4 overflow-y-auto max-h-full">
       <h2 className="text-lg font-semibold">
-        Hold-Tap Settings{" "}
+        長押し設定
         {selected && (
-          <span className="text-sm font-normal text-base-content/60">
+          <span className="text-sm font-normal text-base-content/60 ml-2">
             ({selected.name})
           </span>
         )}
@@ -204,10 +224,10 @@ export function HoldTapSettings() {
           {holdTaps.map((ht) => (
             <Button
               key={ht.id}
-              className={`rounded px-3 py-1 text-sm ${
+              className={`rounded-md px-3 py-1.5 text-sm transition-all ${
                 selectedId === ht.id
                   ? "bg-primary text-primary-content"
-                  : "bg-base-300 hover:bg-base-200"
+                  : "bg-base-200 hover:bg-base-300"
               }`}
               onPress={() => {
                 setSelectedId(ht.id);
@@ -222,157 +242,126 @@ export function HoldTapSettings() {
 
       {holdTaps.length === 0 && !loading && (
         <p className="text-base-content/50 text-sm">
-          No hold-tap instances found.
+          長押し設定の対象が見つかりません。
         </p>
       )}
 
-      {loading && (
-        <p className="text-base-content/50 text-sm">
-          Discovering hold-tap instances...
-        </p>
-      )}
+      {loading && <LoadingSkeleton lines={4} />}
 
       {selected && !loading && (
         <>
-          {/* Tapping Term */}
-          <section className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium text-base-content/70">
-              Tapping Term
-              <span className="text-xs font-normal text-base-content/40 ml-2">
-                (default: {selected.defaultTappingTermMs}ms)
-              </span>
-            </h3>
+          <SettingsCard
+            title="タッピングターム"
+            description="キーを押してから「長押し」と判定されるまでの時間"
+            defaultNote={`初期値: ${selected.defaultTappingTermMs}ms`}
+          >
             <div className="flex items-center gap-3">
-              <span className="text-xs text-base-content/50 w-10">
-                50ms
-              </span>
+              <span className="text-xs text-base-content/50 w-10">速い</span>
               <input
                 type="range"
                 min={50}
                 max={500}
                 step={10}
                 value={tappingTerm}
-                onChange={(e) =>
-                  setTappingTerm(parseInt(e.target.value))
-                }
+                onChange={(e) => setTappingTerm(parseInt(e.target.value))}
                 className="flex-1 accent-primary"
               />
-              <span className="text-xs text-base-content/50 w-12">
-                500ms
-              </span>
+              <span className="text-xs text-base-content/50 w-10 text-right">遅い</span>
             </div>
-            <p className="text-sm font-medium text-center">
-              {tappingTerm}ms
-            </p>
-          </section>
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-xs text-base-content/40">
+                {tappingTermDescription(tappingTerm)}
+              </span>
+              <span className="text-sm font-medium tabular-nums">{tappingTerm}ms</span>
+            </div>
+          </SettingsCard>
 
-          {/* Quick Tap */}
-          <section className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium text-base-content/70">
-              Quick Tap
-              <span className="text-xs font-normal text-base-content/40 ml-2">
-                (default: {sanitizeMs(selected.defaultQuickTapMs)}ms)
-              </span>
-            </h3>
+          <SettingsCard
+            title="クイックタップ"
+            description="素早く連打した時にタップとして扱う時間"
+            defaultNote={`初期値: ${sanitizeMs(selected.defaultQuickTapMs)}ms`}
+          >
             <div className="flex items-center gap-3">
-              <span className="text-xs text-base-content/50 w-10">
-                0ms
-              </span>
+              <span className="text-xs text-base-content/50 w-10">無効</span>
               <input
                 type="range"
                 min={0}
                 max={500}
                 step={10}
                 value={quickTap}
-                onChange={(e) =>
-                  setQuickTap(parseInt(e.target.value))
-                }
+                onChange={(e) => setQuickTap(parseInt(e.target.value))}
                 className="flex-1 accent-primary"
               />
-              <span className="text-xs text-base-content/50 w-12">
-                500ms
-              </span>
+              <span className="text-xs text-base-content/50 w-10 text-right">長い</span>
             </div>
-            <p className="text-sm font-medium text-center">
-              {quickTap}ms
-            </p>
-          </section>
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-xs text-base-content/40">
+                {msDescription(quickTap)}
+              </span>
+              <span className="text-sm font-medium tabular-nums">{quickTap}ms</span>
+            </div>
+          </SettingsCard>
 
-          {/* Require Prior Idle */}
-          <section className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium text-base-content/70">
-              Require Prior Idle
-              <span className="text-xs font-normal text-base-content/40 ml-2">
-                (default: {sanitizeMs(selected.defaultRequirePriorIdleMs)}ms)
-              </span>
-            </h3>
+          <SettingsCard
+            title="入力前待ち時間"
+            description="前のキーを離してからこの時間経過しないと長押し判定しない"
+            defaultNote={`初期値: ${sanitizeMs(selected.defaultRequirePriorIdleMs)}ms`}
+          >
             <div className="flex items-center gap-3">
-              <span className="text-xs text-base-content/50 w-10">
-                0ms
-              </span>
+              <span className="text-xs text-base-content/50 w-10">無効</span>
               <input
                 type="range"
                 min={0}
                 max={500}
                 step={10}
                 value={requirePriorIdle}
-                onChange={(e) =>
-                  setRequirePriorIdle(parseInt(e.target.value))
-                }
+                onChange={(e) => setRequirePriorIdle(parseInt(e.target.value))}
                 className="flex-1 accent-primary"
               />
-              <span className="text-xs text-base-content/50 w-12">
-                500ms
-              </span>
+              <span className="text-xs text-base-content/50 w-10 text-right">長い</span>
             </div>
-            <p className="text-sm font-medium text-center">
-              {requirePriorIdle}ms
-            </p>
-          </section>
-
-          {/* Flavor */}
-          <section className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium text-base-content/70">
-              Flavor
-              <span className="text-xs font-normal text-base-content/40 ml-2">
-                (default:{" "}
-                {HT.FLAVOR_LABELS[selected.defaultFlavor] ??
-                  "Unknown"})
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-xs text-base-content/40">
+                {msDescription(requirePriorIdle)}
               </span>
-            </h3>
+              <span className="text-sm font-medium tabular-nums">{requirePriorIdle}ms</span>
+            </div>
+          </SettingsCard>
+
+          <SettingsCard
+            title="判定モード"
+            description="タップと長押しをどう判定するか"
+            defaultNote={`初期値: ${HT.FLAVOR_LABELS[selected.defaultFlavor] ?? "不明"}`}
+          >
             <select
               value={flavor}
               onChange={(e) =>
-                setFlavor(
-                  parseInt(e.target.value) as HT.HoldTapFlavor
-                )
+                setFlavor(parseInt(e.target.value) as HT.HoldTapFlavor)
               }
-              className="rounded px-2 py-1 bg-base-100 border border-base-300"
+              className="w-full rounded-md px-2 py-1.5 bg-base-100 border border-base-300"
             >
-              {Object.entries(HT.FLAVOR_LABELS).map(
-                ([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                )
-              )}
+              {Object.entries(HT.FLAVOR_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
-          </section>
+          </SettingsCard>
 
           {/* Buttons */}
           <div className="flex gap-2 pt-2">
             <Button
-              className="rounded bg-primary text-primary-content px-4 py-2 hover:opacity-90 disabled:opacity-50"
+              className="rounded-md bg-primary text-primary-content px-4 py-2 hover:opacity-90 disabled:opacity-50 transition-opacity"
               isDisabled={saving}
               onPress={handleApply}
             >
-              {saving ? "Applying..." : "Apply"}
+              {saving ? "適用中..." : "適用"}
             </Button>
             <Button
-              className="rounded bg-base-300 px-4 py-2 hover:bg-base-200"
+              className="rounded-md bg-base-200 px-4 py-2 hover:bg-base-300 transition-colors"
               onPress={handleReset}
             >
-              Reset to Default
+              初期値に戻す
             </Button>
           </div>
         </>

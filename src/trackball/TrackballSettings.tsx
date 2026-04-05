@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "react-aria-components";
+import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
 import {
   useCustomSubsystem,
   useCustomNotification,
 } from "../rpc/useCustomSubsystem";
+import { useToast } from "../misc/Toast";
 import * as RIP from "../proto/rip";
 
 export function TrackballSettings() {
   const subsystem = useCustomSubsystem(RIP.SUBSYSTEM_ID);
+  const { toast } = useToast();
   const [processors, setProcessors] = useState<RIP.InputProcessorInfo[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -51,6 +54,7 @@ export function TrackballSettings() {
         // Response is empty; processor info arrives via notifications
       } catch (e) {
         console.error("Failed to discover processors:", e);
+        toast("Failed to discover trackball", "error");
       }
     }
 
@@ -151,6 +155,7 @@ export function TrackballSettings() {
       formDirty.current = false;
     } catch (e) {
       console.error("Failed to apply trackball config:", e);
+      toast("Failed to apply trackball settings", "error");
     } finally {
       setSaving(false);
     }
@@ -179,6 +184,7 @@ export function TrackballSettings() {
       formDirty.current = false;
     } catch (e) {
       console.error("Failed to reset trackball config:", e);
+      toast("Failed to reset trackball settings", "error");
     } finally {
       setSaving(false);
     }
@@ -186,13 +192,11 @@ export function TrackballSettings() {
 
   if (!subsystem) {
     return (
-      <div className="p-4 text-base-content/60">
-        <p>Trackball runtime configuration module is not available.</p>
-        <p className="text-sm mt-2">
-          Firmware needs{" "}
-          <code>CONFIG_ZMK_RUNTIME_INPUT_PROCESSOR_STUDIO_RPC=y</code>
-        </p>
-      </div>
+      <SubsystemUnavailable
+        featureName="トラックボール設定"
+        explanation="キーボードのファームウェアがこの機能に対応していないか、接続方法を確認してください。"
+        technicalDetails="CONFIG_ZMK_RUNTIME_INPUT_PROCESSOR_STUDIO_RPC=y"
+      />
     );
   }
 
