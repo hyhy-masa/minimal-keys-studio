@@ -6,18 +6,31 @@ import {
   categoryOrder,
   BehaviorCategory,
 } from "../behavior-descriptions";
+import { BehaviorParametersPicker } from "../BehaviorParametersPicker";
 
 interface AllBehaviorsTabProps {
   behaviors: GetBehaviorDetailsResponse[];
   layers: { id: number; name: string }[];
   selectedBehaviorId: number;
   onBehaviorSelected: (behaviorId: number) => void;
+  // Inline param editing
+  editingParams?: boolean;
+  param1?: number;
+  param2?: number;
+  onParam1Changed?: (value?: number) => void;
+  onParam2Changed?: (value?: number) => void;
 }
 
 export function AllBehaviorsTab({
   behaviors,
+  layers,
   selectedBehaviorId,
   onBehaviorSelected,
+  editingParams,
+  param1,
+  param2,
+  onParam1Changed,
+  onParam2Changed,
 }: AllBehaviorsTabProps) {
   const [expandedCategory, setExpandedCategory] =
     useState<BehaviorCategory | null>("basic");
@@ -40,6 +53,11 @@ export function AllBehaviorsTab({
     }
     return groups;
   }, [behaviors]);
+
+  const selectedMetadata = useMemo(
+    () => behaviors.find((b) => b.id === selectedBehaviorId)?.metadata,
+    [behaviors, selectedBehaviorId]
+  );
 
   return (
     <div className="flex flex-col gap-1">
@@ -65,25 +83,39 @@ export function AllBehaviorsTab({
                   const desc = getBehaviorDescription(b.displayName);
                   const isSelected = b.id === selectedBehaviorId;
                   return (
-                    <button
-                      key={b.id}
-                      className={`text-left px-2 py-1 rounded text-sm hover:bg-base-200 ${
-                        isSelected ? "bg-primary/10 text-primary font-medium" : ""
-                      }`}
-                      onClick={() => onBehaviorSelected(b.id)}
-                    >
-                      <span>{desc.label}</span>
-                      {desc.label !== b.displayName && (
-                        <span className="text-xs text-base-content/40 ml-1">
-                          ({b.displayName})
-                        </span>
+                    <div key={b.id}>
+                      <button
+                        className={`w-full text-left px-2 py-1 rounded text-sm hover:bg-base-200 ${
+                          isSelected ? "bg-primary/10 text-primary font-medium" : ""
+                        }`}
+                        onClick={() => onBehaviorSelected(b.id)}
+                      >
+                        <span>{desc.label}</span>
+                        {desc.label !== b.displayName && (
+                          <span className="text-xs text-base-content/40 ml-1">
+                            ({b.displayName})
+                          </span>
+                        )}
+                        {desc.description && (
+                          <p className="text-xs text-base-content/50 leading-relaxed">
+                            {desc.description}
+                          </p>
+                        )}
+                      </button>
+                      {/* Inline param picker — directly below selected behavior */}
+                      {isSelected && editingParams && selectedMetadata && onParam1Changed && onParam2Changed && (
+                        <div className="ml-2 mt-1 mb-2 p-2 border border-base-300 rounded-lg bg-base-100">
+                          <BehaviorParametersPicker
+                            metadata={selectedMetadata}
+                            param1={param1}
+                            param2={param2}
+                            layers={layers}
+                            onParam1Changed={onParam1Changed}
+                            onParam2Changed={onParam2Changed}
+                          />
+                        </div>
                       )}
-                      {desc.description && (
-                        <p className="text-xs text-base-content/50 leading-relaxed">
-                          {desc.description}
-                        </p>
-                      )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>

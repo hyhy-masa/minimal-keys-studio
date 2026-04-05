@@ -58,8 +58,9 @@ export const Key = ({
       style={{
         width: `${pixelWidth}px`,
         height: `${pixelHeight}px`,
-        fontSize: `${Math.max(11, oneU * 0.22)}px`,
+        fontSize: `${Math.max(10, oneU * 0.17)}px`,
         borderRadius: `${radius}px`,
+        overflow: "hidden",
       }}
       onClick={onClick}
     >

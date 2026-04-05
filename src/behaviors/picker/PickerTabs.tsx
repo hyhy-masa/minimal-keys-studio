@@ -15,12 +15,18 @@ interface PickerTabsProps {
   selectedBehaviorId: number;
   onApplyBinding: (binding: BehaviorBinding) => void;
   onBehaviorSelected: (behaviorId: number) => void;
+  // Inline param editing for "自分で選ぶ" tab
+  editingParams?: boolean;
+  param1?: number;
+  param2?: number;
+  onParam1Changed?: (value?: number) => void;
+  onParam2Changed?: (value?: number) => void;
 }
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "recommendations", label: "おすすめ" },
   { id: "use-cases", label: "用途別" },
-  { id: "all", label: "すべて" },
+  { id: "all", label: "自分で選ぶ" },
 ];
 
 export function PickerTabs({
@@ -30,6 +36,11 @@ export function PickerTabs({
   selectedBehaviorId,
   onApplyBinding,
   onBehaviorSelected,
+  editingParams,
+  param1,
+  param2,
+  onParam1Changed,
+  onParam2Changed,
 }: PickerTabsProps) {
   const hasRecommendations = keyRoleMap[keyPosition] !== undefined;
   const [activeTab, setActiveTab] = useState<TabId>(
@@ -80,6 +91,11 @@ export function PickerTabs({
             layers={layers}
             selectedBehaviorId={selectedBehaviorId}
             onBehaviorSelected={onBehaviorSelected}
+            editingParams={editingParams}
+            param1={param1}
+            param2={param2}
+            onParam1Changed={onParam1Changed}
+            onParam2Changed={onParam2Changed}
           />
         )}
       </div>

@@ -25,7 +25,7 @@ describe("PickerTabs", () => {
     );
     expect(screen.getByText("おすすめ")).toBeDefined();
     expect(screen.getByText("用途別")).toBeDefined();
-    expect(screen.getByText("すべて")).toBeDefined();
+    expect(screen.getByText("自分で選ぶ")).toBeDefined();
   });
 
   it("defaults to recommendations tab for key with role data", () => {

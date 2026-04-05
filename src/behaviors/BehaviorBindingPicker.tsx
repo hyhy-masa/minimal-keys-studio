@@ -4,7 +4,6 @@ import type {
   BehaviorBindingParametersSet,
 } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
-import { BehaviorParametersPicker } from "./BehaviorParametersPicker";
 import { validateValue } from "./parameters";
 import { getBehaviorDescription } from "./behavior-descriptions";
 import { PickerTabs } from "./picker/PickerTabs";
@@ -152,17 +151,12 @@ export const BehaviorBindingPicker = ({
         selectedBehaviorId={behaviorId}
         onApplyBinding={handleApplyBinding}
         onBehaviorSelected={handleBehaviorSelected}
+        editingParams={editingParams}
+        param1={param1}
+        param2={param2}
+        onParam1Changed={setParam1}
+        onParam2Changed={setParam2}
       />
-      {editingParams && metadata && (
-        <BehaviorParametersPicker
-          metadata={metadata}
-          param1={param1}
-          param2={param2}
-          layers={layers}
-          onParam1Changed={setParam1}
-          onParam2Changed={setParam2}
-        />
-      )}
     </div>
   );
 };
