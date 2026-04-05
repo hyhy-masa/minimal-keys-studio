@@ -7,9 +7,10 @@ import { resolveBehaviorId } from "../resolve-behavior";
 interface UseCasesTabProps {
   behaviors: GetBehaviorDetailsResponse[];
   onApplyBinding: (binding: BehaviorBinding) => void;
+  onSelectBehavior?: (behaviorId: number) => void;
 }
 
-export function UseCasesTab({ behaviors, onApplyBinding }: UseCasesTabProps) {
+export function UseCasesTab({ behaviors, onApplyBinding, onSelectBehavior }: UseCasesTabProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState(useCaseCategories[0]?.id);
   const selectedCategory = useCaseCategories.find((c) => c.id === selectedCategoryId);
 
@@ -39,15 +40,22 @@ export function UseCasesTab({ behaviors, onApplyBinding }: UseCasesTabProps) {
               <button
                 key={i}
                 className="text-left px-3 py-2 rounded hover:bg-base-200 transition-colors"
-                onClick={() =>
-                  onApplyBinding({
-                    behaviorId,
-                    param1: item.param1,
-                    param2: item.param2,
-                  })
-                }
+                onClick={() => {
+                  if (item.needsParams && onSelectBehavior) {
+                    onSelectBehavior(behaviorId);
+                  } else {
+                    onApplyBinding({
+                      behaviorId,
+                      param1: item.param1,
+                      param2: item.param2,
+                    });
+                  }
+                }}
               >
                 <span className="text-sm font-medium">{item.label}</span>
+                {item.needsParams && (
+                  <span className="text-xs text-primary ml-1">→ 設定へ</span>
+                )}
                 <p className="text-xs text-base-content/50">{item.description}</p>
               </button>
             );

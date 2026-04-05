@@ -70,6 +70,7 @@ export function PickerTabs({
           <UseCasesTab
             behaviors={behaviors}
             onApplyBinding={onApplyBinding}
+            onSelectBehavior={onBehaviorSelected}
           />
         )}
         {activeTab === "all" && (

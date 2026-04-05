@@ -6,6 +6,7 @@ export interface UseCaseItem {
   behaviorDisplayName: string;
   param1: number;
   param2: number;
+  needsParams?: boolean;
 }
 
 export interface UseCaseCategory {
@@ -162,6 +163,24 @@ export const useCaseCategories: UseCaseCategory[] = [
     id: "layers",
     label: "レイヤーを使う",
     items: [
+      {
+        label: "普段はキー入力、長押しでレイヤー切替",
+        description:
+          "1つのキーに2つの役割。短く押すと通常キー、長押しでレイヤーを切り替える。キーが少ないキーボードの必須テクニック",
+        behaviorDisplayName: "Layer-Tap",
+        param1: 0,
+        param2: 0,
+        needsParams: true,
+      },
+      {
+        label: "普段はキー入力、長押しで修飾キー",
+        description:
+          "短く押すと通常キー、長押しでCtrlやShiftとして動作する。ホームポジションから手を動かさずに修飾キーが使える",
+        behaviorDisplayName: "Mod-Tap",
+        param1: 0,
+        param2: 0,
+        needsParams: true,
+      },
       {
         label: "押している間だけ切り替える",
         description:
