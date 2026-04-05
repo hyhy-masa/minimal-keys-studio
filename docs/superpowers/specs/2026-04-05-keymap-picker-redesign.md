@@ -157,16 +157,28 @@ BehaviorBindingPicker (modified)
 - No search (future enhancement)
 - No drag-and-drop (future enhancement)
 
-## Future Enhancements (not in v1)
+## Implemented (v1 — 2026-04-06)
+
+- 3 tabs: おすすめ / 用途別 / 自分で選ぶ
+- OS auto-detection (Mac=Cmd, Windows=Ctrl) for shortcuts
+- Layer-Tap / Mod-Tap with "→ 設定へ" flow to inline param picker
+- Current binding display with highlighted border
+- Key labels show modifiers (⌘+V, Ctrl+C)
+- Picker area scrollable
+- Param picker inline below selected behavior (not at window bottom)
+- Bug fixes: chattering (ref-based validation guard), key switch stale state
+
+## Future Enhancements
 
 - Search bar across all tabs
 - App-specific presets (Excel, PowerPoint, etc.)
-- "Popular among other users" based on analytics
+- Key label friendly names ("⌘+V" → "貼り付け")
+- Full key role coverage (all 43 keys, currently 6 thumb keys)
 - Onboarding wizard for first-time setup
-- Full key role coverage (all 43 keys)
+- Thumb key position indices verification with real device
 
 ## Testing Strategy
 
-- Unit tests: key role data lookup, use case data structure validation
-- Component tests: tab switching, recommendation card click applies binding
+- Unit tests: 34 tests (resolve-behavior, use-cases, key-roles, tab components)
 - Manual test: full flow with real keyboard connected via Tauri
+- Remaining: BehaviorBindingPicker state management tests (chattering regression)
