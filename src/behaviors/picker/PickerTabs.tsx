@@ -38,7 +38,7 @@ export function PickerTabs({
 
   // Reset tab when key changes
   useEffect(() => {
-    setActiveTab(keyRoleMap[keyPosition] ? "recommendations" : "use-cases");
+    setActiveTab(keyRoleMap[keyPosition] !== undefined ? "recommendations" : "use-cases");
   }, [keyPosition]);
 
   return (
@@ -75,6 +75,7 @@ export function PickerTabs({
         )}
         {activeTab === "all" && (
           <AllBehaviorsTab
+            key={keyPosition}
             behaviors={behaviors}
             layers={layers}
             selectedBehaviorId={selectedBehaviorId}

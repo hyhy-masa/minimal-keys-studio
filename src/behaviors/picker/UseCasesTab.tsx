@@ -33,12 +33,12 @@ export function UseCasesTab({ behaviors, onApplyBinding, onSelectBehavior }: Use
       </div>
       {selectedCategory && (
         <div className="flex flex-col gap-0.5">
-          {selectedCategory.items.map((item, i) => {
+          {selectedCategory.items.map((item) => {
             const behaviorId = resolveBehaviorId(item.behaviorDisplayName, behaviors);
             if (behaviorId === undefined) return null;
             return (
               <button
-                key={i}
+                key={`${item.behaviorDisplayName}-${item.param1}-${item.label}`}
                 className="text-left px-3 py-2 rounded hover:bg-base-200 transition-colors"
                 onClick={() => {
                   if (item.needsParams && onSelectBehavior) {

@@ -66,13 +66,23 @@ export const BehaviorBindingPicker = ({
 
   // Sync binding prop → local state (when key changes or parent updates binding)
   useEffect(() => {
-    // Stop param editing when binding changes (key switched)
+    // If we're editing params and binding echoes our own change, don't reset
+    if (
+      editingParamsRef.current &&
+      binding.behaviorId === behaviorId &&
+      binding.param1 === param1 &&
+      binding.param2 === param2
+    ) {
+      return;
+    }
+    // Key switched or external change — stop editing and sync
     editingParamsRef.current = false;
     setEditingParams(false);
     setBehaviorId(binding.behaviorId);
     setParam1(binding.param1);
     setParam2(binding.param2);
-  }, [binding]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [binding.behaviorId, binding.param1, binding.param2]);
 
   // Auto-apply: ONLY when user is editing params via "All" tab
   useEffect(() => {
@@ -96,8 +106,8 @@ export const BehaviorBindingPicker = ({
     ) {
       onBindingChangedRef.current({
         behaviorId,
-        param1: param1 || 0,
-        param2: param2 || 0,
+        param1: param1 ?? 0,
+        param2: param2 ?? 0,
       });
     }
   }, [behaviorId, param1, param2, binding.behaviorId, binding.param1, binding.param2, layers, metadata]);
@@ -126,12 +136,12 @@ export const BehaviorBindingPicker = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {currentDesc && (
+      {currentBehavior && currentDesc && (
         <div className="flex items-center gap-2 px-2 py-1.5 bg-base-200 rounded text-sm">
           <span className="text-base-content/50">現在:</span>
           <span className="font-medium">{currentDesc.label}</span>
-          {currentDesc.label !== currentBehavior!.displayName && (
-            <span className="text-xs text-base-content/40">({currentBehavior!.displayName})</span>
+          {currentDesc.label !== currentBehavior.displayName && (
+            <span className="text-xs text-base-content/40">({currentBehavior.displayName})</span>
           )}
         </div>
       )}

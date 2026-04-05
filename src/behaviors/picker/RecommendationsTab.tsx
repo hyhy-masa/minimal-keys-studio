@@ -28,12 +28,12 @@ export function RecommendationsTab({
     <div className="flex flex-col gap-3">
       <p className="text-sm text-base-content/60 px-1">{role.roleLabel}</p>
       <div className="flex gap-2 flex-wrap">
-        {role.recommendations.map((rec, i) => {
+        {role.recommendations.map((rec) => {
           const behaviorId = resolveBehaviorId(rec.behaviorDisplayName, behaviors);
           if (behaviorId === undefined) return null;
           return (
             <button
-              key={i}
+              key={`${rec.behaviorDisplayName}-${rec.param1}-${rec.param2}`}
               className="flex flex-col items-center gap-1 px-4 py-3 rounded-lg border border-base-300 hover:border-primary hover:bg-primary/5 transition-all min-w-[5rem]"
               onClick={() =>
                 onApplyBinding({
