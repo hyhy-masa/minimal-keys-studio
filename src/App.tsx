@@ -211,6 +211,7 @@ function AppInner() {
   const [connectionAbort, setConnectionAbort] = useState(new AbortController());
   const [activeTab, setActiveTab] = useState<ActiveTab>("keymap");
   const [mountedTabs, setMountedTabs] = useState<Set<ActiveTab>>(new Set(["keymap"]));
+  const [keymapVersion, setKeymapVersion] = useState(0);
 
   const [lockState, setLockState] = useState<LockState>(
     LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED
@@ -279,7 +280,8 @@ function AppInner() {
       }
 
       reset();
-      setConn({ conn: conn.conn });
+      // Re-mount Keyboard to re-fetch keymap (don't use setConn — it clears ALL data)
+      setKeymapVersion((v) => v + 1);
     }
 
     doDiscard();
@@ -301,7 +303,7 @@ function AppInner() {
       }
 
       reset();
-      setConn({ conn: conn.conn });
+      setKeymapVersion((v) => v + 1);
     }
 
     doReset();
@@ -386,7 +388,7 @@ function AppInner() {
               </nav>
             )}
             <div className="min-h-0 overflow-hidden">
-              <div className={activeTab === "keymap" ? "h-full" : "hidden"}><Keyboard /></div>
+              <div className={activeTab === "keymap" ? "h-full" : "hidden"}><Keyboard key={keymapVersion} /></div>
               {mountedTabs.has("trackball") && <div className={activeTab === "trackball" ? "h-full" : "hidden"}><TrackballSettings /></div>}
               {mountedTabs.has("encoder") && <div className={activeTab === "encoder" ? "h-full" : "hidden"}><EncoderSettings /></div>}
               {mountedTabs.has("bluetooth") && <div className={activeTab === "bluetooth" ? "h-full" : "hidden"}><BleManagement /></div>}
