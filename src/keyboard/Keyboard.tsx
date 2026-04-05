@@ -500,6 +500,7 @@ export default function Keyboard() {
               name: name || li.toLocaleString(),
             }))}
             onBindingChanged={doUpdateBinding}
+            keyPosition={selectedKeyPosition}
           />
         </div>
       )}
