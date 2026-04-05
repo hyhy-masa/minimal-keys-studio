@@ -50,6 +50,10 @@ export const BehaviorBindingPicker = ({
   // Skip validation when applying directly from recommendations/use-cases
   // or when selecting a behavior for param configuration
   const skipNextValidation = useRef(false);
+  // Stable ref for onBindingChanged to prevent effect re-runs when
+  // parent recreates the callback (e.g. after keymap changes)
+  const onBindingChangedRef = useRef(onBindingChanged);
+  onBindingChangedRef.current = onBindingChanged;
 
   const metadata = useMemo(
     () => behaviors.find((b) => b.id == behaviorId)?.metadata,
@@ -77,13 +81,13 @@ export const BehaviorBindingPicker = ({
         param2
       )
     ) {
-      onBindingChanged({
+      onBindingChangedRef.current({
         behaviorId,
         param1: param1 || 0,
         param2: param2 || 0,
       });
     }
-  }, [behaviorId, param1, param2, binding.behaviorId, binding.param1, binding.param2, layers, metadata, onBindingChanged]);
+  }, [behaviorId, param1, param2, binding.behaviorId, binding.param1, binding.param2, layers, metadata]);
 
   useEffect(() => {
     setBehaviorId(binding.behaviorId);
@@ -99,7 +103,7 @@ export const BehaviorBindingPicker = ({
     setParam1(newBinding.param1);
     setParam2(newBinding.param2);
     // Bypass validation — pre-configured data is known-good
-    onBindingChanged(newBinding);
+    onBindingChangedRef.current(newBinding);
   };
 
   // Called by All tab — select behavior, then show param pickers
