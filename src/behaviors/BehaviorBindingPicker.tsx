@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   GetBehaviorDetailsResponse,
   BehaviorBindingParametersSet,
@@ -46,12 +46,10 @@ export const BehaviorBindingPicker = ({
   const [behaviorId, setBehaviorId] = useState(binding.behaviorId);
   const [param1, setParam1] = useState<number | undefined>(binding.param1);
   const [param2, setParam2] = useState<number | undefined>(binding.param2);
-  const [showParamPickers, setShowParamPickers] = useState(false);
-  // Skip validation when applying directly from recommendations/use-cases
-  // or when selecting a behavior for param configuration
-  const skipNextValidation = useRef(false);
-  // Stable ref for onBindingChanged to prevent effect re-runs when
-  // parent recreates the callback (e.g. after keymap changes)
+  // "All" tab: user is manually editing params via param pickers
+  const [editingParams, setEditingParams] = useState(false);
+
+  // Stable ref to avoid effect dependency on callback
   const onBindingChangedRef = useRef(onBindingChanged);
   onBindingChangedRef.current = onBindingChanged;
 
@@ -60,11 +58,9 @@ export const BehaviorBindingPicker = ({
     [behaviorId, behaviors]
   );
 
+  // Auto-apply: ONLY when user is editing params via "All" tab
   useEffect(() => {
-    if (skipNextValidation.current) {
-      skipNextValidation.current = false;
-      return;
-    }
+    if (!editingParams) return;
     if (
       binding.behaviorId === behaviorId &&
       binding.param1 === param1 &&
@@ -87,8 +83,9 @@ export const BehaviorBindingPicker = ({
         param2: param2 || 0,
       });
     }
-  }, [behaviorId, param1, param2, binding.behaviorId, binding.param1, binding.param2, layers, metadata]);
+  }, [editingParams, behaviorId, param1, param2, binding.behaviorId, binding.param1, binding.param2, layers, metadata]);
 
+  // Sync binding prop → local state
   useEffect(() => {
     setBehaviorId(binding.behaviorId);
     setParam1(binding.param1);
@@ -96,25 +93,18 @@ export const BehaviorBindingPicker = ({
   }, [binding]);
 
   // Called by Recommendations/UseCases tabs — apply full binding directly
-  const handleApplyBinding = (newBinding: BehaviorBinding) => {
-    setShowParamPickers(false);
-    skipNextValidation.current = true;
-    setBehaviorId(newBinding.behaviorId);
-    setParam1(newBinding.param1);
-    setParam2(newBinding.param2);
-    // Bypass validation — pre-configured data is known-good
+  const handleApplyBinding = useCallback((newBinding: BehaviorBinding) => {
+    setEditingParams(false);
     onBindingChangedRef.current(newBinding);
-  };
+  }, []);
 
   // Called by All tab — select behavior, then show param pickers
-  // Don't call onBindingChanged yet — wait for user to set params
-  const handleBehaviorSelected = (newBehaviorId: number) => {
-    setShowParamPickers(true);
-    skipNextValidation.current = true;
+  const handleBehaviorSelected = useCallback((newBehaviorId: number) => {
+    setEditingParams(true);
     setBehaviorId(newBehaviorId);
     setParam1(0);
     setParam2(0);
-  };
+  }, []);
 
   // Current binding display
   const currentBehavior = behaviors.find((b) => b.id === binding.behaviorId);
@@ -141,7 +131,7 @@ export const BehaviorBindingPicker = ({
         onApplyBinding={handleApplyBinding}
         onBehaviorSelected={handleBehaviorSelected}
       />
-      {showParamPickers && metadata && (
+      {editingParams && metadata && (
         <BehaviorParametersPicker
           metadata={metadata}
           param1={param1}
