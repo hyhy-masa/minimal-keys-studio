@@ -21,6 +21,7 @@ export type KeyPosition = PropsWithChildren<{
 
 export type LayoutZoom = number | "auto";
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function deserializeLayoutZoom(value: string): LayoutZoom {
   if (value === "auto") {
     return "auto";

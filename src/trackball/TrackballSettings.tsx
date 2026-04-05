@@ -59,7 +59,7 @@ export function TrackballSettings() {
     }
 
     discover();
-  }, [subsystem]);
+  }, [subsystem, toast]);
 
   // Listen for notifications (processor discovery + real-time updates)
   const formDirty = useRef(false);
@@ -174,6 +174,7 @@ export function TrackballSettings() {
     axisSnapMode,
     axisSnapThreshold,
     axisSnapTimeout,
+    toast,
   ]);
 
   const handleReset = useCallback(async () => {
@@ -188,7 +189,7 @@ export function TrackballSettings() {
     } finally {
       setSaving(false);
     }
-  }, [subsystem, selectedId]);
+  }, [subsystem, selectedId, toast]);
 
   if (!subsystem) {
     return (

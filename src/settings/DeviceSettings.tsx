@@ -85,7 +85,7 @@ export function DeviceSettings() {
     } finally {
       setSaving(false);
     }
-  }, [subsystem, idleSeconds, sleepMinutes]);
+  }, [subsystem, idleSeconds, sleepMinutes, toast]);
 
   const handleSync = useCallback(async () => {
     if (!subsystem) return;
@@ -111,7 +111,7 @@ export function DeviceSettings() {
     } finally {
       setSaving(false);
     }
-  }, [subsystem, idleSeconds, sleepMinutes, allSettings]);
+  }, [subsystem, idleSeconds, sleepMinutes, allSettings, toast]);
 
   if (!subsystem) {
     return (

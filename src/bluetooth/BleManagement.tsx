@@ -60,7 +60,7 @@ export function BleManagement() {
     return () => {
       ignore = true;
     };
-  }, [subsystem]);
+  }, [subsystem, toast]);
 
   const refreshProfiles = useCallback(async () => {
     if (!subsystem) return;
@@ -73,7 +73,7 @@ export function BleManagement() {
       console.error("[BLE] Failed to refresh profiles:", e);
       toast("Failed to refresh profiles", "error");
     }
-  }, [subsystem]);
+  }, [subsystem, toast]);
 
   const switchProfile = useCallback(
     async (index: number) => {
@@ -89,7 +89,7 @@ export function BleManagement() {
         setLoading(false);
       }
     },
-    [subsystem, refreshProfiles]
+    [subsystem, refreshProfiles, toast]
   );
 
   const unpairProfile = useCallback(
@@ -107,7 +107,7 @@ export function BleManagement() {
         setLoading(false);
       }
     },
-    [subsystem, refreshProfiles]
+    [subsystem, refreshProfiles, toast]
   );
 
   const saveName = useCallback(
@@ -122,7 +122,7 @@ export function BleManagement() {
       }
       setEditingName(null);
     },
-    [subsystem, nameValue, refreshProfiles]
+    [subsystem, nameValue, refreshProfiles, toast]
   );
 
   const changeOutputPriority = useCallback(
@@ -136,7 +136,7 @@ export function BleManagement() {
         toast("Failed to set output priority", "error");
       }
     },
-    [subsystem]
+    [subsystem, toast]
   );
 
   if (!subsystem) {

@@ -47,6 +47,7 @@ export function useConnectedDeviceData<T>(
         ignore = true;
       };
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     requireUnlock
       ? [connection, requireUnlock, lockState]
       : [connection, requireUnlock]

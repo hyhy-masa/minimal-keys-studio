@@ -100,7 +100,7 @@ export function HoldTapSettings() {
     }
 
     discover();
-  }, [subsystem, callWithTimeout]);
+  }, [subsystem, callWithTimeout, toast]);
 
   function applyInfo(info: HT.HoldTapInfo) {
     setTappingTerm(info.tappingTermMs);
@@ -167,6 +167,7 @@ export function HoldTapSettings() {
     requirePriorIdle,
     flavor,
     callWithTimeout,
+    toast,
   ]);
 
   const handleReset = useCallback(async () => {
@@ -195,7 +196,7 @@ export function HoldTapSettings() {
     } finally {
       setSaving(false);
     }
-  }, [subsystem, selectedId, callWithTimeout]);
+  }, [subsystem, selectedId, callWithTimeout, toast]);
 
   if (!subsystem) {
     return (

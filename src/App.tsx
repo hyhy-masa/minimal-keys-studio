@@ -38,7 +38,7 @@ import { HoldTapSettings } from "./holdtap/HoldTapSettings";
 import { BehaviorsProvider } from "./behaviors/BehaviorsContext";
 import { CustomSubsystemsProvider } from "./rpc/useCustomSubsystem";
 import { UndoRedoContext, useUndoRedo } from "./undoRedo";
-import { usePub, useSub } from "./usePubSub";
+import { pub, useSub } from "./usePubSub";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { LockStateContext } from "./rpc/LockStateContext";
 import { UnlockModal } from "./UnlockModal";
@@ -95,9 +95,7 @@ async function listen_for_notifications(
     reader.releaseLock();
   };
   signal.addEventListener("abort", onAbort, { once: true });
-  do {
-    const pub = usePub();
-
+  for (;;) {
     try {
       const { done, value } = await reader.read();
       if (done) {
@@ -111,14 +109,14 @@ async function listen_for_notifications(
       pub("rpc_notification", value);
 
       const subsystem = Object.entries(value).find(
-        ([_k, v]) => v !== undefined
+        ([, v]) => v !== undefined
       );
       if (!subsystem) {
         continue;
       }
 
       const [subId, subData] = subsystem;
-      const event = Object.entries(subData).find(([_k, v]) => v !== undefined);
+      const event = Object.entries(subData).find(([, v]) => v !== undefined);
 
       if (!event) {
         continue;
@@ -133,7 +131,7 @@ async function listen_for_notifications(
       reader.releaseLock();
       throw e;
     }
-  } while (true);
+  }
 
   signal.removeEventListener("abort", onAbort);
   reader.releaseLock();
@@ -169,7 +167,7 @@ async function connect(
       setConnectedDeviceName(undefined);
       setConn({ conn: null });
     })
-    .catch((_e) => {
+    .catch(() => {
       setConnectedDeviceName(undefined);
       setConn({ conn: null });
     });
@@ -246,7 +244,7 @@ function AppInner() {
     }
 
     updateLockState();
-  }, [conn, setLockState]);
+  }, [conn, setLockState, reset]);
 
   const save = useCallback(() => {
     async function doSave() {
@@ -285,7 +283,7 @@ function AppInner() {
     }
 
     doDiscard();
-  }, [conn, toast]);
+  }, [conn, toast, reset]);
 
   const resetSettings = useCallback(() => {
     async function doReset() {
@@ -307,7 +305,7 @@ function AppInner() {
     }
 
     doReset();
-  }, [conn, toast]);
+  }, [conn, toast, reset]);
 
   const disconnect = useCallback(() => {
     async function doDisconnect() {
@@ -321,7 +319,7 @@ function AppInner() {
     }
 
     doDisconnect();
-  }, [conn]);
+  }, [conn, connectionAbort]);
 
   const onConnect = useCallback(
     (t: RpcTransport, isWireless?: boolean) => {

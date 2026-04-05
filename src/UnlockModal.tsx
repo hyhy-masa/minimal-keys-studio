@@ -7,9 +7,7 @@ import { useModalRef } from "./misc/useModalRef";
 import { GenericModal } from "./GenericModal";
 import { ExternalLink } from "./misc/ExternalLink";
 
-export interface UnlockModalProps {}
-
-export const UnlockModal = ({}: UnlockModalProps) => {
+export const UnlockModal = () => {
   const conn = useContext(ConnectionContext);
   const lockState = useContext(LockStateContext);
 

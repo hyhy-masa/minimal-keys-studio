@@ -62,6 +62,7 @@ export function CustomSubsystemsProvider({ children }: { children: React.ReactNo
  * Discover and connect to a custom subsystem by identifier.
  * Uses cached subsystem list from CustomSubsystemsProvider.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCustomSubsystem(
   identifier: string
 ): CustomSubsystemConnection | null {
@@ -103,6 +104,7 @@ export function useCustomSubsystem(
 /**
  * Subscribe to custom subsystem notifications.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCustomNotification(
   subsystemIndex: number | undefined,
   onNotification: (payload: Uint8Array) => void
@@ -110,7 +112,7 @@ export function useCustomNotification(
   const callbackRef = useRef(onNotification);
   callbackRef.current = onNotification;
 
-  useSub("rpc_notification.custom.customNotification", (notification: any) => {
+  useSub("rpc_notification.custom.customNotification", (notification: { subsystemIndex?: number; payload: Uint8Array }) => {
     if (
       subsystemIndex !== undefined &&
       notification?.subsystemIndex === subsystemIndex

@@ -16,7 +16,7 @@ export async function connect(dev: AvailableDevice): Promise<RpcTransport> {
   const abortController = new AbortController();
 
   const writable = new WritableStream({
-    async write(chunk, _controller) {
+    async write(chunk) {
       await invoke("transport_send_data", new Uint8Array(chunk));
     },
   });
@@ -34,7 +34,7 @@ export async function connect(dev: AvailableDevice): Promise<RpcTransport> {
 
   const unlisten_disconnected = await listen(
     "connection_disconnected",
-    async (_ev: any) => {
+    async () => {
       unlisten_data();
       unlisten_disconnected();
       response_writable.close();
@@ -43,7 +43,7 @@ export async function connect(dev: AvailableDevice): Promise<RpcTransport> {
 
   const signal = abortController.signal;
 
-  const abort_cb = async (_reason: any) => {
+  const abort_cb = async () => {
     unlisten_data();
     unlisten_disconnected();
     await invoke("transport_close");

@@ -129,7 +129,7 @@ export const BehaviorBindingPicker = ({
         param2: param2 || 0,
       });
     }
-  }, [behaviorId, param1, param2]);
+  }, [behaviorId, param1, param2, binding.behaviorId, binding.param1, binding.param2, layers, metadata, onBindingChanged]);
 
   useEffect(() => {
     setBehaviorId(binding.behaviorId);

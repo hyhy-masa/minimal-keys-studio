@@ -94,7 +94,7 @@ function useLayouts(): [
 export default function Keyboard() {
   const [
     layouts,
-    _setLayouts,
+    ,
     selectedPhysicalLayoutIndex,
     setSelectedPhysicalLayoutIndex,
   ] = useLayouts();
@@ -145,7 +145,7 @@ export default function Keyboard() {
     }
 
     performSetRequest();
-  }, [selectedPhysicalLayoutIndex]);
+  }, [selectedPhysicalLayoutIndex, conn.conn, layouts, setKeymap]);
 
   const doSelectPhysicalLayout = useCallback(
     (i: number) => {
@@ -158,7 +158,7 @@ export default function Keyboard() {
         };
       });
     },
-    [undoRedo, selectedPhysicalLayoutIndex]
+    [undoRedo, selectedPhysicalLayoutIndex, setSelectedPhysicalLayoutIndex]
   );
 
   const doUpdateBinding = useCallback(
@@ -188,9 +188,9 @@ export default function Keyboard() {
           SetLayerBindingResponse.SET_LAYER_BINDING_RESP_OK
         ) {
           setKeymap(
-            produce((draft: any) => {
+            produce((draft: Keymap) => {
               draft.layers[layer].bindings[keyPosition] = binding;
-            })
+            }) as (base: Keymap | undefined) => Keymap
           );
         } else {
           console.error("Failed to set binding", resp.keymap?.setLayerBinding);
@@ -212,9 +212,9 @@ export default function Keyboard() {
             SetLayerBindingResponse.SET_LAYER_BINDING_RESP_OK
           ) {
             setKeymap(
-              produce((draft: any) => {
+              produce((draft: Keymap) => {
                 draft.layers[layer].bindings[keyPosition] = oldBinding;
-              })
+              }) as (base: Keymap | undefined) => Keymap
             );
           } else {
             toast("Failed to undo key binding change", "error");
@@ -222,7 +222,7 @@ export default function Keyboard() {
         };
       });
     },
-    [conn, keymap, undoRedo, selectedLayerIndex, selectedKeyPosition]
+    [conn, keymap, undoRedo, selectedLayerIndex, selectedKeyPosition, setKeymap, toast]
   );
 
   const selectedBinding = useMemo(() => {
@@ -257,7 +257,7 @@ export default function Keyboard() {
         return () => doMove(end, start);
       });
     },
-    [undoRedo]
+    [undoRedo, conn.conn, setKeymap]
   );
 
   const addLayer = useCallback(() => {
@@ -271,10 +271,10 @@ export default function Keyboard() {
       if (resp.keymap?.addLayer?.ok) {
         const newSelection = keymap.layers.length;
         setKeymap(
-          produce((draft: any) => {
-            draft.layers.push(resp.keymap!.addLayer!.ok!.layer);
+          produce((draft: Keymap) => {
+            draft.layers.push(resp.keymap!.addLayer!.ok!.layer!);
             draft.availableLayers--;
-          })
+          }) as (base: Keymap | undefined) => Keymap
         );
 
         setSelectedLayerIndex(newSelection);
@@ -297,10 +297,10 @@ export default function Keyboard() {
 
       if (resp.keymap?.removeLayer?.ok) {
         setKeymap(
-          produce((draft: any) => {
+          produce((draft: Keymap) => {
             draft.layers.splice(layerIndex, 1);
             draft.availableLayers++;
-          })
+          }) as (base: Keymap | undefined) => Keymap
         );
       } else {
         console.error("Remove error", resp.keymap?.removeLayer?.err);
@@ -314,7 +314,7 @@ export default function Keyboard() {
       const index = await doAdd();
       return () => doRemove(index);
     });
-  }, [conn, undoRedo, keymap]);
+  }, [conn, undoRedo, keymap, setKeymap]);
 
   const removeLayer = useCallback(() => {
     async function doRemove(layerIndex: number): Promise<void> {
@@ -331,10 +331,10 @@ export default function Keyboard() {
           setSelectedLayerIndex(layerIndex - 1);
         }
         setKeymap(
-          produce((draft: any) => {
+          produce((draft: Keymap) => {
             draft.layers.splice(layerIndex, 1);
             draft.availableLayers++;
-          })
+          }) as (base: Keymap | undefined) => Keymap
         );
       } else {
         console.error("Remove error", resp.keymap?.removeLayer?.err);
@@ -355,10 +355,10 @@ export default function Keyboard() {
 
       if (resp.keymap?.restoreLayer?.ok) {
         setKeymap(
-          produce((draft: any) => {
-            draft.layers.splice(atIndex, 0, resp!.keymap!.restoreLayer!.ok);
+          produce((draft: Keymap) => {
+            draft.layers.splice(atIndex, 0, resp!.keymap!.restoreLayer!.ok!);
             draft.availableLayers--;
-          })
+          }) as (base: Keymap | undefined) => Keymap
         );
         setSelectedLayerIndex(atIndex);
       } else {
@@ -379,7 +379,7 @@ export default function Keyboard() {
       await doRemove(index);
       return () => doRestore(layerId, index);
     });
-  }, [conn, undoRedo, selectedLayerIndex]);
+  }, [conn, undoRedo, selectedLayerIndex, keymap, setKeymap]);
 
   const changeLayerName = useCallback(
     (id: number, oldName: string, newName: string) => {
@@ -397,12 +397,12 @@ export default function Keyboard() {
           SetLayerPropsResponse.SET_LAYER_PROPS_RESP_OK
         ) {
           setKeymap(
-            produce((draft: any) => {
+            produce((draft: Keymap) => {
               const layer_index = draft.layers.findIndex(
                 (l: Layer) => l.id == layerId
               );
               draft.layers[layer_index].name = name;
-            })
+            }) as (base: Keymap | undefined) => Keymap
           );
         } else {
           throw new Error(
@@ -418,7 +418,7 @@ export default function Keyboard() {
         };
       });
     },
-    [conn, undoRedo, keymap]
+    [conn, undoRedo, setKeymap]
   );
 
   useEffect(() => {

@@ -45,6 +45,7 @@ function useLayers(): LayerDisplay[] {
       const km = resp?.keymap?.getKeymap;
       if (km?.layers) {
         setLayers(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           km.layers.map((l: any, i: number) => ({
             id: l.id ?? i,
             name: l.name || `Layer ${i}`,
@@ -149,7 +150,7 @@ export function EncoderSettings() {
     }
 
     discoverAndLoad();
-  }, [subsystem, callWithTimeout]);
+  }, [subsystem, callWithTimeout, toast]);
 
   // Reload bindings when user switches sensor (not on initial load)
   const loadBindingsForSensor = useCallback(async (sensorIndex: number) => {
@@ -169,7 +170,7 @@ export function EncoderSettings() {
     } finally {
       setLoading(false);
     }
-  }, [subsystem, callWithTimeout]);
+  }, [subsystem, callWithTimeout, toast]);
 
   // Update local form state when selected layer changes
   useEffect(() => {
@@ -239,7 +240,7 @@ export function EncoderSettings() {
     } finally {
       setSaving(false);
     }
-  }, [subsystem, selectedSensorIndex, selectedLayer, cwBinding, ccwBinding, callWithTimeout]);
+  }, [subsystem, selectedSensorIndex, selectedLayer, cwBinding, ccwBinding, callWithTimeout, behaviors, toast]);
 
   if (!subsystem) {
     return (

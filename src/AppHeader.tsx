@@ -52,7 +52,7 @@ export const AppHeader = ({
     ) {
       setShowSettingsReset(false);
     }
-  }, [lockState, showSettingsReset]);
+  }, [lockState, showSettingsReset, connectionState.conn]);
 
   const showSettingsRef = useModalRef(showSettingsReset);
   const [unsaved, setUnsaved] = useConnectedDeviceData<boolean>(

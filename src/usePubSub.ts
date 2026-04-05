@@ -3,11 +3,15 @@ import { useEffect } from "react";
 
 const emitter = new Emittery();
 
-export const usePub = () => (name: PropertyKey, data: any) =>
+// Non-hook version for use outside React components
+export const pub = (name: PropertyKey, data: unknown) =>
   emitter.emit(name, data);
+
+export const usePub = () => pub;
 
 export const useSub = (
   name: PropertyKey,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   callback: (data: any) => void | Promise<void>
 ) => {
   const unsub = () => emitter.off(name, callback);

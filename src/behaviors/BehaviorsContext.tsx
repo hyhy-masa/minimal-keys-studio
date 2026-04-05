@@ -14,10 +14,12 @@ interface BehaviorsState {
 
 const BehaviorsContext = createContext<BehaviorsState>({ map: {}, list: [] });
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useBehaviorMap(): BehaviorMap {
   return useContext(BehaviorsContext).map;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useBehaviorList(): GetBehaviorDetailsResponse[] {
   return useContext(BehaviorsContext).list;
 }
