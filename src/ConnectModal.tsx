@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
@@ -23,10 +23,13 @@ export interface ConnectModalProps {
   onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void;
 }
 
-function simpleDevicePicker(
-  transports: TransportFactory[],
-  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void
-) {
+function SimpleDevicePicker({
+  transports,
+  onTransportCreated,
+}: {
+  transports: TransportFactory[];
+  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void;
+}) {
   const [selectedTransport, setSelectedTransport] = useState<
     TransportFactory | undefined
   >(undefined);
@@ -64,14 +67,14 @@ function simpleDevicePicker(
     return () => {
       ignore = true;
     };
-  }, [selectedTransport]);
+  }, [selectedTransport, onTransportCreated]);
 
-  let connections = transports.map((t) => (
+  const connections = transports.map((t) => (
     <li key={t.label} className="list-none">
       <button
         className="bg-base-300 hover:bg-primary hover:text-primary-content rounded px-2 py-1"
         type="button"
-        onClick={async () => setSelectedTransport(t)}
+        onClick={() => setSelectedTransport(t)}
       >
         {t.label}
       </button>
@@ -85,11 +88,15 @@ function simpleDevicePicker(
   );
 }
 
-function deviceList(
-  open: boolean,
-  transports: TransportFactory[],
-  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void
-) {
+function DeviceList({
+  open,
+  transports,
+  onTransportCreated,
+}: {
+  open: boolean;
+  transports: TransportFactory[];
+  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void;
+}) {
   const [devices, setDevices] = useState<
     Array<[TransportFactory, AvailableDevice]>
   >([]);
@@ -97,9 +104,9 @@ function deviceList(
   const [refreshing, setRefreshing] = useState(false);
   const [connecting, setConnecting] = useState(false);
 
-  async function loadDevices() {
+  const loadDevices = useCallback(async () => {
     setRefreshing(true);
-    let entries: Array<[TransportFactory, AvailableDevice]> = [];
+    const entries: Array<[TransportFactory, AvailableDevice]> = [];
     for (const t of transports.filter((t) => t.pick_and_connect)) {
       try {
         const devs = await t.pick_and_connect?.list();
@@ -114,15 +121,15 @@ function deviceList(
     setDevices(entries);
     setSelectedIndex(null);
     setRefreshing(false);
-  }
+  }, [transports]);
 
   useEffect(() => {
     if (open) {
       loadDevices();
     }
-  }, [open]);
+  }, [open, loadDevices]);
 
-  async function connectToSelected() {
+  const connectToSelected = useCallback(async () => {
     if (selectedIndex === null) return;
     const [transport, device] = devices[selectedIndex];
     setConnecting(true);
@@ -137,7 +144,7 @@ function deviceList(
     } finally {
       setConnecting(false);
     }
-  }
+  }, [selectedIndex, devices, onTransportCreated]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -195,7 +202,7 @@ function deviceList(
   );
 }
 
-function noTransportsOptionsPrompt() {
+function NoTransportsPrompt() {
   return (
     <div className="m-4 flex flex-col gap-2">
       <p>
@@ -217,19 +224,32 @@ function noTransportsOptionsPrompt() {
   );
 }
 
-function connectOptions(
-  transports: TransportFactory[],
-  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void,
-  open?: boolean
-) {
+function ConnectOptions({
+  transports,
+  onTransportCreated,
+  open,
+}: {
+  transports: TransportFactory[];
+  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void;
+  open?: boolean;
+}) {
   const useSimplePicker = useMemo(
     () => transports.every((t) => !t.pick_and_connect),
     [transports]
   );
 
-  return useSimplePicker
-    ? simpleDevicePicker(transports, onTransportCreated)
-    : deviceList(open || false, transports, onTransportCreated);
+  return useSimplePicker ? (
+    <SimpleDevicePicker
+      transports={transports}
+      onTransportCreated={onTransportCreated}
+    />
+  ) : (
+    <DeviceList
+      open={open || false}
+      transports={transports}
+      onTransportCreated={onTransportCreated}
+    />
+  );
 }
 
 export const ConnectModal = ({
@@ -243,10 +263,22 @@ export const ConnectModal = ({
 
   return (
     <GenericModal ref={dialog} className="max-w-xl">
-      <h1 className="text-xl">minimal-keys Studio</h1>
-      {haveTransports
-        ? connectOptions(transports, onTransportCreated, open)
-        : noTransportsOptionsPrompt()}
+      <div className="flex flex-col items-center gap-3 py-2 mb-4">
+        <img src={`${import.meta.env.BASE_URL}zmk.svg`} alt="Logo" className="h-12 rounded" />
+        <h1 className="text-xl font-semibold">minimal-keys Studio</h1>
+        <p className="text-sm text-base-content/60 text-center">
+          キーボードを接続して設定を始めましょう
+        </p>
+      </div>
+      {haveTransports ? (
+        <ConnectOptions
+          transports={transports}
+          onTransportCreated={onTransportCreated}
+          open={open}
+        />
+      ) : (
+        <NoTransportsPrompt />
+      )}
     </GenericModal>
   );
 };
