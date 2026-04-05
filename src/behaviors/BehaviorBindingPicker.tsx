@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   GetBehaviorDetailsResponse,
   BehaviorBindingParametersSet,
@@ -46,6 +46,9 @@ export const BehaviorBindingPicker = ({
   const [param1, setParam1] = useState<number | undefined>(binding.param1);
   const [param2, setParam2] = useState<number | undefined>(binding.param2);
   const [showParamPickers, setShowParamPickers] = useState(false);
+  // Skip validation when applying directly from recommendations/use-cases
+  // or when selecting a behavior for param configuration
+  const skipNextValidation = useRef(false);
 
   const metadata = useMemo(
     () => behaviors.find((b) => b.id == behaviorId)?.metadata,
@@ -53,6 +56,10 @@ export const BehaviorBindingPicker = ({
   );
 
   useEffect(() => {
+    if (skipNextValidation.current) {
+      skipNextValidation.current = false;
+      return;
+    }
     if (
       binding.behaviorId === behaviorId &&
       binding.param1 === param1 &&
@@ -86,14 +93,19 @@ export const BehaviorBindingPicker = ({
   // Called by Recommendations/UseCases tabs — apply full binding directly
   const handleApplyBinding = (newBinding: BehaviorBinding) => {
     setShowParamPickers(false);
+    skipNextValidation.current = true;
     setBehaviorId(newBinding.behaviorId);
     setParam1(newBinding.param1);
     setParam2(newBinding.param2);
+    // Bypass validation — pre-configured data is known-good
+    onBindingChanged(newBinding);
   };
 
   // Called by All tab — select behavior, then show param pickers
+  // Don't call onBindingChanged yet — wait for user to set params
   const handleBehaviorSelected = (newBehaviorId: number) => {
     setShowParamPickers(true);
+    skipNextValidation.current = true;
     setBehaviorId(newBehaviorId);
     setParam1(0);
     setParam2(0);
