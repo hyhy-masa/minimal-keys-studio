@@ -37,7 +37,7 @@ interface PhysicalLayoutProps {
   hoverZoom?: boolean;
   zoom?: LayoutZoom;
   onPositionClicked?: (position: number) => void;
-  onRecommendationApply?: (binding: import("@zmkfirmware/zmk-studio-ts-client/keymap").BehaviorBinding) => void;
+  onRecommendationClick?: (rec: import("./key-roles").KeyRecommendation) => void;
 }
 
 interface PhysicalLayoutPositionLocation {
@@ -79,6 +79,7 @@ export const PhysicalLayout = ({
   selectedPosition,
   oneU = 128,
   onPositionClicked,
+  onRecommendationClick,
   ...props
 }: PhysicalLayoutProps) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -137,6 +138,7 @@ export const PhysicalLayout = ({
           oneU={oneU}
           selected={idx === selectedPosition}
           tooltipData={p.tooltipData}
+          onRecommendationClick={onRecommendationClick}
           onMoreClick={() => onPositionClicked?.(idx)}
           {...p}
         />
