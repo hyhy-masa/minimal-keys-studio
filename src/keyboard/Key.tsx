@@ -115,7 +115,7 @@ export const Key = ({
         style={{
           width: `${pixelWidth}px`,
           height: `${pixelHeight}px`,
-          fontSize: `${Math.max(10, oneU * 0.17)}px`,
+          fontSize: `${Math.max(12, oneU * 0.21)}px`,
           borderRadius: `${radius}px`,
         }}
         onClick={handleClick}
@@ -124,7 +124,7 @@ export const Key = ({
       >
         <div
           className={`absolute ${selected ? "text-primary-content" : "text-base-content"} opacity-70 top-1 text-nowrap left-1/2 font-light -translate-x-1/2 text-center`}
-          style={{ fontSize: `${Math.max(10, oneU * 0.18)}px` }}
+          style={{ fontSize: `${Math.max(12, oneU * 0.22)}px` }}
         >
           {shortenHeader(header)}
         </div>
