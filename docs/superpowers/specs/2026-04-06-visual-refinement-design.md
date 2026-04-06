@@ -38,9 +38,7 @@ Replace the current purple theme with a white-based + blue accent scheme.
 
 ### Dark Mode
 
-Existing `light-dark()` function in tailwind.config.js handles dark mode. Update dark-mode values proportionally:
-- Dark base-100: `#1a1b2e` (deep navy instead of pure black)
-- Dark primary: brighter blue for contrast
+Out of scope for this iteration. Light mode only. Existing dark mode values remain unchanged — they will look slightly inconsistent with the new light theme, but dark mode is not the primary use case for initial release. Dark mode alignment is a future task.
 
 ## Section 2: Keyboard View
 
@@ -62,8 +60,9 @@ Increase visible gap between keys by reducing keycap size within its allocated s
 ### Selected Key Highlight
 
 - Current: `bg-primary scale-[0.97]` with inset shadow
-- New: `bg-primary ring-4 ring-primary/30` — glow effect, no scale reduction
-- The ring creates a visible "aura" around the selected key
+- New: `bg-primary scale-[0.97] ring-2 ring-primary/40` — keep press-in feel + add glow
+- `ring-2` (2px width) fits within the 3px gap between keys without overlapping neighbors
+- The ring creates a visible "aura" around the selected key while the scale keeps the tactile feel
 
 ### Key Shadows (non-selected)
 
@@ -128,7 +127,7 @@ Card styling:
 
 ### In Scope
 
-- Tailwind theme color changes (light mode focus, dark mode proportional)
+- Tailwind theme color changes (light mode only)
 - Key gap increase (keycap size reduction)
 - Key shadow modernization
 - Selected key glow effect
@@ -144,6 +143,7 @@ Card styling:
 - Animation additions
 - Custom fonts (keep Inter)
 - Responsive/mobile layout
+- Dark mode alignment (future task)
 - Onboarding tour (separate backlog item)
 
 ## Success Criteria
