@@ -55,8 +55,8 @@ export const Key = ({
   onMoreClick,
   children,
 }: PropsWithChildren<KeyProps>) => {
-  const pixelWidth = width * oneU - 6;
-  const pixelHeight = height * oneU - 6;
+  const pixelWidth = width * oneU - 4;
+  const pixelHeight = height * oneU - 4;
   const radius = Math.max(4, oneU * 0.08);
 
   const [showTooltip, setShowTooltip] = useState(false);
@@ -117,7 +117,6 @@ export const Key = ({
           height: `${pixelHeight}px`,
           fontSize: `${Math.max(10, oneU * 0.17)}px`,
           borderRadius: `${radius}px`,
-          overflow: "hidden",
         }}
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
