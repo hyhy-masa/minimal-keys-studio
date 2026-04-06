@@ -10,10 +10,12 @@ const fakeBehaviors = [
   { id: 40, displayName: "Sticky Layer", metadata: [] },
 ];
 
+const fakeLayers = [{ id: 0, name: "Layer 0" }, { id: 1, name: "Layer 1" }];
+
 describe("UseCasesTab", () => {
   it("renders category buttons", () => {
     render(
-      <UseCasesTab behaviors={fakeBehaviors} onApplyBinding={() => {}} />
+      <UseCasesTab behaviors={fakeBehaviors} layers={fakeLayers} onApplyBinding={() => {}} />
     );
     expect(screen.getByText("よく使う操作")).toBeDefined();
     expect(screen.getByText("仕事効率化")).toBeDefined();
@@ -22,7 +24,7 @@ describe("UseCasesTab", () => {
 
   it("shows items for default category (common actions)", () => {
     render(
-      <UseCasesTab behaviors={fakeBehaviors} onApplyBinding={() => {}} />
+      <UseCasesTab behaviors={fakeBehaviors} layers={fakeLayers} onApplyBinding={() => {}} />
     );
     expect(screen.getByText("コピーする")).toBeDefined();
   });
@@ -30,11 +32,11 @@ describe("UseCasesTab", () => {
   it("calls onApplyBinding with resolved behaviorId on item click", async () => {
     const onApply = vi.fn();
     render(
-      <UseCasesTab behaviors={fakeBehaviors} onApplyBinding={onApply} />
+      <UseCasesTab behaviors={fakeBehaviors} layers={fakeLayers} onApplyBinding={onApply} />
     );
     await userEvent.click(screen.getByText("コピーする"));
     expect(onApply).toHaveBeenCalledWith({
-      behaviorId: 10, // resolved from "Key Press"
+      behaviorId: 10,
       param1: expect.any(Number),
       param2: 0,
     });

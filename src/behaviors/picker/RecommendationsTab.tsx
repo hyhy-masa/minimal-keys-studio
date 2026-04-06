@@ -19,7 +19,7 @@ export function RecommendationsTab({
   if (!role) {
     return (
       <div className="px-3 py-4 text-sm text-base-content/50">
-        このキーのおすすめはまだありません。「用途別」または「すべて」から選んでください。
+        このキーのおすすめはまだありません。「用途別」または「自分で選ぶ」から選んでください。
       </div>
     );
   }

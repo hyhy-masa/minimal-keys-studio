@@ -80,8 +80,8 @@ export function PickerTabs({
         {activeTab === "use-cases" && (
           <UseCasesTab
             behaviors={behaviors}
+            layers={layers}
             onApplyBinding={onApplyBinding}
-            onSelectBehavior={onBehaviorSelected}
           />
         )}
         {activeTab === "all" && (
