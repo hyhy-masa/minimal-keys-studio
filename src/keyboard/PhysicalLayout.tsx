@@ -17,6 +17,7 @@ export type KeyPosition = PropsWithChildren<{
   r?: number;
   rx?: number;
   ry?: number;
+  tooltipData?: import("./tooltip-data").TooltipData | null;
 }>;
 
 export type LayoutZoom = number | "auto";
@@ -36,6 +37,7 @@ interface PhysicalLayoutProps {
   hoverZoom?: boolean;
   zoom?: LayoutZoom;
   onPositionClicked?: (position: number) => void;
+  onRecommendationApply?: (binding: import("@zmkfirmware/zmk-studio-ts-client/keymap").BehaviorBinding) => void;
 }
 
 interface PhysicalLayoutPositionLocation {
@@ -134,6 +136,8 @@ export const PhysicalLayout = ({
         <Key
           oneU={oneU}
           selected={idx === selectedPosition}
+          tooltipData={p.tooltipData}
+          onMoreClick={() => onPositionClicked?.(idx)}
           {...p}
         />
       </div>

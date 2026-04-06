@@ -3,12 +3,15 @@ import {
   Keymap as KeymapMsg,
 } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
+import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 
 import {
   LayoutZoom,
   PhysicalLayout as PhysicalLayoutComp,
 } from "./PhysicalLayout";
 import { HidUsageLabel } from "./HidUsageLabel";
+import { resolveTooltipData } from "./tooltip-data";
+import { detectOS } from "../behaviors/use-cases";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -20,6 +23,7 @@ export interface KeymapProps {
   selectedLayerIndex: number;
   selectedKeyPosition: number | undefined;
   onKeyPositionClicked: (keyPosition: number) => void;
+  onBindingApply?: (binding: BehaviorBinding) => void;
 }
 
 export const Keymap = ({
@@ -30,10 +34,14 @@ export const Keymap = ({
   selectedLayerIndex,
   selectedKeyPosition,
   onKeyPositionClicked,
+  onBindingApply,
 }: KeymapProps) => {
   if (!keymap.layers[selectedLayerIndex]) {
     return <></>;
   }
+
+  const behaviorList = Object.values(behaviors);
+  const os = detectOS();
 
   const positions = layout.keys.map((k, i) => {
     if (i >= keymap.layers[selectedLayerIndex].bindings.length) {
@@ -45,14 +53,16 @@ export const Keymap = ({
         width: k.width / 100,
         height: k.height / 100.0,
         children: <span></span>,
+        tooltipData: null,
       };
     }
+
+    const binding = keymap.layers[selectedLayerIndex].bindings[i];
 
     return {
       id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
       header:
-        behaviors[keymap.layers[selectedLayerIndex].bindings[i].behaviorId]
-          ?.displayName || "Unknown",
+        behaviors[binding.behaviorId]?.displayName || "Unknown",
       x: k.x / 100.0,
       y: k.y / 100.0,
       width: k.width / 100,
@@ -62,9 +72,10 @@ export const Keymap = ({
       ry: (k.ry || 0) / 100.0,
       children: (
         <HidUsageLabel
-          hid_usage={keymap.layers[selectedLayerIndex].bindings[i].param1}
+          hid_usage={binding.param1}
         />
       ),
+      tooltipData: resolveTooltipData(binding, behaviorList, i, os),
     };
   });
 
@@ -76,6 +87,7 @@ export const Keymap = ({
       zoom={scale}
       selectedPosition={selectedKeyPosition}
       onPositionClicked={onKeyPositionClicked}
+      onRecommendationApply={onBindingApply}
     />
   );
 };

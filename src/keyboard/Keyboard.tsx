@@ -470,6 +470,7 @@ export default function Keyboard() {
             selectedLayerIndex={selectedLayerIndex}
             selectedKeyPosition={selectedKeyPosition}
             onKeyPositionClicked={setSelectedKeyPosition}
+            onBindingApply={doUpdateBinding}
           />
           <select
             className="absolute top-2 right-2 h-8 rounded px-2 text-sm"
