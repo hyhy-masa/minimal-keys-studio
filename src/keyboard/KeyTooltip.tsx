@@ -13,6 +13,8 @@ export interface KeyTooltipProps {
   data: TooltipData | null;
   anchorRect: AnchorRect;
   encoderRotationLabel?: string;
+  onTooltipMouseEnter?: () => void;
+  onTooltipMouseLeave?: () => void;
   onRecommendationClick?: (rec: KeyRecommendation) => void;
   onMoreClick?: () => void;
   onEncoderPressSettingClick?: () => void;
@@ -23,6 +25,8 @@ export function KeyTooltip({
   data,
   anchorRect,
   encoderRotationLabel,
+  onTooltipMouseEnter,
+  onTooltipMouseLeave,
   onRecommendationClick,
   onMoreClick,
   onEncoderPressSettingClick,
@@ -67,9 +71,10 @@ export function KeyTooltip({
     <div
       style={tooltipStyle}
       className="pointer-events-auto"
-      onMouseEnter={(e) => e.stopPropagation()}
+      onMouseEnter={onTooltipMouseEnter}
+      onMouseLeave={onTooltipMouseLeave}
     >
-      <div className="bg-base-100 border border-base-300 rounded-lg shadow-lg text-sm max-w-xs">
+      <div className="bg-base-100 border border-base-300 rounded-lg shadow-lg text-sm max-w-sm">
         {content}
       </div>
     </div>,
@@ -80,7 +85,7 @@ export function KeyTooltip({
 function SimpleTooltip({ data }: { data: TooltipData }) {
   return (
     <div className="px-3 py-2 flex items-center gap-2">
-      <span className="font-medium">{data.roleName}</span>
+      <span className="font-medium text-base">{data.roleName}</span>
       {data.description && (
         <>
           <span className="text-base-content/30">—</span>
@@ -101,23 +106,23 @@ function DetailTooltip({
   onMoreClick?: () => void;
 }) {
   return (
-    <div className="px-3 py-2 flex flex-col gap-1.5">
+    <div className="px-3 py-2.5 flex flex-col gap-2">
       <div>
-        <div className="font-medium">{data.roleName}</div>
+        <div className="font-medium text-base">{data.roleName}</div>
         {data.description && (
-          <div className="text-xs text-base-content/70">{data.description}</div>
+          <div className="text-sm text-base-content/70 mt-0.5">{data.description}</div>
         )}
       </div>
       {data.recommendations && data.recommendations.length > 0 && (
         <>
           <div className="border-t border-base-300" />
-          <div className="flex flex-col gap-1">
-            <div className="text-xs text-base-content/50">おすすめ</div>
-            <div className="flex gap-1 flex-wrap">
+          <div className="flex flex-col gap-1.5">
+            <div className="text-sm text-base-content/50">おすすめ</div>
+            <div className="flex gap-1.5 flex-wrap">
               {data.recommendations.slice(0, 3).map((rec) => (
                 <button
                   key={rec.label}
-                  className="px-2 py-0.5 rounded bg-base-200 hover:bg-primary hover:text-primary-content text-xs transition-colors"
+                  className="px-2.5 py-1 rounded bg-base-200 hover:bg-primary hover:text-primary-content text-sm transition-colors"
                   onClick={() => onRecommendationClick?.(rec)}
                 >
                   {rec.label}
@@ -125,7 +130,7 @@ function DetailTooltip({
               ))}
             </div>
             <button
-              className="text-xs text-primary hover:underline text-left"
+              className="text-sm text-primary hover:underline text-left"
               onClick={onMoreClick}
             >
               もっと見る →
@@ -149,9 +154,9 @@ function EncoderTooltip({
   onRotationSettingClick?: () => void;
 }) {
   return (
-    <div className="px-3 py-2 flex flex-col gap-1.5">
-      <div className="font-medium">🎛 ロータリーエンコーダ</div>
-      <div className="flex flex-col gap-1 text-xs">
+    <div className="px-3 py-2.5 flex flex-col gap-2">
+      <div className="font-medium text-base">🎛 ロータリーエンコーダ</div>
+      <div className="flex flex-col gap-1.5 text-sm">
         <div className="flex items-center justify-between gap-4">
           <span>
             <span className="text-base-content/50">回す: </span>
@@ -180,7 +185,7 @@ function EncoderTooltip({
       {data.encoderOptions && data.encoderOptions.length > 0 && (
         <>
           <div className="border-t border-base-300" />
-          <div className="text-xs">
+          <div className="text-sm">
             <div className="text-base-content/50 mb-0.5">回すで調整できること:</div>
             <div className="text-base-content/70">
               {data.encoderOptions.map((opt) => opt.label).join(" / ")}

@@ -23,6 +23,7 @@ interface BehaviorShortName {
 const MAX_HEADER_LENGTH = 9;
 const shortNames: Record<string, BehaviorShortName> = BehaviorShortNames;
 const HOVER_DELAY_MS = 200;
+const HIDE_DELAY_MS = 300;
 
 const shortenHeader = (header: string | undefined) => {
   if (typeof header === "undefined") {
@@ -61,9 +62,25 @@ export const Key = ({
   const [showTooltip, setShowTooltip] = useState(false);
   const [anchorRect, setAnchorRect] = useState({ top: 0, left: 0, width: 0, height: 0 });
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  const cancelHideTimer = useCallback(() => {
+    if (hideTimerRef.current) {
+      clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  }, []);
+
+  const startHideTimer = useCallback(() => {
+    cancelHideTimer();
+    hideTimerRef.current = setTimeout(() => {
+      setShowTooltip(false);
+    }, HIDE_DELAY_MS);
+  }, [cancelHideTimer]);
+
   const handleMouseEnter = useCallback(() => {
+    cancelHideTimer();
     hoverTimerRef.current = setTimeout(() => {
       if (buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect();
@@ -71,15 +88,15 @@ export const Key = ({
       }
       setShowTooltip(true);
     }, HOVER_DELAY_MS);
-  }, []);
+  }, [cancelHideTimer]);
 
   const handleMouseLeave = useCallback(() => {
     if (hoverTimerRef.current) {
       clearTimeout(hoverTimerRef.current);
       hoverTimerRef.current = null;
     }
-    setShowTooltip(false);
-  }, []);
+    startHideTimer();
+  }, [startHideTimer]);
 
   const handleClick = useCallback(() => {
     setShowTooltip(false);
@@ -119,6 +136,8 @@ export const Key = ({
           data={tooltipData}
           anchorRect={anchorRect}
           encoderRotationLabel={encoderRotationLabel}
+          onTooltipMouseEnter={cancelHideTimer}
+          onTooltipMouseLeave={startHideTimer}
           onRecommendationClick={(rec) => {
             setShowTooltip(false);
             onRecommendationClick?.(rec);
