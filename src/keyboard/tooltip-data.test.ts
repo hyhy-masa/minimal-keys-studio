@@ -7,8 +7,6 @@ import { ENCODER_POSITION } from "./key-descriptions";
 
 const KB = 7;
 const key = (id: number) => hid_usage_from_page_and_id(KB, id);
-// ctrl is defined for completeness; gui is used for mac Cmd key tests
-const _ctrl = (usage: number) => (0x01 << 24) | usage; void _ctrl;
 const gui = (usage: number) => (0x08 << 24) | usage;
 
 const fakeBehaviors: GetBehaviorDetailsResponse[] = [
@@ -72,5 +70,21 @@ describe("resolveTooltipData", () => {
     const result = resolveTooltipData(binding, fakeBehaviors, 10, "mac");
     expect(result.roleName).toBe("透過");
     expect(result.description).toContain("下のレイヤー");
+  });
+
+  it("resolves Ctrl+C to use case match on Windows", () => {
+    const ctrl = (usage: number) => (0x01 << 24) | usage;
+    const binding: BehaviorBinding = { behaviorId: 1, param1: ctrl(key(6)), param2: 0 };
+    const result = resolveTooltipData(binding, fakeBehaviors, 10, "windows");
+    expect(result.roleName).toBe("コピーする");
+    expect(result.type).toBe("detail");
+  });
+
+  it("resolves unregistered modifier combo with prefix", () => {
+    const shift = (usage: number) => (0x02 << 24) | usage;
+    const binding: BehaviorBinding = { behaviorId: 1, param1: shift(key(4)), param2: 0 };
+    const result = resolveTooltipData(binding, fakeBehaviors, 10, "mac");
+    expect(result.roleName).toBe("Shift+A");
+    expect(result.type).toBe("simple");
   });
 });

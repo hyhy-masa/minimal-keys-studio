@@ -33,7 +33,17 @@ export function resolveTooltipData(
   const behavior = behaviors.find((b) => b.id === binding.behaviorId);
   const displayName = behavior?.displayName ?? "";
 
+  // Unknown behavior — show generic message
+  if (!behavior) {
+    return {
+      type: "simple",
+      roleName: "不明",
+      description: "このキーの情報を取得できません",
+    };
+  }
+
   // Encoder position — always show encoder tooltip
+  // TODO: Verify ENCODER_POSITION with real device
   if (keyPosition === ENCODER_POSITION) {
     const pressDesc = resolveBindingLabel(binding, behaviors, displayName, os);
     return {
