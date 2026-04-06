@@ -362,10 +362,10 @@ function AppInner() {
               onResetSettings={resetSettings}
             />
             {conn.conn && (
-              <nav className="flex items-center gap-1 border-b border-base-300 px-3 py-1">
+              <nav className="flex items-center gap-1 border-b border-gray-200 bg-gray-50 px-3 py-1">
                 {TAB_GROUPS.map((group, gi) => (
                   <div key={gi} className="flex items-center gap-0.5">
-                    {gi > 0 && <div className="w-px h-6 bg-base-300 mx-2" />}
+                    {gi > 0 && <div className="w-px h-6 bg-gray-300 mx-2" />}
                     {group.tabs.map((tab) => (
                       <button
                         key={tab.id}

@@ -74,7 +74,7 @@ export function KeyTooltip({
       onMouseEnter={onTooltipMouseEnter}
       onMouseLeave={onTooltipMouseLeave}
     >
-      <div className="bg-base-100 border border-base-300 rounded-lg shadow-lg text-sm max-w-sm">
+      <div className="bg-white border border-gray-200 rounded-lg shadow-xl text-sm max-w-sm">
         {content}
       </div>
     </div>,
