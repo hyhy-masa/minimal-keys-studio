@@ -71,9 +71,9 @@ export function AllBehaviorsTab({
               className="w-full flex items-center gap-2 px-2 py-1.5 text-sm font-medium text-base-content/70 hover:bg-base-200 rounded"
               onClick={() => setExpandedCategory(isExpanded ? null : cat)}
             >
-              <span className="text-xs">{isExpanded ? "▼" : "▶"}</span>
+              <span className="text-sm">{isExpanded ? "▼" : "▶"}</span>
               {categoryLabels[cat]}
-              <span className="text-xs text-base-content/40 ml-auto">
+              <span className="text-sm text-base-content/40 ml-auto">
                 {list.length}
               </span>
             </button>
@@ -92,12 +92,12 @@ export function AllBehaviorsTab({
                       >
                         <span>{desc.label}</span>
                         {desc.label !== b.displayName && (
-                          <span className="text-xs text-base-content/40 ml-1">
+                          <span className="text-sm text-base-content/40 ml-1">
                             ({b.displayName})
                           </span>
                         )}
                         {desc.description && (
-                          <p className="text-xs text-base-content/50 leading-relaxed">
+                          <p className="text-sm text-base-content/50 leading-relaxed">
                             {desc.description}
                           </p>
                         )}

@@ -32,7 +32,7 @@ export function UseCasesTab({ behaviors, layers, onApplyBinding }: UseCasesTabPr
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-base-content/40 px-1">{os === "mac" ? "Mac" : "Windows"}</span>
+        <span className="text-sm text-base-content/40 px-1">{os === "mac" ? "Mac" : "Windows"}</span>
         {categories.map((cat) => (
           <button
             key={cat.id}
@@ -82,9 +82,9 @@ export function UseCasesTab({ behaviors, layers, onApplyBinding }: UseCasesTabPr
                 >
                   <span className="text-sm font-medium">{item.label}</span>
                   {item.needsParams && (
-                    <span className="text-xs text-primary ml-1">{isEditing ? "▼ 設定中" : "▶ クリックして設定"}</span>
+                    <span className="text-sm text-primary ml-1">{isEditing ? "▼ 設定中" : "▶ クリックして設定"}</span>
                   )}
-                  <p className="text-xs text-base-content/50">{item.description}</p>
+                  <p className="text-sm text-base-content/50">{item.description}</p>
                 </button>
                 {isEditing && editingMetadata && (
                   <div className="ml-3 mt-1 mb-2 p-2 border border-base-300 rounded-lg bg-base-100">

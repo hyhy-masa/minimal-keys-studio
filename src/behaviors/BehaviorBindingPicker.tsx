@@ -140,7 +140,7 @@ export const BehaviorBindingPicker = ({
           <span className="text-primary font-medium">現在の設定:</span>
           <span className="font-bold">{currentDesc.label}</span>
           {currentDesc.label !== currentBehavior.displayName && (
-            <span className="text-xs text-base-content/50">({currentBehavior.displayName})</span>
+            <span className="text-sm text-base-content/50">({currentBehavior.displayName})</span>
           )}
         </div>
       )}

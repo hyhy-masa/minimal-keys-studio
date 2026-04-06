@@ -47,7 +47,7 @@ export function RecommendationsTab({
               {rec.popular && (
                 <span className="text-[10px] text-primary">人気</span>
               )}
-              <span className="text-xs text-base-content/40">{rec.description}</span>
+              <span className="text-sm text-base-content/40">{rec.description}</span>
             </button>
           );
         })}
