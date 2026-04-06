@@ -5,6 +5,9 @@ export interface KeyDescription {
   description: string;
 }
 
+// Keyboard usage page (HID)
+const KB = 7;
+
 // Encoder is at position 0 (Q key position on left side)
 export const ENCODER_POSITION = 0;
 
@@ -51,6 +54,14 @@ const specialKeys: Record<number, KeyDescription> = {
   80: { roleName: "←", description: "左に移動" },
   81: { roleName: "↓", description: "下に移動" },
   82: { roleName: "↑", description: "上に移動" },
+  224: { roleName: "左Ctrl", description: "修飾キー" },
+  225: { roleName: "左Shift", description: "修飾キー" },
+  226: { roleName: "左Alt", description: "修飾キー" },
+  227: { roleName: "左⌘/Win", description: "修飾キー" },
+  228: { roleName: "右Ctrl", description: "修飾キー" },
+  229: { roleName: "右Shift", description: "修飾キー" },
+  230: { roleName: "右Alt", description: "修飾キー" },
+  231: { roleName: "右⌘/Win", description: "修飾キー" },
 };
 
 // Letter keys: A=4 to Z=29
@@ -64,7 +75,7 @@ function isNumberKey(id: number): boolean {
 }
 
 export function getHidKeyDescription(page: number, id: number): KeyDescription {
-  if (page === 7) {
+  if (page === KB) {
     // Known special keys
     if (specialKeys[id]) return specialKeys[id];
 
