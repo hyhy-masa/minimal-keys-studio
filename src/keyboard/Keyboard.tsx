@@ -31,6 +31,7 @@ import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
+import { useEncoderBindings } from "./useEncoderBindings";
 
 function useLayouts(): [
   PhysicalLayout[] | undefined,
@@ -232,6 +233,11 @@ export default function Keyboard() {
 
     return keymap.layers[selectedLayerIndex].bindings[selectedKeyPosition];
   }, [keymap, selectedLayerIndex, selectedKeyPosition]);
+
+  const encoderSummary = useEncoderBindings(
+    behaviors ? Object.values(behaviors) : [],
+    selectedLayerIndex,
+  );
 
   const moveLayer = useCallback(
     (start: number, end: number) => {
@@ -471,6 +477,7 @@ export default function Keyboard() {
             selectedKeyPosition={selectedKeyPosition}
             onKeyPositionClicked={setSelectedKeyPosition}
             onBindingApply={doUpdateBinding}
+            encoderRotationLabel={encoderSummary?.rotationLabel}
           />
           <select
             className="absolute top-2 right-2 h-8 rounded px-2 text-sm"

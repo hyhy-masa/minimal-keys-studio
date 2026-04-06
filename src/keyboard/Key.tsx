@@ -11,6 +11,7 @@ interface KeyProps {
   header?: string;
   onClick?: () => void;
   tooltipData?: TooltipData | null;
+  encoderRotationLabel?: string;
   onRecommendationClick?: (rec: import("./key-roles").KeyRecommendation) => void;
   onMoreClick?: () => void;
 }
@@ -48,6 +49,7 @@ export const Key = ({
   header,
   onClick,
   tooltipData,
+  encoderRotationLabel,
   onRecommendationClick,
   onMoreClick,
   children,
@@ -116,6 +118,7 @@ export const Key = ({
         <KeyTooltip
           data={tooltipData}
           anchorRect={anchorRect}
+          encoderRotationLabel={encoderRotationLabel}
           onRecommendationClick={(rec) => {
             setShowTooltip(false);
             onRecommendationClick?.(rec);

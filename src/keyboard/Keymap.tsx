@@ -26,6 +26,7 @@ export interface KeymapProps {
   selectedKeyPosition: number | undefined;
   onKeyPositionClicked: (keyPosition: number) => void;
   onBindingApply?: (binding: BehaviorBinding) => void;
+  encoderRotationLabel?: string;
 }
 
 export const Keymap = ({
@@ -37,6 +38,7 @@ export const Keymap = ({
   selectedKeyPosition,
   onKeyPositionClicked,
   onBindingApply,
+  encoderRotationLabel,
 }: KeymapProps) => {
   if (!keymap.layers[selectedLayerIndex]) {
     return <></>;
@@ -97,6 +99,7 @@ export const Keymap = ({
       selectedPosition={selectedKeyPosition}
       onPositionClicked={onKeyPositionClicked}
       onRecommendationClick={handleRecommendationClick}
+      encoderRotationLabel={encoderRotationLabel}
     />
   );
 };

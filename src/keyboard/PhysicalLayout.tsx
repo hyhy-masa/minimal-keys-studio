@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { Key } from "./Key";
+import { ENCODER_POSITION } from "./key-descriptions";
 
 export type KeyPosition = PropsWithChildren<{
   id: string;
@@ -38,6 +39,7 @@ interface PhysicalLayoutProps {
   zoom?: LayoutZoom;
   onPositionClicked?: (position: number) => void;
   onRecommendationClick?: (rec: import("./key-roles").KeyRecommendation) => void;
+  encoderRotationLabel?: string;
 }
 
 interface PhysicalLayoutPositionLocation {
@@ -80,6 +82,7 @@ export const PhysicalLayout = ({
   oneU = 128,
   onPositionClicked,
   onRecommendationClick,
+  encoderRotationLabel,
   ...props
 }: PhysicalLayoutProps) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -138,6 +141,7 @@ export const PhysicalLayout = ({
           oneU={oneU}
           selected={idx === selectedPosition}
           tooltipData={p.tooltipData}
+          encoderRotationLabel={idx === ENCODER_POSITION ? encoderRotationLabel : undefined}
           onRecommendationClick={onRecommendationClick}
           onMoreClick={() => onPositionClicked?.(idx)}
           {...p}
