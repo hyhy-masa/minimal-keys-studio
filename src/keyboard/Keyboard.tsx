@@ -29,8 +29,6 @@ import { produce } from "immer";
 import { useToast } from "../misc/Toast";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
-import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
-import { useLocalStorageState } from "../misc/useLocalStorageState";
 import { useEncoderBindings } from "./useEncoderBindings";
 
 function useLayouts(): [
@@ -104,10 +102,6 @@ export default function Keyboard() {
     (keymap) => keymap?.keymap?.getKeymap,
     true
   );
-
-  const [keymapScale, setKeymapScale] = useLocalStorageState<LayoutZoom>("keymapScale", 1, {
-    deserialize: deserializeLayoutZoom,
-  });
 
   const [selectedLayerIndex, setSelectedLayerIndex] = useState<number>(0);
   const [selectedKeyPosition, setSelectedKeyPosition] = useState<
@@ -467,35 +461,18 @@ export default function Keyboard() {
         )}
       </div>
       {layouts && keymap && behaviors && (
-        <div className="p-2 col-start-2 row-start-1 grid items-center justify-center relative min-w-0 bg-gray-100 rounded-lg">
+        <div className="p-4 col-start-2 row-start-1 grid items-center justify-center min-w-0 bg-gray-50 rounded-lg">
           <KeymapComp
             keymap={keymap}
             layout={layouts[selectedPhysicalLayoutIndex]}
             behaviors={behaviors}
-            scale={keymapScale}
+            scale={"auto"}
             selectedLayerIndex={selectedLayerIndex}
             selectedKeyPosition={selectedKeyPosition}
             onKeyPositionClicked={setSelectedKeyPosition}
             onBindingApply={doUpdateBinding}
             encoderRotationLabel={encoderSummary?.rotationLabel}
           />
-          <select
-            className="absolute top-2 right-2 h-8 rounded px-2 text-sm"
-            value={keymapScale}
-            onChange={(e) => {
-              const value = deserializeLayoutZoom(e.target.value);
-              setKeymapScale(value);
-            }}
-          >
-            <option value="auto">Auto</option>
-            <option value={0.5}>50%</option>
-            <option value={0.75}>75%</option>
-            <option value={1}>100%</option>
-            <option value={1.5}>150%</option>
-            <option value={2}>200%</option>
-            <option value={2.5}>250%</option>
-            <option value={3}>300%</option>
-          </select>
         </div>
       )}
       {keymap && selectedBinding && (

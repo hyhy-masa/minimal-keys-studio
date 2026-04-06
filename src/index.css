@@ -11,7 +11,7 @@
 }
 
 html {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 #root {
@@ -46,6 +46,6 @@ body {
   right: 2px;
   height: 40%;
   border-radius: inherit;
-  background: linear-gradient(to bottom, rgba(255,255,255,0.06), transparent);
+  background: linear-gradient(to bottom, rgba(255,255,255,0.4), transparent);
   pointer-events: none;
 }
