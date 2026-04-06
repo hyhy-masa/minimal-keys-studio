@@ -34,7 +34,7 @@ export function RecommendationsTab({
           return (
             <button
               key={`${rec.behaviorDisplayName}-${rec.param1}-${rec.param2}`}
-              className="flex flex-col items-center gap-1 px-4 py-3 rounded-lg border border-base-300 hover:border-primary hover:bg-primary/5 transition-all min-w-[5rem]"
+              className="flex flex-col items-center gap-1.5 px-5 py-4 rounded-xl border border-base-300 hover:border-primary hover:bg-primary/5 hover:shadow-md transition-all min-w-[6rem]"
               onClick={() =>
                 onApplyBinding({
                   behaviorId,
@@ -43,9 +43,9 @@ export function RecommendationsTab({
                 })
               }
             >
-              <span className="text-sm font-medium">{rec.label}</span>
+              <span className="text-base font-medium">{rec.label}</span>
               {rec.popular && (
-                <span className="text-[10px] text-primary">人気</span>
+                <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">人気</span>
               )}
               <span className="text-sm text-base-content/40">{rec.description}</span>
             </button>

@@ -68,7 +68,7 @@ export function AllBehaviorsTab({
         return (
           <div key={cat}>
             <button
-              className="w-full flex items-center gap-2 px-2 py-1.5 text-sm font-medium text-base-content/70 hover:bg-base-200 rounded"
+              className="w-full flex items-center gap-2 px-2 py-2.5 text-sm font-medium text-base-content/70 hover:bg-base-200 rounded"
               onClick={() => setExpandedCategory(isExpanded ? null : cat)}
             >
               <span className="text-sm">{isExpanded ? "▼" : "▶"}</span>
@@ -85,7 +85,7 @@ export function AllBehaviorsTab({
                   return (
                     <div key={b.id}>
                       <button
-                        className={`w-full text-left px-2 py-1 rounded text-sm hover:bg-base-200 ${
+                        className={`w-full text-left px-2 py-2 rounded text-sm hover:bg-base-200 ${
                           isSelected ? "bg-primary/10 text-primary font-medium" : ""
                         }`}
                         onClick={() => onBehaviorSelected(b.id)}

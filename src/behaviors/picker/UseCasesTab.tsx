@@ -59,7 +59,7 @@ export function UseCasesTab({ behaviors, layers, onApplyBinding }: UseCasesTabPr
             return (
               <div key={`${item.behaviorDisplayName}-${item.param1}-${item.label}`}>
                 <button
-                  className={`w-full text-left px-3 py-2 rounded hover:bg-base-200 transition-colors ${
+                  className={`w-full text-left px-3 py-3 rounded hover:bg-primary/5 transition-colors ${
                     isEditing ? "bg-primary/10 text-primary" : ""
                   }`}
                   onClick={() => {

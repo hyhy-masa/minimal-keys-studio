@@ -54,13 +54,13 @@ export function PickerTabs({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-1 border-b border-base-300 pb-1">
+      <div className="flex gap-1 bg-base-200 p-1 rounded-lg">
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            className={`px-3 py-1 text-sm rounded-t transition-all ${
+            className={`px-4 py-1.5 text-sm rounded-md transition-all ${
               activeTab === tab.id
-                ? "bg-base-100 text-primary font-medium border-b-2 border-primary"
+                ? "bg-white text-primary font-medium shadow-sm"
                 : "text-base-content/50 hover:text-base-content"
             }`}
             onClick={() => setActiveTab(tab.id)}

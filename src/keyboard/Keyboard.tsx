@@ -467,7 +467,7 @@ export default function Keyboard() {
         )}
       </div>
       {layouts && keymap && behaviors && (
-        <div className="p-2 col-start-2 row-start-1 grid items-center justify-center relative min-w-0">
+        <div className="p-2 col-start-2 row-start-1 grid items-center justify-center relative min-w-0 bg-gray-100 rounded-lg">
           <KeymapComp
             keymap={keymap}
             layout={layouts[selectedPhysicalLayoutIndex]}

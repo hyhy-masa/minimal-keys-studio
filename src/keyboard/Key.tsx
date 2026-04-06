@@ -55,8 +55,8 @@ export const Key = ({
   onMoreClick,
   children,
 }: PropsWithChildren<KeyProps>) => {
-  const pixelWidth = width * oneU - 2;
-  const pixelHeight = height * oneU - 2;
+  const pixelWidth = width * oneU - 6;
+  const pixelHeight = height * oneU - 6;
   const radius = Math.max(4, oneU * 0.08);
 
   const [showTooltip, setShowTooltip] = useState(false);
@@ -109,8 +109,8 @@ export const Key = ({
         ref={buttonRef}
         className={`keycap group relative flex flex-col justify-center items-center cursor-pointer transition-all duration-150 text-sm border ${
           selected
-            ? "bg-primary text-primary-content border-primary/30 shadow-[inset_0_-2px_0_0_rgba(0,0,0,0.25),0_1px_2px_rgba(0,0,0,0.2)] scale-[0.97]"
-            : "bg-base-100 text-base-content border-base-300/60 shadow-[inset_0_-3px_0_0_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.08)] hover:shadow-[inset_0_-3px_0_0_rgba(0,0,0,0.12),0_3px_8px_rgba(0,0,0,0.12)] hover:scale-105 hover:-translate-y-0.5"
+            ? "bg-primary text-primary-content border-primary/30 shadow-[0_1px_2px_rgba(0,0,0,0.2)] scale-[0.97] ring-2 ring-primary/40"
+            : "bg-white text-base-content border-base-300/60 shadow-[0_1px_3px_rgba(0,0,0,0.12),0_1px_2px_rgba(0,0,0,0.06)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.15)] hover:scale-105 hover:-translate-y-0.5"
         }`}
         style={{
           width: `${pixelWidth}px`,
