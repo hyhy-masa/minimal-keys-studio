@@ -38,10 +38,22 @@ function hidParamLabel(param: number): string {
   return desc.roleName;
 }
 
+// Get short layer name for display on keys
+function shortLayerName(layerIndex: number, layerNames: string[]): string {
+  const name = layerNames[layerIndex];
+  if (!name) return `L${layerIndex}`;
+  // Truncate long names
+  if (name.length <= 6) return name;
+  // Use first word or abbreviation
+  const first = name.split(/[\s&/]+/)[0];
+  return first.length <= 6 ? first : first.substring(0, 5);
+}
+
 // Generate smart header + children based on behavior type
 function getKeyDisplay(
   binding: BehaviorBinding,
   displayName: string,
+  layerNames: string[],
 ): { header: string; children: ReactNode } {
   switch (displayName) {
     case "Key Press":
@@ -50,7 +62,7 @@ function getKeyDisplay(
     case "Layer-Tap":
       // param1 = layer, param2 = tap key
       return {
-        header: `L${binding.param1}`,
+        header: shortLayerName(binding.param1, layerNames),
         children: <span>{hidParamLabel(binding.param2)}</span>,
       };
 
@@ -71,25 +83,25 @@ function getKeyDisplay(
     case "Momentary Layer":
       return {
         header: "MLayer",
-        children: <span>L{binding.param1}</span>,
+        children: <span>{shortLayerName(binding.param1, layerNames)}</span>,
       };
 
     case "Toggle Layer":
       return {
         header: "Toggle",
-        children: <span>L{binding.param1}</span>,
+        children: <span>{shortLayerName(binding.param1, layerNames)}</span>,
       };
 
     case "To Layer":
       return {
         header: "To",
-        children: <span>L{binding.param1}</span>,
+        children: <span>{shortLayerName(binding.param1, layerNames)}</span>,
       };
 
     case "Sticky Layer":
       return {
         header: "Sticky",
-        children: <span>L{binding.param1}</span>,
+        children: <span>{shortLayerName(binding.param1, layerNames)}</span>,
       };
 
     case "Sticky Key": {
@@ -182,7 +194,8 @@ export const Keymap = ({
 
     const binding = keymap.layers[selectedLayerIndex].bindings[i];
     const displayName = behaviors[binding.behaviorId]?.displayName || "Unknown";
-    const { header, children } = getKeyDisplay(binding, displayName);
+    const layerNames = keymap.layers.map((l, li) => l.name || `L${li}`);
+    const { header, children } = getKeyDisplay(binding, displayName, layerNames);
 
     return {
       id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
