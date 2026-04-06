@@ -23,7 +23,7 @@ interface BehaviorShortName {
 const MAX_HEADER_LENGTH = 9;
 const shortNames: Record<string, BehaviorShortName> = BehaviorShortNames;
 const HOVER_DELAY_MS = 200;
-const HIDE_DELAY_MS = 300;
+const HIDE_DELAY_MS = 200;
 
 const shortenHeader = (header: string | undefined) => {
   if (typeof header === "undefined") {
