@@ -460,8 +460,8 @@ export default function Keyboard() {
           </div>
         )}
       </div>
-      {layouts && keymap && behaviors && (
-        <div className="p-4 col-start-2 row-start-1 flex items-center justify-center min-w-0 overflow-hidden bg-gray-200/50 rounded-lg">
+      <div className="p-4 col-start-2 row-start-1 flex items-center justify-center min-w-0 overflow-hidden bg-gray-200/50 rounded-lg">
+        {layouts && keymap && behaviors ? (
           <KeymapComp
             keymap={keymap}
             layout={layouts[selectedPhysicalLayoutIndex]}
@@ -473,8 +473,10 @@ export default function Keyboard() {
             onBindingApply={doUpdateBinding}
             encoderRotationLabel={encoderSummary?.rotationLabel}
           />
-        </div>
-      )}
+        ) : (
+          <div className="text-base-content/30 text-sm">読み込み中...</div>
+        )}
+      </div>
       {keymap && (
         <div className="p-3 col-start-2 row-start-2 bg-white border-t border-gray-200 overflow-y-auto">
           {selectedBinding != null ? (
