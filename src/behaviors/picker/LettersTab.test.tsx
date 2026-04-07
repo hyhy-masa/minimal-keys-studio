@@ -51,11 +51,28 @@ describe("LettersTab", () => {
     expect(screen.getByText("/")).toBeTruthy();
   });
 
-  it("switches to special keys subcategory", () => {
+  it("switches to special keys subcategory with Caps Lock", () => {
     const onApply = vi.fn();
     render(<LettersTab behaviors={mockBehaviors} onApplyBinding={onApply} />);
     fireEvent.click(screen.getByText("特殊"));
     expect(screen.getByText("Enter")).toBeTruthy();
-    expect(screen.getByText("Space")).toBeTruthy();
+    expect(screen.getByText("Caps Lock")).toBeTruthy();
+    expect(screen.getByText("Insert")).toBeTruthy();
+  });
+
+  it("switches to F13-F24 subcategory", () => {
+    const onApply = vi.fn();
+    render(<LettersTab behaviors={mockBehaviors} onApplyBinding={onApply} />);
+    fireEvent.click(screen.getByText("F13-F24"));
+    expect(screen.getByText("F13")).toBeTruthy();
+    expect(screen.getByText("F24")).toBeTruthy();
+  });
+
+  it("switches to keypad subcategory", () => {
+    const onApply = vi.fn();
+    render(<LettersTab behaviors={mockBehaviors} onApplyBinding={onApply} />);
+    fireEvent.click(screen.getByText("テンキー"));
+    expect(screen.getByText("Num Lock")).toBeTruthy();
+    expect(screen.getByText("KP 0")).toBeTruthy();
   });
 });

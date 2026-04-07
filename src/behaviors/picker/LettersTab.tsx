@@ -28,12 +28,18 @@ const fKeys: KeyItem[] = Array.from({ length: 12 }, (_, i) => ({
   hidId: 58 + i,
 }));
 
+const fKeysExtended: KeyItem[] = Array.from({ length: 12 }, (_, i) => ({
+  label: `F${i + 13}`,
+  hidId: 104 + i,
+}));
+
 const symbolKeys: KeyItem[] = [
   { label: "-", hidId: 45 },
   { label: "=", hidId: 46 },
   { label: "[", hidId: 47 },
   { label: "]", hidId: 48 },
   { label: "\\", hidId: 49 },
+  { label: "#", hidId: 50 },
   { label: ";", hidId: 51 },
   { label: "'", hidId: 52 },
   { label: "`", hidId: 53 },
@@ -49,16 +55,44 @@ const specialKeys: KeyItem[] = [
   { label: "Tab", hidId: 43 },
   { label: "Space", hidId: 44 },
   { label: "Delete", hidId: 76 },
+  { label: "Insert", hidId: 73 },
+  { label: "Caps Lock", hidId: 57 },
+  { label: "PrtSc", hidId: 70 },
+  { label: "Scroll Lock", hidId: 71 },
+  { label: "Pause", hidId: 72 },
+  { label: "Menu", hidId: 101 },
 ];
 
-type SubCategory = "letters" | "numbers" | "fkeys" | "symbols" | "special";
+const keypadKeys: KeyItem[] = [
+  { label: "Num Lock", hidId: 83 },
+  { label: "KP /", hidId: 84 },
+  { label: "KP *", hidId: 85 },
+  { label: "KP -", hidId: 86 },
+  { label: "KP +", hidId: 87 },
+  { label: "KP Enter", hidId: 88 },
+  { label: "KP 1", hidId: 89 },
+  { label: "KP 2", hidId: 90 },
+  { label: "KP 3", hidId: 91 },
+  { label: "KP 4", hidId: 92 },
+  { label: "KP 5", hidId: 93 },
+  { label: "KP 6", hidId: 94 },
+  { label: "KP 7", hidId: 95 },
+  { label: "KP 8", hidId: 96 },
+  { label: "KP 9", hidId: 97 },
+  { label: "KP 0", hidId: 98 },
+  { label: "KP .", hidId: 99 },
+];
+
+type SubCategory = "letters" | "numbers" | "fkeys" | "fkeys2" | "symbols" | "special" | "keypad";
 
 const subCategories: { id: SubCategory; label: string; keys: KeyItem[] }[] = [
   { id: "letters", label: "A-Z", keys: letterKeys },
   { id: "numbers", label: "0-9", keys: numberKeys },
   { id: "fkeys", label: "F1-F12", keys: fKeys },
+  { id: "fkeys2", label: "F13-F24", keys: fKeysExtended },
   { id: "symbols", label: "記号", keys: symbolKeys },
   { id: "special", label: "特殊", keys: specialKeys },
+  { id: "keypad", label: "テンキー", keys: keypadKeys },
 ];
 
 interface LettersTabProps {

@@ -6,8 +6,9 @@ import { ActionsTab } from "./ActionsTab";
 import { LayersTab } from "./LayersTab";
 import { ModifiersTab } from "./ModifiersTab";
 import { SystemTab } from "./SystemTab";
+import { JapaneseTab } from "./JapaneseTab";
 
-type TabId = "actions" | "letters" | "layers" | "modifiers" | "system";
+type TabId = "actions" | "letters" | "layers" | "modifiers" | "japanese" | "system";
 
 interface PickerTabsProps {
   keyPosition: number;
@@ -21,6 +22,7 @@ const tabs: { id: TabId; label: string }[] = [
   { id: "letters", label: "文字・記号" },
   { id: "layers", label: "レイヤー" },
   { id: "modifiers", label: "修飾キー" },
+  { id: "japanese", label: "日本語" },
   { id: "system", label: "システム" },
 ];
 
@@ -66,6 +68,9 @@ export function PickerTabs({
         )}
         {activeTab === "modifiers" && (
           <ModifiersTab behaviors={behaviors} layers={layers} onApplyBinding={onApplyBinding} />
+        )}
+        {activeTab === "japanese" && (
+          <JapaneseTab behaviors={behaviors} onApplyBinding={onApplyBinding} />
         )}
         {activeTab === "system" && (
           <SystemTab behaviors={behaviors} onApplyBinding={onApplyBinding} />

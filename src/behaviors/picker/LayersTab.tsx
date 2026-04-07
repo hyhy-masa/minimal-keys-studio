@@ -6,19 +6,7 @@ import { getBehaviorDescription } from "../behavior-descriptions";
 
 const KB = 7;
 
-// Common keys for Layer-Tap param2 selection
-const commonTapKeys = [
-  { label: "Space", hidId: 44 },
-  { label: "Enter", hidId: 40 },
-  { label: "Tab", hidId: 43 },
-  { label: "Esc", hidId: 41 },
-  { label: "BS", hidId: 42 },
-  { label: "Delete", hidId: 76 },
-  ...Array.from({ length: 26 }, (_, i) => ({
-    label: String.fromCharCode(65 + i),
-    hidId: 4 + i,
-  })),
-];
+import { commonTapKeys } from "./common-tap-keys";
 
 const layerBehaviorNames = [
   "Momentary Layer",
@@ -26,6 +14,7 @@ const layerBehaviorNames = [
   "Layer-Tap",
   "Sticky Layer",
   "To Layer",
+  "Conditional Layer",
 ];
 
 interface LayersTabProps {

@@ -151,6 +151,27 @@ const mediaItems: ActionItem[] = [
     behaviorName: "Key Press",
     param1: hid_usage_from_page_and_id(CONSUMER, 0x70),
   },
+  {
+    label: "停止",
+    description: "メディア停止",
+    behaviorName: "Key Press",
+    param1: hid_usage_from_page_and_id(CONSUMER, 0xb7),
+  },
+  {
+    label: "イジェクト",
+    description: "ディスク取り出し",
+    behaviorName: "Key Press",
+    param1: hid_usage_from_page_and_id(CONSUMER, 0xb8),
+  },
+];
+
+const appLaunchItems: ActionItem[] = [
+  { label: "電卓", description: "電卓アプリを起動", behaviorName: "Key Press", param1: hid_usage_from_page_and_id(CONSUMER, 0x192) },
+  { label: "メール", description: "メールアプリを起動", behaviorName: "Key Press", param1: hid_usage_from_page_and_id(CONSUMER, 0x18a) },
+  { label: "ブラウザ", description: "Webブラウザを起動", behaviorName: "Key Press", param1: hid_usage_from_page_and_id(CONSUMER, 0x196) },
+  { label: "ファイル", description: "ファイルマネージャを起動", behaviorName: "Key Press", param1: hid_usage_from_page_and_id(CONSUMER, 0x194) },
+  { label: "スリープ", description: "スリープモードへ", behaviorName: "Key Press", param1: hid_usage_from_page_and_id(CONSUMER, 0x32) },
+  { label: "ロック", description: "画面をロック", behaviorName: "Key Press", param1: hid_usage_from_page_and_id(CONSUMER, 0x19e) },
 ];
 
 const navItems: ActionItem[] = [
@@ -175,13 +196,14 @@ const navItems: ActionItem[] = [
   },
 ];
 
-type SubCategory = "recommendations" | "shortcuts" | "mouse" | "media" | "nav";
+type SubCategory = "recommendations" | "shortcuts" | "mouse" | "media" | "apps" | "nav";
 
 const subCategories: { id: SubCategory; label: string; alwaysShow?: boolean }[] = [
   { id: "recommendations", label: "おすすめ" },
   { id: "shortcuts", label: "キー操作" },
   { id: "mouse", label: "マウス" },
   { id: "media", label: "メディア" },
+  { id: "apps", label: "アプリ起動" },
   { id: "nav", label: "ナビゲーション" },
 ];
 
@@ -290,6 +312,7 @@ export function ActionsTab({ keyPosition, behaviors, onApplyBinding }: ActionsTa
       {activeSub === "shortcuts" && renderActionItems(shortcutItems)}
       {activeSub === "mouse" && renderActionItems(mouseItems)}
       {activeSub === "media" && renderActionItems(mediaItems)}
+      {activeSub === "apps" && renderActionItems(appLaunchItems)}
       {activeSub === "nav" && renderActionItems(navItems)}
     </div>
   );

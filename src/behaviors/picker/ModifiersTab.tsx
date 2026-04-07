@@ -23,18 +23,7 @@ const modifiers: ModifierItem[] = [
   { label: "Cmd/Win (右)", symbol: "⌘", hidId: 231, bitmask: 0x80 },
 ];
 
-// Common keys for Mod-Tap param2 selection
-const commonTapKeys = [
-  { label: "Space", hidId: 44 },
-  { label: "Enter", hidId: 40 },
-  { label: "Tab", hidId: 43 },
-  { label: "Esc", hidId: 41 },
-  { label: "BS", hidId: 42 },
-  ...Array.from({ length: 26 }, (_, i) => ({
-    label: String.fromCharCode(65 + i),
-    hidId: 4 + i,
-  })),
-];
+import { commonTapKeys } from "./common-tap-keys";
 
 type Mode = "standalone" | "mod-tap" | "sticky";
 

@@ -12,6 +12,14 @@ const systemBehaviorNames = [
   "Bootloader",
   "Soft Off",
   "Studio Unlock",
+  "External Power",
+  "Backlight",
+  "RGB Underglow",
+  "Key Toggle",
+  "Key Repeat",
+  "Caps Word",
+  "Grave/Escape",
+  "Macro",
 ];
 
 // Known Bluetooth operations
