@@ -123,12 +123,14 @@ export const Key = ({
         onMouseLeave={handleMouseLeave}
       >
         <div
-          className={`absolute ${selected ? "text-primary-content" : "text-base-content"} opacity-70 top-1 text-nowrap left-1/2 font-light -translate-x-1/2 text-center`}
-          style={{ fontSize: `${Math.max(12, oneU * 0.22)}px` }}
+          className={`absolute ${selected ? "text-primary-content" : "text-base-content"} opacity-70 top-0.5 left-0.5 right-0.5 font-light text-center overflow-hidden text-ellipsis whitespace-nowrap`}
+          style={{ fontSize: `${Math.max(9, oneU * 0.18)}px` }}
         >
           {shortenHeader(header)}
         </div>
-        {children}
+        <div className="overflow-hidden text-ellipsis max-w-full px-0.5 leading-tight">
+          {children}
+        </div>
       </button>
       {showTooltip && !selected && tooltipData && (
         <KeyTooltip

@@ -16,18 +16,9 @@ import { detectOS } from "../behaviors/use-cases";
 import { getHidKeyDescription, getMouseKeyDescription } from "./key-descriptions";
 import { hid_usage_page_and_id_from_usage } from "../hid-usages";
 import type { ReactNode } from "react";
+import { modifierSymbols } from "./key-label-utils";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
-
-// Modifier bitmask → short label
-function modifierLabel(param1: number): string {
-  const mods: string[] = [];
-  if (param1 & 0x01) mods.push("Ctrl");
-  if (param1 & 0x02) mods.push("Shift");
-  if (param1 & 0x04) mods.push("Alt");
-  if (param1 & 0x08) mods.push("⌘");
-  return mods.join("+") || `Mod${param1}`;
-}
 
 // Get readable label for a HID usage param
 function hidParamLabel(param: number): string {
@@ -68,7 +59,7 @@ function getKeyDisplay(
     case "Mod-Tap":
       // param1 = modifier, param2 = tap key
       return {
-        header: modifierLabel(binding.param1),
+        header: modifierSymbols(binding.param1),
         children: <span>{hidParamLabel(binding.param2)}</span>,
       };
 
@@ -104,7 +95,7 @@ function getKeyDisplay(
       };
 
     case "Sticky Key": {
-      const modLabel = modifierLabel(binding.param1);
+      const modLabel = modifierSymbols(binding.param1);
       return {
         header: "Sticky",
         children: <span>{modLabel}</span>,
