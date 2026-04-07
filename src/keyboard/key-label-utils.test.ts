@@ -20,6 +20,18 @@ describe("modifierSymbols", () => {
   it("converts all modifiers to ⌃⇧⌥⌘", () => {
     expect(modifierSymbols(0x0f)).toBe("⌃⇧⌥⌘");
   });
+  it("converts Right Ctrl to R⌃", () => {
+    expect(modifierSymbols(0x10)).toBe("R⌃");
+  });
+  it("converts Right Shift to R⇧", () => {
+    expect(modifierSymbols(0x20)).toBe("R⇧");
+  });
+  it("converts Right Cmd to R⌘", () => {
+    expect(modifierSymbols(0x80)).toBe("R⌘");
+  });
+  it("converts all right modifiers", () => {
+    expect(modifierSymbols(0xf0)).toBe("R⌃R⇧R⌥R⌘");
+  });
   it("falls back for unknown bitmask 0", () => {
     expect(modifierSymbols(0)).toBe("Mod0");
   });

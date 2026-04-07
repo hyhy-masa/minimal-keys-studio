@@ -17,10 +17,10 @@ const modifiers: ModifierItem[] = [
   { label: "Shift (左)", symbol: "⇧", hidId: 225, bitmask: 0x02 },
   { label: "Alt (左)", symbol: "⌥", hidId: 226, bitmask: 0x04 },
   { label: "Cmd/Win (左)", symbol: "⌘", hidId: 227, bitmask: 0x08 },
-  { label: "Ctrl (右)", symbol: "⌃", hidId: 228, bitmask: 0x11 },
-  { label: "Shift (右)", symbol: "⇧", hidId: 229, bitmask: 0x12 },
-  { label: "Alt (右)", symbol: "⌥", hidId: 230, bitmask: 0x14 },
-  { label: "Cmd/Win (右)", symbol: "⌘", hidId: 231, bitmask: 0x18 },
+  { label: "Ctrl (右)", symbol: "⌃", hidId: 228, bitmask: 0x10 },
+  { label: "Shift (右)", symbol: "⇧", hidId: 229, bitmask: 0x20 },
+  { label: "Alt (右)", symbol: "⌥", hidId: 230, bitmask: 0x40 },
+  { label: "Cmd/Win (右)", symbol: "⌘", hidId: 231, bitmask: 0x80 },
 ];
 
 // Common keys for Mod-Tap param2 selection
