@@ -91,6 +91,7 @@ export function PickerTabs({
             layers={layers}
             selectedBehaviorId={selectedBehaviorId}
             onBehaviorSelected={onBehaviorSelected}
+            onApplyBinding={onApplyBinding}
             editingParams={editingParams}
             param1={param1}
             param2={param2}

@@ -504,7 +504,7 @@ export default function Keyboard() {
   }, [keymap, selectedLayerIndex]);
 
   return (
-    <div className="grid grid-cols-[auto_1fr] grid-rows-[7fr_3fr] bg-base-300 max-w-full min-w-0 min-h-0 h-full">
+    <div className="grid grid-cols-[auto_1fr] grid-rows-[55fr_45fr] bg-base-300 max-w-full min-w-0 min-h-0 h-full">
       <div className="p-2 flex flex-col gap-2 bg-gray-50 border-r border-gray-200 row-span-2">
         {layouts && (
           <div className="col-start-3 row-start-1 row-end-2">
