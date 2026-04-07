@@ -387,7 +387,7 @@ function AppInner() {
                 ))}
               </nav>
             )}
-            <div className="min-h-0 overflow-hidden">
+            <div className="min-h-0 overflow-hidden h-full">
               <div className={activeTab === "keymap" ? "h-full" : "hidden"}><Keyboard key={keymapVersion} /></div>
               {mountedTabs.has("trackball") && <div className={activeTab === "trackball" ? "h-full" : "hidden"}><TrackballSettings /></div>}
               {mountedTabs.has("encoder") && <div className={activeTab === "encoder" ? "h-full" : "hidden"}><EncoderSettings /></div>}

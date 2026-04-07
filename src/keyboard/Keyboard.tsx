@@ -32,6 +32,7 @@ import { useToast } from "../misc/Toast";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { useEncoderBindings } from "./useEncoderBindings";
+import { computeOneU, DEFAULT_ONE_U } from "./compute-one-u";
 
 // Separate component for keyboard area — measures container and computes oneU.
 // Isolated so ResizeObserver doesn't cause feedback loops with the keyboard rendering.
@@ -51,7 +52,7 @@ function KeyboardArea({
   encoderRotationLabel?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [oneU, setOneU] = useState(56);
+  const [oneU, setOneU] = useState(DEFAULT_ONE_U);
 
   const layout = layouts?.[selectedPhysicalLayoutIndex];
 
@@ -65,15 +66,10 @@ function KeyboardArea({
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    if (!container || rightMost === 0 || bottomMost === 0) return;
+    if (!container) return;
 
     const calculate = () => {
-      const padding = 32;
-      const availW = container.clientWidth - padding;
-      const availH = container.clientHeight - padding;
-      if (availW <= 0 || availH <= 0) return;
-      const newOneU = Math.max(20, Math.min(availW / rightMost, availH / bottomMost));
-      setOneU(newOneU);
+      setOneU(computeOneU(container.clientWidth, container.clientHeight, rightMost, bottomMost));
     };
 
     calculate();
@@ -508,7 +504,7 @@ export default function Keyboard() {
   }, [keymap, selectedLayerIndex]);
 
   return (
-    <div className="grid grid-cols-[auto_1fr] grid-rows-[7fr_3fr] bg-base-300 max-w-full min-w-0 min-h-0">
+    <div className="grid grid-cols-[auto_1fr] grid-rows-[7fr_3fr] bg-base-300 max-w-full min-w-0 min-h-0 h-full">
       <div className="p-2 flex flex-col gap-2 bg-gray-50 border-r border-gray-200 row-span-2">
         {layouts && (
           <div className="col-start-3 row-start-1 row-end-2">
