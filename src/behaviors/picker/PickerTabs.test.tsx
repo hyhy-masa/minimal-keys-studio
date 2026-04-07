@@ -53,7 +53,8 @@ describe("PickerTabs", () => {
         onApplyBinding={() => {}}
       />
     );
-    // Placeholder text visible when letters tab is active
-    expect(screen.getByText("文字・記号タブ（実装中）")).toBeDefined();
+    // LettersTab renders with A-Z subcategory by default
+    expect(screen.getByText("A-Z")).toBeDefined();
+    expect(screen.getByText("A")).toBeDefined();
   });
 });

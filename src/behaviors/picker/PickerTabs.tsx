@@ -3,6 +3,7 @@ import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-clie
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { keyRoleMap } from "../../keyboard/key-roles";
 import { RecommendationsTab } from "./RecommendationsTab";
+import { LettersTab } from "./LettersTab";
 
 type TabId = "recommendations" | "letters" | "actions" | "layers" | "modifiers" | "system";
 
@@ -64,7 +65,7 @@ export function PickerTabs({
           />
         )}
         {activeTab === "letters" && (
-          <div className="p-4 text-sm text-base-content/50">文字・記号タブ（実装中）</div>
+          <LettersTab behaviors={behaviors} onApplyBinding={onApplyBinding} />
         )}
         {activeTab === "actions" && (
           <div className="p-4 text-sm text-base-content/50">操作タブ（実装中）</div>
