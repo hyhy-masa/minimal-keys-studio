@@ -3,62 +3,48 @@ import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-clie
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { keyRoleMap } from "../../keyboard/key-roles";
 import { RecommendationsTab } from "./RecommendationsTab";
-import { UseCasesTab } from "./UseCasesTab";
-import { AllBehaviorsTab } from "./AllBehaviorsTab";
 
-type TabId = "recommendations" | "use-cases" | "all";
+type TabId = "recommendations" | "letters" | "actions" | "layers" | "modifiers" | "system";
 
 interface PickerTabsProps {
   keyPosition: number;
   behaviors: GetBehaviorDetailsResponse[];
   layers: { id: number; name: string }[];
-  selectedBehaviorId: number;
   onApplyBinding: (binding: BehaviorBinding) => void;
-  onBehaviorSelected: (behaviorId: number) => void;
-  // Inline param editing for "自分で選ぶ" tab
-  editingParams?: boolean;
-  param1?: number;
-  param2?: number;
-  onParam1Changed?: (value?: number) => void;
-  onParam2Changed?: (value?: number) => void;
 }
 
 const tabs: { id: TabId; label: string }[] = [
   { id: "recommendations", label: "おすすめ" },
-  { id: "use-cases", label: "用途別" },
-  { id: "all", label: "自分で選ぶ" },
+  { id: "letters", label: "文字・記号" },
+  { id: "actions", label: "操作" },
+  { id: "layers", label: "レイヤー" },
+  { id: "modifiers", label: "修飾キー" },
+  { id: "system", label: "システム" },
 ];
 
 export function PickerTabs({
   keyPosition,
   behaviors,
-  layers,
-  selectedBehaviorId,
+  layers: _layers,
   onApplyBinding,
-  onBehaviorSelected,
-  editingParams,
-  param1,
-  param2,
-  onParam1Changed,
-  onParam2Changed,
 }: PickerTabsProps) {
   const hasRecommendations = keyRoleMap[keyPosition] !== undefined;
   const [activeTab, setActiveTab] = useState<TabId>(
-    hasRecommendations ? "recommendations" : "use-cases"
+    hasRecommendations ? "recommendations" : "letters"
   );
 
   // Reset tab when key changes
   useEffect(() => {
-    setActiveTab(keyRoleMap[keyPosition] !== undefined ? "recommendations" : "use-cases");
+    setActiveTab(keyRoleMap[keyPosition] !== undefined ? "recommendations" : "letters");
   }, [keyPosition]);
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-1 bg-base-200 p-1 rounded-lg">
+      <div className="flex gap-0.5 bg-base-200 p-1 rounded-lg overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            className={`px-4 py-1.5 text-sm rounded-md transition-all ${
+            className={`px-3 py-1.5 text-sm rounded-md transition-all whitespace-nowrap ${
               activeTab === tab.id
                 ? "bg-white text-primary font-medium shadow-sm"
                 : "text-base-content/50 hover:text-base-content"
@@ -77,26 +63,20 @@ export function PickerTabs({
             onApplyBinding={onApplyBinding}
           />
         )}
-        {activeTab === "use-cases" && (
-          <UseCasesTab
-            behaviors={behaviors}
-            layers={layers}
-            onApplyBinding={onApplyBinding}
-          />
+        {activeTab === "letters" && (
+          <div className="p-4 text-sm text-base-content/50">文字・記号タブ（実装中）</div>
         )}
-        {activeTab === "all" && (
-          <AllBehaviorsTab
-            key={keyPosition}
-            behaviors={behaviors}
-            layers={layers}
-            selectedBehaviorId={selectedBehaviorId}
-            onBehaviorSelected={onBehaviorSelected}
-            editingParams={editingParams}
-            param1={param1}
-            param2={param2}
-            onParam1Changed={onParam1Changed}
-            onParam2Changed={onParam2Changed}
-          />
+        {activeTab === "actions" && (
+          <div className="p-4 text-sm text-base-content/50">操作タブ（実装中）</div>
+        )}
+        {activeTab === "layers" && (
+          <div className="p-4 text-sm text-base-content/50">レイヤータブ（実装中）</div>
+        )}
+        {activeTab === "modifiers" && (
+          <div className="p-4 text-sm text-base-content/50">修飾キータブ（実装中）</div>
+        )}
+        {activeTab === "system" && (
+          <div className="p-4 text-sm text-base-content/50">システムタブ（実装中）</div>
         )}
       </div>
     </div>
