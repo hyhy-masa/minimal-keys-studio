@@ -13,7 +13,6 @@ interface AllBehaviorsTabProps {
   layers: { id: number; name: string }[];
   selectedBehaviorId: number;
   onBehaviorSelected: (behaviorId: number) => void;
-  onApplyBinding?: (binding: import("@zmkfirmware/zmk-studio-ts-client/keymap").BehaviorBinding) => void;
   // Inline param editing
   editingParams?: boolean;
   param1?: number;
@@ -27,7 +26,6 @@ export function AllBehaviorsTab({
   layers,
   selectedBehaviorId,
   onBehaviorSelected,
-  onApplyBinding,
   editingParams,
   param1,
   param2,
@@ -112,14 +110,8 @@ export function AllBehaviorsTab({
                             param1={param1}
                             param2={param2}
                             layers={layers}
-                            onParam1Changed={(v) => {
-                              onParam1Changed?.(v);
-                              onApplyBinding?.({ behaviorId: b.id, param1: v ?? 0, param2: param2 ?? 0 });
-                            }}
-                            onParam2Changed={(v) => {
-                              onParam2Changed?.(v);
-                              onApplyBinding?.({ behaviorId: b.id, param1: param1 ?? 0, param2: v ?? 0 });
-                            }}
+                            onParam1Changed={onParam1Changed}
+                            onParam2Changed={onParam2Changed}
                           />
                         </div>
                       )}

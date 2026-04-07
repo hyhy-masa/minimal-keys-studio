@@ -125,6 +125,9 @@ export const BehaviorBindingPicker = ({
     setBehaviorId(newBehaviorId);
     setParam1(0);
     setParam2(0);
+    // Immediately apply initial binding so sync effect sees matching
+    // behaviorId and doesn't reset editingParamsRef
+    onBindingChangedRef.current({ behaviorId: newBehaviorId, param1: 0, param2: 0 });
   }, []);
 
   // Current binding display
