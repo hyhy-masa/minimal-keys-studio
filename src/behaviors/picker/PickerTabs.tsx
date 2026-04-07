@@ -6,6 +6,7 @@ import { RecommendationsTab } from "./RecommendationsTab";
 import { LettersTab } from "./LettersTab";
 import { ActionsTab } from "./ActionsTab";
 import { LayersTab } from "./LayersTab";
+import { ModifiersTab } from "./ModifiersTab";
 
 type TabId = "recommendations" | "letters" | "actions" | "layers" | "modifiers" | "system";
 
@@ -76,7 +77,7 @@ export function PickerTabs({
           <LayersTab behaviors={behaviors} layers={layers} onApplyBinding={onApplyBinding} />
         )}
         {activeTab === "modifiers" && (
-          <div className="p-4 text-sm text-base-content/50">修飾キータブ（実装中）</div>
+          <ModifiersTab behaviors={behaviors} layers={layers} onApplyBinding={onApplyBinding} />
         )}
         {activeTab === "system" && (
           <div className="p-4 text-sm text-base-content/50">システムタブ（実装中）</div>
