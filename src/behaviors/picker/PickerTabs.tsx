@@ -4,6 +4,7 @@ import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { keyRoleMap } from "../../keyboard/key-roles";
 import { RecommendationsTab } from "./RecommendationsTab";
 import { LettersTab } from "./LettersTab";
+import { ActionsTab } from "./ActionsTab";
 
 type TabId = "recommendations" | "letters" | "actions" | "layers" | "modifiers" | "system";
 
@@ -26,7 +27,7 @@ const tabs: { id: TabId; label: string }[] = [
 export function PickerTabs({
   keyPosition,
   behaviors,
-  layers: _layers,
+  layers,
   onApplyBinding,
 }: PickerTabsProps) {
   const hasRecommendations = keyRoleMap[keyPosition] !== undefined;
@@ -68,7 +69,7 @@ export function PickerTabs({
           <LettersTab behaviors={behaviors} onApplyBinding={onApplyBinding} />
         )}
         {activeTab === "actions" && (
-          <div className="p-4 text-sm text-base-content/50">操作タブ（実装中）</div>
+          <ActionsTab behaviors={behaviors} layers={layers} onApplyBinding={onApplyBinding} />
         )}
         {activeTab === "layers" && (
           <div className="p-4 text-sm text-base-content/50">レイヤータブ（実装中）</div>
