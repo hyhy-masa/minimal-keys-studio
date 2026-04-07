@@ -107,10 +107,10 @@ export function ModifiersTab({ behaviors, onApplyBinding }: ModifiersTabProps) {
     });
   };
 
-  const modes: { id: Mode; label: string; available: boolean }[] = [
-    { id: "standalone", label: "修飾キー", available: true },
-    { id: "mod-tap", label: "修飾キー/タップ", available: hasModTap },
-    { id: "sticky", label: "ワンショット", available: hasStickyKey },
+  const modes: { id: Mode; label: string; description: string; available: boolean }[] = [
+    { id: "standalone", label: "修飾キー", description: "押している間だけ修飾", available: true },
+    { id: "mod-tap", label: "Mod-Tap", description: "短押し=キー、長押し=修飾キー", available: hasModTap },
+    { id: "sticky", label: "ワンショット", description: "次の1キーだけ修飾", available: hasStickyKey },
   ];
 
   return (
@@ -120,14 +120,15 @@ export function ModifiersTab({ behaviors, onApplyBinding }: ModifiersTabProps) {
         {modes.filter((m) => m.available).map((m) => (
           <button
             key={m.id}
-            className={`px-3 py-1 text-sm rounded-md ${
+            className={`flex flex-col items-start px-3 py-2 text-sm rounded-md border ${
               mode === m.id
-                ? "bg-primary/10 text-primary font-medium"
-                : "text-base-content/50 hover:text-base-content hover:bg-base-200"
+                ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                : "border-base-300 bg-white hover:bg-base-200 text-base-content"
             }`}
             onClick={() => handleModeChange(m.id)}
           >
-            {m.label}
+            <span className="font-medium">{m.label}</span>
+            <span className="text-xs text-base-content/50">{m.description}</span>
           </button>
         ))}
       </div>

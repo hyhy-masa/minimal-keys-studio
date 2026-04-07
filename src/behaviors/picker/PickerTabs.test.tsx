@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { PickerTabs } from "./PickerTabs";
-import { keyRoleMap } from "../../keyboard/key-roles";
 
 const fakeBehaviors = [
   { id: 10, displayName: "Key Press", metadata: [] },
@@ -11,40 +10,36 @@ const fakeBehaviors = [
 ];
 
 describe("PickerTabs", () => {
-  it("renders six tab buttons", () => {
-    const knownPosition = Number(Object.keys(keyRoleMap)[0]);
+  it("renders five tab buttons", () => {
     render(
       <PickerTabs
-        keyPosition={knownPosition}
+        keyPosition={37}
         behaviors={fakeBehaviors}
         layers={[{ id: 0, name: "Layer 0" }]}
         onApplyBinding={() => {}}
       />
     );
-    expect(screen.getByText("おすすめ")).toBeDefined();
+    expect(screen.getByText("ショートカット")).toBeDefined();
     expect(screen.getByText("文字・記号")).toBeDefined();
-    expect(screen.getByText("操作")).toBeDefined();
     expect(screen.getByText("レイヤー")).toBeDefined();
     expect(screen.getByText("修飾キー")).toBeDefined();
     expect(screen.getByText("システム")).toBeDefined();
   });
 
-  it("defaults to recommendations tab for key with role data", () => {
-    const knownPosition = Number(Object.keys(keyRoleMap)[0]);
-    const role = keyRoleMap[knownPosition];
+  it("defaults to ショートカット tab with おすすめ for thumb key", () => {
     render(
       <PickerTabs
-        keyPosition={knownPosition}
+        keyPosition={37}
         behaviors={fakeBehaviors}
         layers={[{ id: 0, name: "Layer 0" }]}
         onApplyBinding={() => {}}
       />
     );
-    // Role label is only visible in recommendations tab
-    expect(screen.getByText(role.roleLabel)).toBeDefined();
+    // Recommendations subcat visible for thumb keys
+    expect(screen.getByText("おすすめ")).toBeDefined();
   });
 
-  it("defaults to letters tab for key without role data", () => {
+  it("defaults to ショートカット tab without おすすめ for non-thumb key", () => {
     render(
       <PickerTabs
         keyPosition={9999}
@@ -53,8 +48,8 @@ describe("PickerTabs", () => {
         onApplyBinding={() => {}}
       />
     );
-    // LettersTab renders with A-Z subcategory by default
-    expect(screen.getByText("A-Z")).toBeDefined();
-    expect(screen.getByText("A")).toBeDefined();
+    // ショートカット subcategory visible, but no おすすめ
+    expect(screen.getByText("ショートカット")).toBeDefined();
+    expect(screen.queryByText("おすすめ")).toBeNull();
   });
 });

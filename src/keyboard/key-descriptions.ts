@@ -101,13 +101,13 @@ export function getHidKeyDescription(page: number, id: number): KeyDescription {
   return { roleName: name, description: "キー入力" };
 }
 
-// Mouse button descriptions
+// Mouse button descriptions — ZMK uses bitmask encoding
 const mouseButtons: Record<number, KeyDescription> = {
-  1: { roleName: "左クリック", description: "選択・決定" },
-  2: { roleName: "右クリック", description: "メニューを開く" },
-  3: { roleName: "中クリック", description: "新しいタブで開く" },
-  4: { roleName: "戻る", description: "前のページへ戻る" },
-  5: { roleName: "進む", description: "次のページへ進む" },
+  0x01: { roleName: "左クリック", description: "選択・決定" },
+  0x02: { roleName: "右クリック", description: "メニューを開く" },
+  0x04: { roleName: "中クリック", description: "新しいタブで開く" },
+  0x08: { roleName: "戻る", description: "前のページへ戻る" },
+  0x10: { roleName: "進む", description: "次のページへ進む" },
 };
 
 export function getMouseKeyDescription(buttonId: number): KeyDescription {

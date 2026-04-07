@@ -3,6 +3,8 @@ import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-clie
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { hid_usage_from_page_and_id } from "../../hid-usages";
 import { detectOS } from "../use-cases";
+import { keyRoleMap } from "../../keyboard/key-roles";
+import { resolveBehaviorId } from "../resolve-behavior";
 
 const KB = 7;
 const CONSUMER = 12;
@@ -91,12 +93,13 @@ function getShortcutItems(os: string): ActionItem[] {
   ];
 }
 
+// ZMK mouse buttons use bitmask encoding: MB1=BIT(0), MB2=BIT(1), MB3=BIT(2), etc.
 const mouseItems: ActionItem[] = [
-  { label: "左クリック", description: "選択・決定", behaviorName: "Mouse Key Press", param1: 1 },
-  { label: "右クリック", description: "メニューを開く", behaviorName: "Mouse Key Press", param1: 2 },
-  { label: "中クリック", description: "新しいタブで開く", behaviorName: "Mouse Key Press", param1: 3 },
-  { label: "戻る", description: "前のページへ戻る", behaviorName: "Mouse Key Press", param1: 4 },
-  { label: "進む", description: "次のページへ進む", behaviorName: "Mouse Key Press", param1: 5 },
+  { label: "左クリック", description: "選択・決定", behaviorName: "Mouse Key Press", param1: 0x01 },
+  { label: "右クリック", description: "メニューを開く", behaviorName: "Mouse Key Press", param1: 0x02 },
+  { label: "中クリック", description: "新しいタブで開く", behaviorName: "Mouse Key Press", param1: 0x04 },
+  { label: "戻る", description: "前のページへ戻る", behaviorName: "Mouse Key Press", param1: 0x08 },
+  { label: "進む", description: "次のページへ進む", behaviorName: "Mouse Key Press", param1: 0x10 },
 ];
 
 const mediaItems: ActionItem[] = [
@@ -172,23 +175,28 @@ const navItems: ActionItem[] = [
   },
 ];
 
-type SubCategory = "shortcuts" | "mouse" | "media" | "nav";
+type SubCategory = "recommendations" | "shortcuts" | "mouse" | "media" | "nav";
 
-const subCategories: { id: SubCategory; label: string }[] = [
-  { id: "shortcuts", label: "ショートカット" },
+const subCategories: { id: SubCategory; label: string; alwaysShow?: boolean }[] = [
+  { id: "recommendations", label: "おすすめ" },
+  { id: "shortcuts", label: "キー操作" },
   { id: "mouse", label: "マウス" },
   { id: "media", label: "メディア" },
   { id: "nav", label: "ナビゲーション" },
 ];
 
 interface ActionsTabProps {
+  keyPosition?: number;
   behaviors: GetBehaviorDetailsResponse[];
   layers: { id: number; name: string }[];
   onApplyBinding: (binding: BehaviorBinding) => void;
 }
 
-export function ActionsTab({ behaviors, onApplyBinding }: ActionsTabProps) {
-  const [activeSub, setActiveSub] = useState<SubCategory>("shortcuts");
+export function ActionsTab({ keyPosition, behaviors, onApplyBinding }: ActionsTabProps) {
+  const hasRecommendations = keyPosition !== undefined && keyRoleMap[keyPosition] !== undefined;
+  const [activeSub, setActiveSub] = useState<SubCategory>(
+    hasRecommendations ? "recommendations" : "shortcuts"
+  );
   const os = useMemo(() => detectOS(), []);
 
   const behaviorIdMap = useMemo(() => {
@@ -201,18 +209,12 @@ export function ActionsTab({ behaviors, onApplyBinding }: ActionsTabProps) {
 
   const shortcutItems = useMemo(() => getShortcutItems(os), [os]);
 
-  const activeItems: ActionItem[] = (() => {
-    switch (activeSub) {
-      case "shortcuts":
-        return shortcutItems;
-      case "mouse":
-        return mouseItems;
-      case "media":
-        return mediaItems;
-      case "nav":
-        return navItems;
-    }
-  })();
+  const role = keyPosition !== undefined ? keyRoleMap[keyPosition] : undefined;
+
+  // Filter subcategories: only show "おすすめ" when key has recommendations
+  const visibleSubCategories = subCategories.filter(
+    (sub) => sub.id !== "recommendations" || hasRecommendations
+  );
 
   const handleItemClick = (item: ActionItem) => {
     const behaviorId = behaviorIdMap[item.behaviorName];
@@ -220,10 +222,57 @@ export function ActionsTab({ behaviors, onApplyBinding }: ActionsTabProps) {
     onApplyBinding({ behaviorId, param1: item.param1, param2: 0 });
   };
 
+  const handleRecommendationClick = (rec: { behaviorDisplayName: string; param1: number; param2: number }) => {
+    const behaviorId = resolveBehaviorId(rec.behaviorDisplayName, behaviors);
+    if (behaviorId === undefined) return;
+    onApplyBinding({ behaviorId, param1: rec.param1, param2: rec.param2 });
+  };
+
+  // Render recommendations section
+  const renderRecommendations = () => {
+    if (!role) return null;
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="text-sm text-base-content/60">{role.roleLabel}</p>
+        <div className="flex gap-2 flex-wrap">
+          {role.recommendations.map((rec) => (
+            <button
+              key={`${rec.behaviorDisplayName}-${rec.param1}-${rec.param2}`}
+              className="flex flex-col items-center gap-1.5 px-5 py-4 rounded-xl border border-base-300 hover:border-primary hover:bg-primary/5 hover:shadow-md transition-all min-w-[6rem]"
+              onClick={() => handleRecommendationClick(rec)}
+            >
+              <span className="text-base font-medium">{rec.label}</span>
+              {rec.popular && (
+                <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">人気</span>
+              )}
+              <span className="text-sm text-base-content/40">{rec.description}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // Render action items list
+  const renderActionItems = (items: ActionItem[]) => (
+    <div className="flex flex-col gap-1">
+      {items.map((item, i) => (
+        <button
+          key={i}
+          className="flex items-center gap-3 px-3 py-2 text-sm rounded-md border border-base-300 bg-white hover:bg-primary/10 hover:border-primary/30 transition-all text-left"
+          onClick={() => handleItemClick(item)}
+        >
+          <span className="font-medium">{item.label}</span>
+          <span className="text-base-content/50">{item.description}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-1 flex-wrap">
-        {subCategories.map((sub) => (
+        {visibleSubCategories.map((sub) => (
           <button
             key={sub.id}
             className={`px-3 py-1 text-sm rounded-md ${
@@ -237,18 +286,11 @@ export function ActionsTab({ behaviors, onApplyBinding }: ActionsTabProps) {
           </button>
         ))}
       </div>
-      <div className="flex flex-col gap-1">
-        {activeItems.map((item, i) => (
-          <button
-            key={i}
-            className="flex items-center gap-3 px-3 py-2 text-sm rounded-md border border-base-300 bg-white hover:bg-primary/10 hover:border-primary/30 transition-all text-left"
-            onClick={() => handleItemClick(item)}
-          >
-            <span className="font-medium">{item.label}</span>
-            <span className="text-base-content/50">{item.description}</span>
-          </button>
-        ))}
-      </div>
+      {activeSub === "recommendations" && renderRecommendations()}
+      {activeSub === "shortcuts" && renderActionItems(shortcutItems)}
+      {activeSub === "mouse" && renderActionItems(mouseItems)}
+      {activeSub === "media" && renderActionItems(mediaItems)}
+      {activeSub === "nav" && renderActionItems(navItems)}
     </div>
   );
 }

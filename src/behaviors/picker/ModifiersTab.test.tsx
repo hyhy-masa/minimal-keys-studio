@@ -10,11 +10,12 @@ const mockBehaviors = [
 ];
 
 describe("ModifiersTab", () => {
-  it("renders mode buttons", () => {
+  it("renders mode buttons with descriptions", () => {
     const onApply = vi.fn();
     render(<ModifiersTab behaviors={mockBehaviors} layers={[]} onApplyBinding={onApply} />);
     expect(screen.getByText("修飾キー")).toBeTruthy();
-    expect(screen.getByText("修飾キー/タップ")).toBeTruthy();
+    expect(screen.getByText("Mod-Tap")).toBeTruthy();
+    expect(screen.getByText("短押し=キー、長押し=修飾キー")).toBeTruthy();
     expect(screen.getByText("ワンショット")).toBeTruthy();
   });
 
@@ -51,7 +52,7 @@ describe("ModifiersTab", () => {
   it("mod-tap mode: apply button disabled until both params set", () => {
     const onApply = vi.fn();
     render(<ModifiersTab behaviors={mockBehaviors} layers={[]} onApplyBinding={onApply} />);
-    fireEvent.click(screen.getByText("修飾キー/タップ"));
+    fireEvent.click(screen.getByText("Mod-Tap"));
     const applyBtn = screen.getByText("適用する");
     expect(applyBtn).toHaveAttribute("disabled");
   });
@@ -59,14 +60,14 @@ describe("ModifiersTab", () => {
   it("mod-tap mode: apply sends correct binding", () => {
     const onApply = vi.fn();
     render(<ModifiersTab behaviors={mockBehaviors} layers={[]} onApplyBinding={onApply} />);
-    fireEvent.click(screen.getByText("修飾キー/タップ"));
+    fireEvent.click(screen.getByText("Mod-Tap"));
     fireEvent.click(screen.getByText("Ctrl (左)"));
     fireEvent.click(screen.getByText("A"));
     fireEvent.click(screen.getByText("適用する"));
     expect(onApply).toHaveBeenCalledWith({
       behaviorId: 20,
       param1: 0x01,
-      param2: hid_usage_from_page_and_id(7, 4), // A = id 4
+      param2: hid_usage_from_page_and_id(7, 4),
     });
   });
 });

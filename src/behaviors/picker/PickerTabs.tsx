@@ -1,15 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
-import { keyRoleMap } from "../../keyboard/key-roles";
-import { RecommendationsTab } from "./RecommendationsTab";
 import { LettersTab } from "./LettersTab";
 import { ActionsTab } from "./ActionsTab";
 import { LayersTab } from "./LayersTab";
 import { ModifiersTab } from "./ModifiersTab";
 import { SystemTab } from "./SystemTab";
 
-type TabId = "recommendations" | "letters" | "actions" | "layers" | "modifiers" | "system";
+type TabId = "actions" | "letters" | "layers" | "modifiers" | "system";
 
 interface PickerTabsProps {
   keyPosition: number;
@@ -19,9 +17,8 @@ interface PickerTabsProps {
 }
 
 const tabs: { id: TabId; label: string }[] = [
-  { id: "recommendations", label: "おすすめ" },
+  { id: "actions", label: "ショートカット" },
   { id: "letters", label: "文字・記号" },
-  { id: "actions", label: "操作" },
   { id: "layers", label: "レイヤー" },
   { id: "modifiers", label: "修飾キー" },
   { id: "system", label: "システム" },
@@ -33,15 +30,7 @@ export function PickerTabs({
   layers,
   onApplyBinding,
 }: PickerTabsProps) {
-  const hasRecommendations = keyRoleMap[keyPosition] !== undefined;
-  const [activeTab, setActiveTab] = useState<TabId>(
-    hasRecommendations ? "recommendations" : "letters"
-  );
-
-  // Reset tab when key changes
-  useEffect(() => {
-    setActiveTab(keyRoleMap[keyPosition] !== undefined ? "recommendations" : "letters");
-  }, [keyPosition]);
+  const [activeTab, setActiveTab] = useState<TabId>("actions");
 
   return (
     <div className="flex flex-col gap-2">
@@ -61,18 +50,16 @@ export function PickerTabs({
         ))}
       </div>
       <div className="min-h-[6rem]">
-        {activeTab === "recommendations" && (
-          <RecommendationsTab
+        {activeTab === "actions" && (
+          <ActionsTab
             keyPosition={keyPosition}
             behaviors={behaviors}
+            layers={layers}
             onApplyBinding={onApplyBinding}
           />
         )}
         {activeTab === "letters" && (
           <LettersTab behaviors={behaviors} onApplyBinding={onApplyBinding} />
-        )}
-        {activeTab === "actions" && (
-          <ActionsTab behaviors={behaviors} layers={layers} onApplyBinding={onApplyBinding} />
         )}
         {activeTab === "layers" && (
           <LayersTab behaviors={behaviors} layers={layers} onApplyBinding={onApplyBinding} />

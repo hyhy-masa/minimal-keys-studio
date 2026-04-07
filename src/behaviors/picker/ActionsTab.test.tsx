@@ -11,13 +11,13 @@ describe("ActionsTab", () => {
   it("renders subcategory buttons", () => {
     const onApply = vi.fn();
     render(<ActionsTab behaviors={mockBehaviors} layers={[]} onApplyBinding={onApply} />);
-    expect(screen.getByText("ショートカット")).toBeTruthy();
+    expect(screen.getByText("キー操作")).toBeTruthy();
     expect(screen.getByText("マウス")).toBeTruthy();
     expect(screen.getByText("メディア")).toBeTruthy();
     expect(screen.getByText("ナビゲーション")).toBeTruthy();
   });
 
-  it("shows shortcuts by default", () => {
+  it("shows shortcuts by default for non-thumb key", () => {
     const onApply = vi.fn();
     render(<ActionsTab behaviors={mockBehaviors} layers={[]} onApplyBinding={onApply} />);
     expect(screen.getByText("コピー")).toBeTruthy();
@@ -53,6 +53,6 @@ describe("ActionsTab", () => {
     render(<ActionsTab behaviors={mockBehaviors} layers={[]} onApplyBinding={onApply} />);
     fireEvent.click(screen.getByText("マウス"));
     fireEvent.click(screen.getByText("左クリック"));
-    expect(onApply).toHaveBeenCalledWith({ behaviorId: 2, param1: 1, param2: 0 });
+    expect(onApply).toHaveBeenCalledWith({ behaviorId: 2, param1: 0x01, param2: 0 });
   });
 });
