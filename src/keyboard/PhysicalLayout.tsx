@@ -85,34 +85,23 @@ export const PhysicalLayout = ({
   encoderRotationLabel,
 }: PhysicalLayoutProps) => {
   const ref = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
-  // Calculate natural (unscaled) keyboard dimensions
-  const rightMost = positions
-    .map((k) => k.x + k.width)
-    .reduce((a, b) => Math.max(a, b), 0);
-  const bottomMost = positions
-    .map((k) => k.y + k.height)
-    .reduce((a, b) => Math.max(a, b), 0);
-
-  const naturalWidth = rightMost * oneU;
-  const naturalHeight = bottomMost * oneU;
-
   useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const element = ref.current;
+    if (!element) return;
+
+    const parent = element.parentElement;
+    if (!parent) return;
 
     const calculateScale = () => {
       if (zoom === "auto") {
-        const padding = 16;
-        const availableWidth = container.clientWidth - padding * 2;
-        const availableHeight = container.clientHeight - padding * 2;
+        const padding = Math.min(window.innerWidth, window.innerHeight) * 0.05;
         const newScale = Math.min(
-          availableWidth / naturalWidth,
-          availableHeight / naturalHeight,
+          parent.clientWidth / (element.clientWidth + 2 * padding),
+          parent.clientHeight / (element.clientHeight + 2 * padding),
         );
-        setScale(Math.max(0.1, newScale));
+        setScale(newScale);
       } else {
         setScale(zoom || 1);
       }
@@ -124,15 +113,20 @@ export const PhysicalLayout = ({
       calculateScale();
     });
 
-    resizeObserver.observe(container);
+    resizeObserver.observe(element);
+    resizeObserver.observe(parent);
 
     return () => {
       resizeObserver.disconnect();
     };
-  }, [zoom, naturalWidth, naturalHeight]);
+  }, [zoom]);
 
-  const scaledWidth = naturalWidth * scale;
-  const scaledHeight = naturalHeight * scale;
+  const rightMost = positions
+    .map((k) => k.x + k.width)
+    .reduce((a, b) => Math.max(a, b), 0);
+  const bottomMost = positions
+    .map((k) => k.y + k.height)
+    .reduce((a, b) => Math.max(a, b), 0);
 
   const positionItems = positions.map((p, idx) => (
     <div className="absolute" key={p.id} style={scalePosition(p, oneU)}>
@@ -154,27 +148,18 @@ export const PhysicalLayout = ({
   ));
 
   return (
-    <div ref={containerRef} className="w-full h-full flex items-center justify-center">
-      <div
-        className="relative"
-        style={{
-          width: `${scaledWidth}px`,
-          height: `${scaledHeight}px`,
-        }}
-        ref={ref}
-      >
-        <div
-          style={{
-            width: `${naturalWidth}px`,
-            height: `${naturalHeight}px`,
-            transform: `scale(${scale})`,
-            transformOrigin: "top left",
-            transformStyle: "preserve-3d",
-          }}
-        >
-          {positionItems}
-        </div>
-      </div>
+    <div
+      className="relative"
+      style={{
+        height: bottomMost * oneU + "px",
+        width: rightMost * oneU + "px",
+        transform: `scale(${scale})`,
+        transformOrigin: "top left",
+        transformStyle: "preserve-3d",
+      }}
+      ref={ref}
+    >
+      {positionItems}
     </div>
   );
 };
