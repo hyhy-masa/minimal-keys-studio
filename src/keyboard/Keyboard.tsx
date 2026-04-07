@@ -3,7 +3,9 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -30,6 +32,80 @@ import { useToast } from "../misc/Toast";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { useEncoderBindings } from "./useEncoderBindings";
+
+// Separate component for keyboard area — measures container and computes oneU.
+// Isolated so ResizeObserver doesn't cause feedback loops with the keyboard rendering.
+function KeyboardArea({
+  layouts, keymap, behaviors, selectedPhysicalLayoutIndex,
+  selectedLayerIndex, selectedKeyPosition, onKeyPositionClicked,
+  onBindingApply, encoderRotationLabel,
+}: {
+  layouts: PhysicalLayout[] | undefined;
+  keymap: Keymap | undefined;
+  behaviors: Record<number, import("@zmkfirmware/zmk-studio-ts-client/behaviors").GetBehaviorDetailsResponse> | undefined;
+  selectedPhysicalLayoutIndex: number;
+  selectedLayerIndex: number;
+  selectedKeyPosition: number | undefined;
+  onKeyPositionClicked: (pos: number) => void;
+  onBindingApply: (binding: import("@zmkfirmware/zmk-studio-ts-client/keymap").BehaviorBinding) => void;
+  encoderRotationLabel?: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [oneU, setOneU] = useState(56);
+
+  const layout = layouts?.[selectedPhysicalLayoutIndex];
+
+  // Compute keyboard extent in layout units
+  const rightMost = layout?.keys
+    .map((k) => k.x / 100 + k.width / 100)
+    .reduce((a, b) => Math.max(a, b), 0) ?? 0;
+  const bottomMost = layout?.keys
+    .map((k) => k.y / 100 + k.height / 100)
+    .reduce((a, b) => Math.max(a, b), 0) ?? 0;
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container || rightMost === 0 || bottomMost === 0) return;
+
+    const calculate = () => {
+      const padding = 32;
+      const availW = container.clientWidth - padding;
+      const availH = container.clientHeight - padding;
+      if (availW <= 0 || availH <= 0) return;
+      const newOneU = Math.max(20, Math.min(availW / rightMost, availH / bottomMost));
+      setOneU(newOneU);
+    };
+
+    calculate();
+
+    const resizeObserver = new ResizeObserver(calculate);
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, [rightMost, bottomMost]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="p-4 col-start-2 row-start-1 flex items-center justify-center min-w-0 overflow-hidden bg-gray-200/50 rounded-lg"
+    >
+      {layouts && keymap && behaviors ? (
+        <KeymapComp
+          keymap={keymap}
+          layout={layouts[selectedPhysicalLayoutIndex]}
+          behaviors={behaviors}
+          oneU={oneU}
+          selectedLayerIndex={selectedLayerIndex}
+          selectedKeyPosition={selectedKeyPosition}
+          onKeyPositionClicked={onKeyPositionClicked}
+          onBindingApply={onBindingApply}
+          encoderRotationLabel={encoderRotationLabel}
+        />
+      ) : (
+        <div className="text-base-content/30 text-sm">読み込み中...</div>
+      )}
+    </div>
+  );
+}
 
 function useLayouts(): [
   PhysicalLayout[] | undefined,
@@ -460,23 +536,17 @@ export default function Keyboard() {
           </div>
         )}
       </div>
-      <div className="p-4 col-start-2 row-start-1 flex items-center justify-center min-w-0 overflow-hidden bg-gray-200/50 rounded-lg">
-        {layouts && keymap && behaviors ? (
-          <KeymapComp
-            keymap={keymap}
-            layout={layouts[selectedPhysicalLayoutIndex]}
-            behaviors={behaviors}
-            scale={"auto"}
-            selectedLayerIndex={selectedLayerIndex}
-            selectedKeyPosition={selectedKeyPosition}
-            onKeyPositionClicked={setSelectedKeyPosition}
-            onBindingApply={doUpdateBinding}
-            encoderRotationLabel={encoderSummary?.rotationLabel}
-          />
-        ) : (
-          <div className="text-base-content/30 text-sm">読み込み中...</div>
-        )}
-      </div>
+      <KeyboardArea
+        layouts={layouts}
+        keymap={keymap}
+        behaviors={behaviors}
+        selectedPhysicalLayoutIndex={selectedPhysicalLayoutIndex}
+        selectedLayerIndex={selectedLayerIndex}
+        selectedKeyPosition={selectedKeyPosition}
+        onKeyPositionClicked={setSelectedKeyPosition}
+        onBindingApply={doUpdateBinding}
+        encoderRotationLabel={encoderSummary?.rotationLabel}
+      />
       {keymap && (
         <div className="p-3 col-start-2 row-start-2 bg-white border-t border-gray-200 overflow-y-auto">
           {selectedBinding != null ? (

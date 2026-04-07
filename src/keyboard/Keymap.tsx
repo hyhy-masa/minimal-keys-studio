@@ -8,7 +8,6 @@ import { resolveBehaviorId } from "../behaviors/resolve-behavior";
 import type { KeyRecommendation } from "./key-roles";
 
 import {
-  LayoutZoom,
   PhysicalLayout as PhysicalLayoutComp,
 } from "./PhysicalLayout";
 import { HidUsageLabel } from "./HidUsageLabel";
@@ -145,7 +144,7 @@ export interface KeymapProps {
   layout: PhysicalLayout;
   keymap: KeymapMsg;
   behaviors: BehaviorMap;
-  scale: LayoutZoom;
+  oneU: number;
   selectedLayerIndex: number;
   selectedKeyPosition: number | undefined;
   onKeyPositionClicked: (keyPosition: number) => void;
@@ -157,7 +156,7 @@ export const Keymap = ({
   layout,
   keymap,
   behaviors,
-  scale,
+  oneU,
   selectedLayerIndex,
   selectedKeyPosition,
   onKeyPositionClicked,
@@ -215,8 +214,7 @@ export const Keymap = ({
   return (
     <PhysicalLayoutComp
       positions={positions}
-      oneU={56}
-      zoom={scale}
+      oneU={oneU}
       selectedPosition={selectedKeyPosition}
       onPositionClicked={onKeyPositionClicked}
       onRecommendationClick={handleRecommendationClick}
