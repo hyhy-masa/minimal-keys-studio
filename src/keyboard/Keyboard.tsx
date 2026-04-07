@@ -475,18 +475,24 @@ export default function Keyboard() {
           />
         </div>
       )}
-      {keymap && selectedBinding && (
+      {keymap && (
         <div className="p-3 col-start-2 row-start-2 bg-white border-t border-gray-200 overflow-y-auto">
-          <BehaviorBindingPicker
-            binding={selectedBinding}
-            behaviors={Object.values(behaviors)}
-            layers={keymap.layers.map(({ id, name }, li) => ({
-              id,
-              name: name || li.toLocaleString(),
-            }))}
-            onBindingChanged={doUpdateBinding}
-            keyPosition={selectedKeyPosition}
-          />
+          {selectedBinding != null ? (
+            <BehaviorBindingPicker
+              binding={selectedBinding}
+              behaviors={Object.values(behaviors)}
+              layers={keymap.layers.map(({ id, name }, li) => ({
+                id,
+                name: name || li.toLocaleString(),
+              }))}
+              onBindingChanged={doUpdateBinding}
+              keyPosition={selectedKeyPosition}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-base-content/40 text-sm">
+              キーをクリックして設定を変更
+            </div>
+          )}
         </div>
       )}
     </div>
