@@ -35,7 +35,6 @@ interface PhysicalLayoutProps {
   positions: Array<KeyPosition>;
   selectedPosition?: number;
   oneU?: number;
-  hoverZoom?: boolean;
   zoom?: LayoutZoom;
   onPositionClicked?: (position: number) => void;
   onRecommendationClick?: (rec: import("./key-roles").KeyRecommendation) => void;
@@ -80,49 +79,16 @@ export const PhysicalLayout = ({
   positions,
   selectedPosition,
   oneU = 128,
+  zoom,
   onPositionClicked,
   onRecommendationClick,
   encoderRotationLabel,
-  ...props
 }: PhysicalLayoutProps) => {
   const ref = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const parent = element.parentElement;
-    if (!parent) return;
-
-    const calculateScale = () => {
-      if (props.zoom === "auto") {
-        const padding = Math.min(window.innerWidth, window.innerHeight) * 0.05; // Padding when in auto mode
-        const newScale = Math.min(
-          parent.clientWidth / (element.clientWidth + 2 * padding),
-          parent.clientHeight / (element.clientHeight + 2 * padding),
-        );
-        setScale(newScale);
-      } else {
-        setScale(props.zoom || 1);
-      }
-    };
-
-    calculateScale(); // Initial calculation
-
-    const resizeObserver = new ResizeObserver(() => {
-      calculateScale();
-    });
-
-    resizeObserver.observe(element);
-    resizeObserver.observe(parent);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [props.zoom]);
-
-  // TODO: Add a bit of padding for rotation when supported
+  // Calculate natural (unscaled) keyboard dimensions
   const rightMost = positions
     .map((k) => k.x + k.width)
     .reduce((a, b) => Math.max(a, b), 0);
@@ -130,10 +96,47 @@ export const PhysicalLayout = ({
     .map((k) => k.y + k.height)
     .reduce((a, b) => Math.max(a, b), 0);
 
+  const naturalWidth = rightMost * oneU;
+  const naturalHeight = bottomMost * oneU;
+
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const calculateScale = () => {
+      if (zoom === "auto") {
+        const padding = 16;
+        const availableWidth = container.clientWidth - padding * 2;
+        const availableHeight = container.clientHeight - padding * 2;
+        const newScale = Math.min(
+          availableWidth / naturalWidth,
+          availableHeight / naturalHeight,
+        );
+        setScale(Math.max(0.1, newScale));
+      } else {
+        setScale(zoom || 1);
+      }
+    };
+
+    calculateScale();
+
+    const resizeObserver = new ResizeObserver(() => {
+      calculateScale();
+    });
+
+    resizeObserver.observe(container);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [zoom, naturalWidth, naturalHeight]);
+
+  const scaledWidth = naturalWidth * scale;
+  const scaledHeight = naturalHeight * scale;
+
   const positionItems = positions.map((p, idx) => (
-    <div className="absolute" style={scalePosition(p, oneU)}>
+    <div className="absolute" key={p.id} style={scalePosition(p, oneU)}>
       <div
-        key={p.id}
         onClick={() => onPositionClicked?.(idx)}
         className="hover:[transform:translateZ(100px)] transition-transform duration-200"
       >
@@ -151,18 +154,27 @@ export const PhysicalLayout = ({
   ));
 
   return (
-    <div
-      className="relative"
-      style={{
-        height: bottomMost * oneU + "px",
-        width: rightMost * oneU + "px",
-        transform: `scale(${scale})`,
-        transformStyle: "preserve-3d",
-      }}
-      ref={ref}
-      {...props}
-    >
-      {positionItems}
+    <div ref={containerRef} className="w-full h-full flex items-center justify-center">
+      <div
+        className="relative"
+        style={{
+          width: `${scaledWidth}px`,
+          height: `${scaledHeight}px`,
+        }}
+        ref={ref}
+      >
+        <div
+          style={{
+            width: `${naturalWidth}px`,
+            height: `${naturalHeight}px`,
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+            transformStyle: "preserve-3d",
+          }}
+        >
+          {positionItems}
+        </div>
+      </div>
     </div>
   );
 };
