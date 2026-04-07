@@ -59,24 +59,40 @@ export const BehaviorBindingPicker = ({
     [behaviorId, behaviors]
   );
 
-  // IMPORTANT: Sync effect MUST be declared before validation effect.
-  // Both run in declaration order within the same render cycle.
-  // Sync sets editingParamsRef=false so validation can read it immediately.
-
-  // Sync binding prop → local state (when key changes or parent updates binding)
+  // Reset editing state when a different key is selected
   useEffect(() => {
-    // If we're editing params and binding echoes our own change, don't reset
-    if (
-      editingParamsRef.current &&
-      binding.behaviorId === behaviorId &&
-      binding.param1 === param1 &&
-      binding.param2 === param2
-    ) {
-      return;
-    }
-    // Key switched or external change — stop editing and sync
     editingParamsRef.current = false;
     setEditingParams(false);
+    setBehaviorId(binding.behaviorId);
+    setParam1(binding.param1);
+    setParam2(binding.param2);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyPosition]);
+
+  // Sync binding prop → local state (when key changes or parent updates binding)
+  // Only resets editing state on EXTERNAL changes (binding prop changed by parent).
+  // When editingParamsRef is true and behaviorId matches what user selected,
+  // we keep editing active (user is still adjusting params).
+  useEffect(() => {
+    if (editingParamsRef.current) {
+      // User is editing — check if this is an echo of our own change or external
+      if (
+        binding.behaviorId === behaviorId &&
+        binding.param1 === param1 &&
+        binding.param2 === param2
+      ) {
+        return; // Echo of our change — skip
+      }
+      // If behavior matches what user selected, keep editing
+      // (binding prop hasn't caught up yet, or params are still being adjusted)
+      if (binding.behaviorId !== behaviorId) {
+        // Only reset if the BEHAVIOR changed externally (e.g., different key selected)
+        // Don't reset if user just selected a new behavior in the picker
+        return;
+      }
+      return; // Keep editing active for param changes
+    }
+    // Not editing — sync from parent
     setBehaviorId(binding.behaviorId);
     setParam1(binding.param1);
     setParam2(binding.param2);
@@ -125,9 +141,6 @@ export const BehaviorBindingPicker = ({
     setBehaviorId(newBehaviorId);
     setParam1(0);
     setParam2(0);
-    // Immediately apply initial binding so sync effect sees matching
-    // behaviorId and doesn't reset editingParamsRef
-    onBindingChangedRef.current({ behaviorId: newBehaviorId, param1: 0, param2: 0 });
   }, []);
 
   // Current binding display
