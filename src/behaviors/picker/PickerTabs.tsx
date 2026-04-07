@@ -5,6 +5,7 @@ import { keyRoleMap } from "../../keyboard/key-roles";
 import { RecommendationsTab } from "./RecommendationsTab";
 import { LettersTab } from "./LettersTab";
 import { ActionsTab } from "./ActionsTab";
+import { LayersTab } from "./LayersTab";
 
 type TabId = "recommendations" | "letters" | "actions" | "layers" | "modifiers" | "system";
 
@@ -72,7 +73,7 @@ export function PickerTabs({
           <ActionsTab behaviors={behaviors} layers={layers} onApplyBinding={onApplyBinding} />
         )}
         {activeTab === "layers" && (
-          <div className="p-4 text-sm text-base-content/50">レイヤータブ（実装中）</div>
+          <LayersTab behaviors={behaviors} layers={layers} onApplyBinding={onApplyBinding} />
         )}
         {activeTab === "modifiers" && (
           <div className="p-4 text-sm text-base-content/50">修飾キータブ（実装中）</div>
