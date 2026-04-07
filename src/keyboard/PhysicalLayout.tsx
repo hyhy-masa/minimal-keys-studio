@@ -51,17 +51,16 @@ interface PhysicalLayoutPositionLocation {
 
 function scalePosition(
   { x, y, r, rx, ry }: PhysicalLayoutPositionLocation,
-  oneU: number,
+  effectiveOneU: number,
 ): CSSProperties {
-  const left = x * oneU;
-  const top = y * oneU;
+  const left = x * effectiveOneU;
+  const top = y * effectiveOneU;
   let transformOrigin = undefined;
   let transform = undefined;
-  const transformStyle = "preserve-3d";
 
   if (r) {
-    const transformX = ((rx || x) - x) * oneU;
-    const transformY = ((ry || y) - y) * oneU;
+    const transformX = ((rx || x) - x) * effectiveOneU;
+    const transformY = ((ry || y) - y) * effectiveOneU;
     transformOrigin = `${transformX}px ${transformY}px`;
     transform = `rotate(${r}deg)`;
   }
@@ -71,56 +70,22 @@ function scalePosition(
     left,
     transformOrigin,
     transform,
-    transformStyle,
   };
 }
 
 export const PhysicalLayout = ({
   positions,
   selectedPosition,
-  oneU = 128,
+  oneU = 56,
   zoom,
   onPositionClicked,
   onRecommendationClick,
   encoderRotationLabel,
 }: PhysicalLayoutProps) => {
-  const ref = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [effectiveOneU, setEffectiveOneU] = useState(oneU);
 
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-
-    const parent = element.parentElement;
-    if (!parent) return;
-
-    const calculateScale = () => {
-      if (zoom === "auto") {
-        const padding = Math.min(window.innerWidth, window.innerHeight) * 0.05;
-        const newScale = Math.min(
-          parent.clientWidth / (element.clientWidth + 2 * padding),
-          parent.clientHeight / (element.clientHeight + 2 * padding),
-        );
-        setScale(newScale);
-      } else {
-        setScale(zoom || 1);
-      }
-    };
-
-    calculateScale();
-
-    const resizeObserver = new ResizeObserver(() => {
-      calculateScale();
-    });
-
-    resizeObserver.observe(element);
-    resizeObserver.observe(parent);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [zoom]);
-
+  // Calculate keyboard extent in layout units
   const rightMost = positions
     .map((k) => k.x + k.width)
     .reduce((a, b) => Math.max(a, b), 0);
@@ -128,14 +93,43 @@ export const PhysicalLayout = ({
     .map((k) => k.y + k.height)
     .reduce((a, b) => Math.max(a, b), 0);
 
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const calculate = () => {
+      if (zoom === "auto" && rightMost > 0 && bottomMost > 0) {
+        const padding = 16;
+        const availW = container.clientWidth - padding * 2;
+        const availH = container.clientHeight - padding * 2;
+        const fitOneU = Math.max(10, Math.min(
+          availW / rightMost,
+          availH / bottomMost,
+        ));
+        setEffectiveOneU(fitOneU);
+      } else if (typeof zoom === "number") {
+        setEffectiveOneU(oneU * zoom);
+      } else {
+        setEffectiveOneU(oneU);
+      }
+    };
+
+    calculate();
+
+    const resizeObserver = new ResizeObserver(calculate);
+    resizeObserver.observe(container);
+
+    return () => resizeObserver.disconnect();
+  }, [zoom, oneU, rightMost, bottomMost]);
+
   const positionItems = positions.map((p, idx) => (
-    <div className="absolute" key={p.id} style={scalePosition(p, oneU)}>
+    <div className="absolute" key={p.id} style={scalePosition(p, effectiveOneU)}>
       <div
         onClick={() => onPositionClicked?.(idx)}
         className="hover:[transform:translateZ(100px)] transition-transform duration-200"
       >
         <Key
-          oneU={oneU}
+          oneU={effectiveOneU}
           selected={idx === selectedPosition}
           tooltipData={p.tooltipData}
           encoderRotationLabel={idx === ENCODER_POSITION ? encoderRotationLabel : undefined}
@@ -148,18 +142,16 @@ export const PhysicalLayout = ({
   ));
 
   return (
-    <div
-      className="relative"
-      style={{
-        height: bottomMost * oneU + "px",
-        width: rightMost * oneU + "px",
-        transform: `scale(${scale})`,
-        transformOrigin: "top left",
-        transformStyle: "preserve-3d",
-      }}
-      ref={ref}
-    >
-      {positionItems}
+    <div ref={containerRef} className="w-full h-full flex items-center justify-center">
+      <div
+        className="relative"
+        style={{
+          width: rightMost * effectiveOneU + "px",
+          height: bottomMost * effectiveOneU + "px",
+        }}
+      >
+        {positionItems}
+      </div>
     </div>
   );
 };
