@@ -6,6 +6,7 @@ import type {
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { validateValue } from "./parameters";
 import { getBehaviorDescription } from "./behavior-descriptions";
+import { formatBindingDetail } from "./binding-display";
 import { PickerTabs } from "./picker/PickerTabs";
 
 export interface BehaviorBindingPickerProps {
@@ -148,6 +149,9 @@ export const BehaviorBindingPicker = ({
   const currentDesc = currentBehavior
     ? getBehaviorDescription(currentBehavior.displayName)
     : null;
+  const bindingDetail = currentBehavior
+    ? formatBindingDetail(currentBehavior.displayName, binding, layers)
+    : "";
 
   return (
     <div className="flex flex-col gap-2">
@@ -155,8 +159,8 @@ export const BehaviorBindingPicker = ({
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-primary/50 bg-primary/5 text-sm">
           <span className="text-primary font-medium">現在の設定:</span>
           <span className="font-bold">{currentDesc.label}</span>
-          {currentDesc.label !== currentBehavior.displayName && (
-            <span className="text-sm text-base-content/50">({currentBehavior.displayName})</span>
+          {bindingDetail && (
+            <span className="text-base-content/70">→ {bindingDetail}</span>
           )}
         </div>
       )}
