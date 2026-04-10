@@ -40,4 +40,16 @@ export const commonTapKeys: TapKeyItem[] = [
   { label: ",", hidId: 54 },
   { label: ".", hidId: 55 },
   { label: "/", hidId: 56 },
+  // Special keys
+  { label: "Caps Lock", hidId: 57 },
+  { label: "Insert", hidId: 73 },
+  { label: "PrtSc", hidId: 70 },
+  { label: "Scroll Lock", hidId: 71 },
+  { label: "Pause", hidId: 72 },
+  { label: "Menu", hidId: 101 },
+  // Japanese IME
+  { label: "LANG1", hidId: 144 },
+  { label: "LANG2", hidId: 145 },
+  { label: "変換", hidId: 138 },
+  { label: "無変換", hidId: 139 },
 ];
