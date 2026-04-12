@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { hid_usage_from_page_and_id } from "../../hid-usages";
-import { detectOS } from "../use-cases";
 import { keyRoleMap } from "../../keyboard/key-roles";
 import { resolveBehaviorId } from "../resolve-behavior";
 
@@ -211,16 +210,15 @@ interface ActionsTabProps {
   keyPosition?: number;
   behaviors: GetBehaviorDetailsResponse[];
   layers: { id: number; name: string }[];
+  osMode: import("../use-cases").UserOS;
   onApplyBinding: (binding: BehaviorBinding) => void;
 }
 
-export function ActionsTab({ keyPosition, behaviors, onApplyBinding }: ActionsTabProps) {
+export function ActionsTab({ keyPosition, behaviors, osMode, onApplyBinding }: ActionsTabProps) {
   const hasRecommendations = keyPosition !== undefined && keyRoleMap[keyPosition] !== undefined;
   const [activeSub, setActiveSub] = useState<SubCategory>(
     hasRecommendations ? "recommendations" : "shortcuts"
   );
-  const os = useMemo(() => detectOS(), []);
-
   const behaviorIdMap = useMemo(() => {
     const map: Record<string, number> = {};
     for (const b of behaviors) {
@@ -229,7 +227,7 @@ export function ActionsTab({ keyPosition, behaviors, onApplyBinding }: ActionsTa
     return map;
   }, [behaviors]);
 
-  const shortcutItems = useMemo(() => getShortcutItems(os), [os]);
+  const shortcutItems = useMemo(() => getShortcutItems(osMode), [osMode]);
 
   const role = keyPosition !== undefined ? keyRoleMap[keyPosition] : undefined;
 

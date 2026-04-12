@@ -57,11 +57,11 @@ const specialKeys: Record<number, KeyDescription> = {
   224: { roleName: "左Ctrl", description: "修飾キー" },
   225: { roleName: "左Shift", description: "修飾キー" },
   226: { roleName: "左Alt", description: "修飾キー" },
-  227: { roleName: "左⌘/Win", description: "修飾キー" },
+  227: { roleName: "左⌘", description: "修飾キー" },
   228: { roleName: "右Ctrl", description: "修飾キー" },
   229: { roleName: "右Shift", description: "修飾キー" },
   230: { roleName: "右Alt", description: "修飾キー" },
-  231: { roleName: "右⌘/Win", description: "修飾キー" },
+  231: { roleName: "右⌘", description: "修飾キー" },
 };
 
 // Letter keys: A=4 to Z=29
@@ -74,8 +74,14 @@ function isNumberKey(id: number): boolean {
   return id >= 30 && id <= 39;
 }
 
-export function getHidKeyDescription(page: number, id: number): KeyDescription {
+export function getHidKeyDescription(page: number, id: number, os?: "mac" | "windows"): KeyDescription {
   if (page === KB) {
+    // OS-dependent GUI key labels
+    if (os === "windows" && (id === 227 || id === 231)) {
+      const side = id === 227 ? "左" : "右";
+      return { roleName: `${side}Win`, description: "修飾キー" };
+    }
+
     // Known special keys
     if (specialKeys[id]) return specialKeys[id];
 

@@ -12,16 +12,35 @@ interface ModifierItem {
   bitmask: number; // for Mod-Tap / Sticky Key
 }
 
-const modifiers: ModifierItem[] = [
-  { label: "Ctrl (左)", symbol: "⌃", hidId: 224, bitmask: 0x01 },
-  { label: "Shift (左)", symbol: "⇧", hidId: 225, bitmask: 0x02 },
-  { label: "Alt (左)", symbol: "⌥", hidId: 226, bitmask: 0x04 },
-  { label: "Cmd/Win (左)", symbol: "⌘", hidId: 227, bitmask: 0x08 },
-  { label: "Ctrl (右)", symbol: "⌃", hidId: 228, bitmask: 0x10 },
-  { label: "Shift (右)", symbol: "⇧", hidId: 229, bitmask: 0x20 },
-  { label: "Alt (右)", symbol: "⌥", hidId: 230, bitmask: 0x40 },
-  { label: "Cmd/Win (右)", symbol: "⌘", hidId: 231, bitmask: 0x80 },
+// Labels are OS-dependent: Cmd on Mac, Win on Windows
+interface ModifierDef {
+  macLabel: string;
+  winLabel: string;
+  symbol: string;
+  winSymbol: string;
+  hidId: number;
+  bitmask: number;
+}
+
+const modifierDefs: ModifierDef[] = [
+  { macLabel: "Ctrl (左)", winLabel: "Ctrl (左)", symbol: "⌃", winSymbol: "⌃", hidId: 224, bitmask: 0x01 },
+  { macLabel: "Shift (左)", winLabel: "Shift (左)", symbol: "⇧", winSymbol: "⇧", hidId: 225, bitmask: 0x02 },
+  { macLabel: "Alt/Option (左)", winLabel: "Alt (左)", symbol: "⌥", winSymbol: "Alt", hidId: 226, bitmask: 0x04 },
+  { macLabel: "⌘ Cmd (左)", winLabel: "Win (左)", symbol: "⌘", winSymbol: "⊞", hidId: 227, bitmask: 0x08 },
+  { macLabel: "Ctrl (右)", winLabel: "Ctrl (右)", symbol: "⌃", winSymbol: "⌃", hidId: 228, bitmask: 0x10 },
+  { macLabel: "Shift (右)", winLabel: "Shift (右)", symbol: "⇧", winSymbol: "⇧", hidId: 229, bitmask: 0x20 },
+  { macLabel: "Alt/Option (右)", winLabel: "Alt (右)", symbol: "⌥", winSymbol: "Alt", hidId: 230, bitmask: 0x40 },
+  { macLabel: "⌘ Cmd (右)", winLabel: "Win (右)", symbol: "⌘", winSymbol: "⊞", hidId: 231, bitmask: 0x80 },
 ];
+
+function getModifiers(os: import("../use-cases").UserOS): ModifierItem[] {
+  return modifierDefs.map((d) => ({
+    label: os === "mac" ? d.macLabel : d.winLabel,
+    symbol: os === "mac" ? d.symbol : d.winSymbol,
+    hidId: d.hidId,
+    bitmask: d.bitmask,
+  }));
+}
 
 import { commonTapKeys } from "./common-tap-keys";
 
@@ -30,13 +49,16 @@ type Mode = "standalone" | "mod-tap" | "sticky";
 interface ModifiersTabProps {
   behaviors: GetBehaviorDetailsResponse[];
   layers: { id: number; name: string }[];
+  osMode: import("../use-cases").UserOS;
   onApplyBinding: (binding: BehaviorBinding) => void;
 }
 
-export function ModifiersTab({ behaviors, onApplyBinding }: ModifiersTabProps) {
+export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTabProps) {
   const [mode, setMode] = useState<Mode>("standalone");
   const [selectedModifier, setSelectedModifier] = useState<ModifierItem | null>(null);
   const [selectedTapKey, setSelectedTapKey] = useState<number | null>(null);
+
+  const modifiers = useMemo(() => getModifiers(osMode), [osMode]);
 
   const behaviorIdMap = useMemo(() => {
     const map: Record<string, number> = {};

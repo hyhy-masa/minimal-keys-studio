@@ -6,24 +6,46 @@ import { hid_usage_from_page_and_id } from "../../hid-usages";
 const mockBehaviors = [{ id: 1, displayName: "Key Press", metadata: [] }];
 
 describe("JapaneseTab", () => {
-  it("renders Japanese key options", () => {
+  it("Mac mode: shows LANG1/LANG2 buttons", () => {
     const onApply = vi.fn();
-    render(<JapaneseTab behaviors={mockBehaviors} onApplyBinding={onApply} />);
-    expect(screen.getByText("半角/全角")).toBeTruthy();
-    expect(screen.getByText("LANG1")).toBeTruthy();
-    expect(screen.getByText("LANG2")).toBeTruthy();
-    expect(screen.getByText("変換")).toBeTruthy();
-    expect(screen.getByText("無変換")).toBeTruthy();
+    render(<JapaneseTab behaviors={mockBehaviors} osMode="mac" onApplyBinding={onApply} />);
+    expect(screen.getByText("日本語にする")).toBeTruthy();
+    expect(screen.getByText("英語にする")).toBeTruthy();
   });
 
-  it("applies LANG1 binding on click", () => {
+  it("Mac mode: applies LANG1 on click", () => {
     const onApply = vi.fn();
-    render(<JapaneseTab behaviors={mockBehaviors} onApplyBinding={onApply} />);
-    fireEvent.click(screen.getByText("LANG1"));
+    render(<JapaneseTab behaviors={mockBehaviors} osMode="mac" onApplyBinding={onApply} />);
+    fireEvent.click(screen.getByText("日本語にする"));
     expect(onApply).toHaveBeenCalledWith({
       behaviorId: 1,
       param1: hid_usage_from_page_and_id(7, 144),
       param2: 0,
     });
+  });
+
+  it("Windows mode: shows IME切替 button", () => {
+    const onApply = vi.fn();
+    render(<JapaneseTab behaviors={mockBehaviors} osMode="windows" onApplyBinding={onApply} />);
+    expect(screen.getByText("IME切替")).toBeTruthy();
+    expect(screen.queryByText("日本語にする")).toBeNull();
+  });
+
+  it("Windows mode: applies Grave key on IME click", () => {
+    const onApply = vi.fn();
+    render(<JapaneseTab behaviors={mockBehaviors} osMode="windows" onApplyBinding={onApply} />);
+    fireEvent.click(screen.getByText("IME切替"));
+    expect(onApply).toHaveBeenCalledWith({
+      behaviorId: 1,
+      param1: hid_usage_from_page_and_id(7, 53),
+      param2: 0,
+    });
+  });
+
+  it("shows common keys on both modes", () => {
+    const onApply = vi.fn();
+    render(<JapaneseTab behaviors={mockBehaviors} osMode="mac" onApplyBinding={onApply} />);
+    expect(screen.getByText("変換")).toBeTruthy();
+    expect(screen.getByText("無変換")).toBeTruthy();
   });
 });

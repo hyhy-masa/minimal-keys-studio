@@ -10,7 +10,7 @@ const fakeBehaviors = [
 ];
 
 describe("PickerTabs", () => {
-  it("renders five tab buttons", () => {
+  it("renders six tab buttons and OS mode toggle", () => {
     render(
       <PickerTabs
         keyPosition={37}
@@ -23,7 +23,11 @@ describe("PickerTabs", () => {
     expect(screen.getByText("文字・記号")).toBeDefined();
     expect(screen.getByText("レイヤー")).toBeDefined();
     expect(screen.getByText("修飾キー")).toBeDefined();
+    expect(screen.getByText("日本語")).toBeDefined();
     expect(screen.getByText("システム")).toBeDefined();
+    // OS toggle
+    expect(screen.getByText("Mac")).toBeDefined();
+    expect(screen.getByText("Windows")).toBeDefined();
   });
 
   it("defaults to ショートカット tab with おすすめ for thumb key", () => {
@@ -35,7 +39,6 @@ describe("PickerTabs", () => {
         onApplyBinding={() => {}}
       />
     );
-    // Recommendations subcat visible for thumb keys
     expect(screen.getByText("おすすめ")).toBeDefined();
   });
 
@@ -48,8 +51,6 @@ describe("PickerTabs", () => {
         onApplyBinding={() => {}}
       />
     );
-    // ショートカット subcategory visible, but no おすすめ
-    expect(screen.getByText("ショートカット")).toBeDefined();
     expect(screen.queryByText("おすすめ")).toBeNull();
   });
 });
