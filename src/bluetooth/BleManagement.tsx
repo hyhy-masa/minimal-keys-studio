@@ -95,7 +95,7 @@ export function BleManagement() {
   const unpairProfile = useCallback(
     async (index: number) => {
       if (!subsystem) return;
-      if (!confirm(`Unpair profile ${index}?`)) return;
+      if (!confirm(`プロファイル ${index} のペアリングを解除しますか？`)) return;
       setLoading(true);
       try {
         await subsystem.callRPC(BLE.encodeUnpairProfile(index));
@@ -151,11 +151,11 @@ export function BleManagement() {
 
   return (
     <div className="p-4 flex flex-col gap-4 overflow-y-auto max-h-full">
-      <h2 className="text-lg font-semibold">Bluetooth Profiles</h2>
+      <h2 className="text-lg font-semibold">Bluetoothプロファイル</h2>
 
       {/* Output Priority */}
       <section className="flex items-center gap-2">
-        <span className="text-sm">Output:</span>
+        <span className="text-sm">出力先:</span>
         <Button
           className={`rounded px-3 py-1 text-sm ${outputPriority === BLE.OutputPriority.USB ? "bg-primary text-primary-content" : "bg-base-300"}`}
           onPress={() => changeOutputPriority(BLE.OutputPriority.USB)}
@@ -185,17 +185,17 @@ export function BleManagement() {
               <div className="flex items-center gap-2">
                 {profile.isActive && (
                   <span className="text-xs bg-primary text-primary-content rounded px-1">
-                    Active
+                    有効
                   </span>
                 )}
                 {profile.isConnected && (
                   <span className="text-xs bg-success text-success-content rounded px-1">
-                    Connected
+                    接続中
                   </span>
                 )}
                 {profile.isOpen && (
                   <span className="text-xs bg-warning text-warning-content rounded px-1">
-                    Open
+                    未接続
                   </span>
                 )}
                 <span className="text-xs text-base-content/50">
@@ -219,13 +219,13 @@ export function BleManagement() {
                     className="text-xs rounded bg-primary text-primary-content px-2"
                     onPress={() => saveName(profile.index)}
                   >
-                    Save
+                    保存
                   </Button>
                   <Button
                     className="text-xs rounded bg-base-300 px-2"
                     onPress={() => setEditingName(null)}
                   >
-                    Cancel
+                    キャンセル
                   </Button>
                 </div>
               ) : (
@@ -252,7 +252,7 @@ export function BleManagement() {
                   isDisabled={loading}
                   onPress={() => switchProfile(profile.index)}
                 >
-                  Switch
+                  切替
                 </Button>
               )}
               {profile.address && (
@@ -261,7 +261,7 @@ export function BleManagement() {
                   isDisabled={loading}
                   onPress={() => unpairProfile(profile.index)}
                 >
-                  Unpair
+                  ペアリング解除
                 </Button>
               )}
             </div>
@@ -273,17 +273,17 @@ export function BleManagement() {
       {splitInfo && splitInfo.isSplit && (
         <section className="flex flex-col gap-2 pt-2 border-t border-base-300">
           <h3 className="text-sm font-medium text-base-content/70">
-            Split Keyboard
+            分割キーボード
           </h3>
           <div className="text-sm">
             <p>
-              Role:{" "}
+              役割:{" "}
               <span className="font-medium">
-                {splitInfo.isCentral ? "Central" : "Peripheral"}
+                {splitInfo.isCentral ? "右手 (R)" : "左手 (L)"}
               </span>
             </p>
             <p>
-              Peripheral:{" "}
+              左手 (L):{" "}
               <span
                 className={
                   splitInfo.peripheralConnected
@@ -292,8 +292,8 @@ export function BleManagement() {
                 }
               >
                 {splitInfo.peripheralConnected
-                  ? "Connected"
-                  : "Not connected"}
+                  ? "接続中"
+                  : "未接続"}
               </span>
             </p>
           </div>

@@ -255,7 +255,7 @@ export function EncoderSettings() {
   return (
     <div className="p-4 flex flex-col gap-4 overflow-y-auto max-h-full">
       <h2 className="text-lg font-semibold">
-        Encoder Settings{" "}
+        エンコーダー設定{" "}
         {selectedSensor && (
           <span className="text-sm font-normal text-base-content/60">
             ({selectedSensor.name})
@@ -286,18 +286,18 @@ export function EncoderSettings() {
       )}
 
       {sensors.length === 0 && (
-        <p className="text-base-content/50 text-sm">Discovering sensors...</p>
+        <p className="text-base-content/50 text-sm">センサー検出中...</p>
       )}
 
       {loading && (
-        <p className="text-base-content/50 text-sm">Loading bindings...</p>
+        <p className="text-base-content/50 text-sm">設定を読み込み中...</p>
       )}
 
       {/* Layer tabs */}
       {sensors.length > 0 && !loading && (
         <>
           <section className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium text-base-content/70">Layer</h3>
+            <h3 className="text-sm font-medium text-base-content/70">レイヤー</h3>
             <div className="flex gap-1 flex-wrap">
               {layers.map((layer) => (
                 <button
@@ -318,7 +318,7 @@ export function EncoderSettings() {
           {/* CW binding */}
           <section className="flex flex-col gap-2">
             <h3 className="text-sm font-medium text-base-content/70">
-              Clockwise (CW)
+              時計回り (CW)
             </h3>
             {behaviors.length > 0 ? (
               <BehaviorBindingPicker
@@ -328,14 +328,14 @@ export function EncoderSettings() {
                 onBindingChanged={setCwBinding}
               />
             ) : (
-              <p className="text-base-content/50 text-sm">Loading behaviors...</p>
+              <p className="text-base-content/50 text-sm">ビヘイビア読み込み中...</p>
             )}
           </section>
 
           {/* CCW binding */}
           <section className="flex flex-col gap-2">
             <h3 className="text-sm font-medium text-base-content/70">
-              Counter-Clockwise (CCW)
+              反時計回り (CCW)
             </h3>
             {behaviors.length > 0 ? (
               <BehaviorBindingPicker
@@ -345,7 +345,7 @@ export function EncoderSettings() {
                 onBindingChanged={setCcwBinding}
               />
             ) : (
-              <p className="text-base-content/50 text-sm">Loading behaviors...</p>
+              <p className="text-base-content/50 text-sm">ビヘイビア読み込み中...</p>
             )}
           </section>
 
@@ -356,7 +356,7 @@ export function EncoderSettings() {
               isDisabled={saving}
               onPress={handleSave}
             >
-              {saving ? "Saving..." : "Save"}
+              {saving ? "保存中..." : "保存"}
             </Button>
           </div>
         </>

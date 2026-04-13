@@ -26,21 +26,21 @@ function getBatteryColor(level: number): string {
 }
 
 function getBatteryStatus(level: number): string {
-  if (level > 80) return "Excellent";
-  if (level > 60) return "Good";
-  if (level > 30) return "Medium";
-  if (level > 10) return "Low";
-  return "Critical";
+  if (level > 80) return "良好";
+  if (level > 60) return "普通";
+  if (level > 30) return "残り少ない";
+  if (level > 10) return "低下";
+  return "要充電";
 }
 
 function formatTimeAgo(seconds: number): string {
   const now = Math.floor(Date.now() / 1000);
   const diff = now - seconds;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 60) return "たった今";
+  if (diff < 3600) return `${Math.floor(diff / 60)}分前`;
   if (diff < 86400)
-    return `${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+    return `${Math.floor(diff / 3600)}時間${Math.floor((diff % 3600) / 60)}分前`;
+  return `${Math.floor(diff / 86400)}日前`;
 }
 
 function BatteryChart({ entries }: { entries: BatteryEntry[] }) {
@@ -53,7 +53,7 @@ function BatteryChart({ entries }: { entries: BatteryEntry[] }) {
   if (entries.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-base-content/40 text-sm">
-        No battery history data available
+        バッテリー履歴データがありません
       </div>
     );
   }
@@ -243,7 +243,7 @@ export function BatteryHistory() {
           sortedEntries.length > 0
             ? sortedEntries[sortedEntries.length - 1].level
             : 0;
-        const name = d.sourceId === 0 ? "Right (Central)" : "Left (Peripheral)";
+        const name = d.sourceId === 0 ? "右手 (R)" : "左手 (L)";
 
         let drainRate = 0;
         let estimatedHours = 0;
@@ -280,13 +280,13 @@ export function BatteryHistory() {
   return (
     <div className="p-4 flex flex-col gap-4 overflow-y-auto max-h-full">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Battery</h2>
+        <h2 className="text-lg font-semibold">バッテリー</h2>
         <Button
           className="text-xs rounded bg-base-300 hover:bg-base-200 px-2 py-1"
           isDisabled={loading}
           onPress={fetchHistory}
         >
-          {loading ? "Loading..." : "Refresh"}
+          {loading ? "読み込み中..." : "更新"}
         </Button>
       </div>
 
@@ -311,9 +311,9 @@ export function BatteryHistory() {
             <BatteryChart entries={d.entries} />
           </div>
           <div className="flex gap-4 text-xs text-base-content/50">
-            <span>Drain: {d.drainRate.toFixed(1)}%/hr</span>
+            <span>消耗: {d.drainRate.toFixed(1)}%/時</span>
             {d.estimatedHours > 0 && (
-              <span>Est. remaining: {Math.floor(d.estimatedHours)}h</span>
+              <span>残り推定: {Math.floor(d.estimatedHours)}時間</span>
             )}
           </div>
         </section>
@@ -321,7 +321,7 @@ export function BatteryHistory() {
 
       {devices.length === 0 && !loading && (
         <p className="text-sm text-base-content/50">
-          No battery data yet. Click Refresh to load history.
+          バッテリーデータがありません。「更新」をクリックして履歴を読み込んでください。
         </p>
       )}
     </div>

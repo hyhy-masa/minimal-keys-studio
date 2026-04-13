@@ -159,7 +159,7 @@ async function connect(
   ]);
 
   if (!details) {
-    onError("Failed to connect to the chosen device");
+    onError("デバイスへの接続に失敗しました");
     return;
   }
 
@@ -256,9 +256,9 @@ function AppInner() {
 
       const resp = await call_rpc(conn.conn, { keymap: { saveChanges: true } });
       if (!resp.keymap?.saveChanges || resp.keymap?.saveChanges.err) {
-        toast("Failed to save changes", "error");
+        toast("保存できませんでした", "error");
       } else {
-        toast("Changes saved", "success");
+        toast("保存しました", "success");
       }
     }
 
@@ -275,9 +275,9 @@ function AppInner() {
         keymap: { discardChanges: true },
       });
       if (!resp.keymap?.discardChanges) {
-        toast("Failed to discard changes", "error");
+        toast("破棄できませんでした", "error");
       } else {
-        toast("Changes discarded", "info");
+        toast("破棄しました", "info");
       }
 
       reset();
@@ -298,9 +298,9 @@ function AppInner() {
         core: { resetSettings: true },
       });
       if (!resp.core?.resetSettings) {
-        toast("Failed to reset settings", "error");
+        toast("設定の初期化に失敗しました", "error");
       } else {
-        toast("Settings reset", "success");
+        toast("設定を初期化しました", "success");
       }
 
       reset();

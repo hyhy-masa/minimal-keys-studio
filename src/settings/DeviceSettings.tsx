@@ -77,11 +77,11 @@ export function DeviceSettings() {
       );
       // Reload all settings
       await subsystem.callRPC(SETTINGS.encodeGetAllActivitySettings());
-      setFeedback("Settings applied");
+      setFeedback("設定を適用しました");
     } catch (e) {
       console.error("Failed to apply settings:", e);
       toast("Failed to apply device settings", "error");
-      setFeedback("Failed to apply settings");
+      setFeedback("設定の適用に失敗しました");
     } finally {
       setSaving(false);
     }
@@ -103,11 +103,11 @@ export function DeviceSettings() {
         );
       }
       await subsystem.callRPC(SETTINGS.encodeGetAllActivitySettings());
-      setFeedback("All devices synced");
+      setFeedback("全デバイスに同期しました");
     } catch (e) {
       console.error("Failed to sync settings:", e);
       toast("Failed to sync device settings", "error");
-      setFeedback("Failed to sync settings");
+      setFeedback("同期に失敗しました");
     } finally {
       setSaving(false);
     }
@@ -125,20 +125,20 @@ export function DeviceSettings() {
 
   return (
     <div className="p-4 flex flex-col gap-4 overflow-y-auto max-h-full">
-      <h2 className="text-lg font-semibold">Device Settings</h2>
+      <h2 className="text-lg font-semibold">デバイス設定</h2>
 
       {/* Sync Warning */}
       {outOfSync && (
         <div className="rounded-lg border border-warning bg-warning/10 p-3 flex items-center justify-between">
           <p className="text-sm text-warning">
-            Settings are out of sync across devices.
+            デバイス間で設定が同期されていません。
           </p>
           <Button
             className="rounded bg-warning text-warning-content px-3 py-1 text-sm"
             isDisabled={saving}
             onPress={handleSync}
           >
-            Sync All
+            全デバイスに同期
           </Button>
         </div>
       )}
@@ -146,11 +146,10 @@ export function DeviceSettings() {
       {/* Idle Timeout */}
       <section className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-base-content/70">
-          Idle Timeout
+          アイドルタイムアウト
         </h3>
         <p className="text-xs text-base-content/50">
-          Time before the keyboard enters idle mode (LEDs off). Set to 0 to
-          disable.
+          アイドルモード（LED消灯）に移行するまでの時間。0で無効化。
         </p>
         <div className="flex items-center gap-2">
           <input
@@ -161,17 +160,17 @@ export function DeviceSettings() {
             onChange={(e) => setIdleSeconds(parseInt(e.target.value) || 0)}
             className="rounded px-2 py-1 bg-base-100 border border-base-300 w-24"
           />
-          <span className="text-sm text-base-content/60">seconds</span>
+          <span className="text-sm text-base-content/60">秒</span>
         </div>
       </section>
 
       {/* Sleep Timeout */}
       <section className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-base-content/70">
-          Sleep Timeout
+          スリープタイムアウト
         </h3>
         <p className="text-xs text-base-content/50">
-          Time before the keyboard enters deep sleep. Set to 0 to disable.
+          ディープスリープに移行するまでの時間。0で無効化。
         </p>
         <div className="flex items-center gap-2">
           <input
@@ -182,7 +181,7 @@ export function DeviceSettings() {
             onChange={(e) => setSleepMinutes(parseInt(e.target.value) || 0)}
             className="rounded px-2 py-1 bg-base-100 border border-base-300 w-24"
           />
-          <span className="text-sm text-base-content/60">minutes</span>
+          <span className="text-sm text-base-content/60">分</span>
         </div>
       </section>
 
@@ -190,7 +189,7 @@ export function DeviceSettings() {
       {allSettings.length > 0 && (
         <section className="flex flex-col gap-2 pt-2 border-t border-base-300">
           <h3 className="text-sm font-medium text-base-content/70">
-            Device Status
+            デバイス状態
           </h3>
           {allSettings.map((s) => (
             <div
@@ -198,10 +197,10 @@ export function DeviceSettings() {
               className="text-xs text-base-content/50 flex gap-4"
             >
               <span>
-                {s.source === 0 ? "Central (R)" : "Peripheral (L)"}
+                {s.source === 0 ? "右手 (R)" : "左手 (L)"}
               </span>
-              <span>Idle: {Math.round(s.idleMs / 1000)}s</span>
-              <span>Sleep: {Math.round(s.sleepMs / 60000)}min</span>
+              <span>アイドル: {Math.round(s.idleMs / 1000)}秒</span>
+              <span>スリープ: {Math.round(s.sleepMs / 60000)}分</span>
             </div>
           ))}
         </section>
@@ -214,7 +213,7 @@ export function DeviceSettings() {
           isDisabled={saving}
           onPress={handleApply}
         >
-          {saving ? "Applying..." : "Apply"}
+          {saving ? "適用中..." : "適用"}
         </Button>
       </div>
 

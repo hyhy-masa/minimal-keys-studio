@@ -73,19 +73,17 @@ export const AppHeader = ({
         <p className="font-semibold text-base">minimal-keys Studio</p>
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">
-        <h2 className="my-2 text-lg">Restore Stock Settings</h2>
+        <h2 className="my-2 text-lg">設定を初期化</h2>
         <div>
           <p>
-            Settings reset will remove any customizations previously made in ZMK
-            Studio and restore the stock keymap
+            設定を初期化すると、すべてのキーマップ変更が元に戻ります。続けますか？
           </p>
-          <p>Continue?</p>
           <div className="flex justify-end my-2 gap-3">
             <Button
               className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
               onPress={() => setShowSettingsReset(false)}
             >
-              Cancel
+              キャンセル
             </Button>
             <Button
               className="rounded bg-base-200 hover:bg-base-300 px-3 py-2"
@@ -94,7 +92,7 @@ export const AppHeader = ({
                 onResetSettings?.();
               }}
             >
-              Restore Stock Settings
+              設定を初期化
             </Button>
           </div>
         </div>
@@ -114,13 +112,13 @@ export const AppHeader = ({
               className="px-2 py-1 hover:bg-base-200"
               onAction={onDisconnect}
             >
-              Disconnect
+              切断
             </MenuItem>
             <MenuItem
               className="px-2 py-1 hover:bg-base-200"
               onAction={() => setShowSettingsReset(true)}
             >
-              Restore Stock Settings
+              設定を初期化
             </MenuItem>
           </Menu>
         </Popover>
@@ -149,44 +147,44 @@ export const AppHeader = ({
           </button>
         </div>
         {onUndo && (
-          <Tooltip label="Undo">
+          <Tooltip label="元に戻す">
             <Button
               className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
               isDisabled={!canUndo}
               onPress={onUndo}
             >
-              <Undo2 className="inline-block w-4 mx-1" aria-label="Undo" />
+              <Undo2 className="inline-block w-4 mx-1" aria-label="元に戻す" />
             </Button>
           </Tooltip>
         )}
 
         {onRedo && (
-          <Tooltip label="Redo">
+          <Tooltip label="やり直し">
             <Button
               className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
               isDisabled={!canRedo}
               onPress={onRedo}
             >
-              <Redo2 className="inline-block w-4 mx-1" aria-label="Redo" />
+              <Redo2 className="inline-block w-4 mx-1" aria-label="やり直し" />
             </Button>
           </Tooltip>
         )}
-        <Tooltip label="Save">
+        <Tooltip label="保存">
           <Button
             className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
             isDisabled={!unsaved}
             onPress={onSave}
           >
-            <Save className="inline-block w-4 mx-1" aria-label="Save" />
+            <Save className="inline-block w-4 mx-1" aria-label="保存" />
           </Button>
         </Tooltip>
-        <Tooltip label="Discard">
+        <Tooltip label="破棄">
           <Button
             className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
             onPress={onDiscard}
             isDisabled={!unsaved}
           >
-            <Trash2 className="inline-block w-4 mx-1" aria-label="Discard" />
+            <Trash2 className="inline-block w-4 mx-1" aria-label="破棄" />
           </Button>
         </Tooltip>
       </div>

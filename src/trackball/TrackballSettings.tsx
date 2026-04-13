@@ -204,7 +204,7 @@ export function TrackballSettings() {
   return (
     <div className="p-4 flex flex-col gap-4 overflow-y-auto max-h-full">
       <h2 className="text-lg font-semibold">
-        Trackball Settings{" "}
+        トラックボール設定{" "}
         {selectedProcessor && (
           <span className="text-sm font-normal text-base-content/60">
             ({selectedProcessor.name})
@@ -231,13 +231,13 @@ export function TrackballSettings() {
       )}
 
       {processors.length === 0 && (
-        <p className="text-base-content/50 text-sm">Discovering processors...</p>
+        <p className="text-base-content/50 text-sm">プロセッサ検出中...</p>
       )}
 
       {/* Speed */}
       <section className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-base-content/70">
-          Speed
+          速度
         </h3>
         <div className="flex items-center gap-3">
           <span className="text-xs text-base-content/50 w-8">0.5x</span>
@@ -259,9 +259,9 @@ export function TrackballSettings() {
 
       {/* Rotation */}
       <section className="flex flex-col gap-2">
-        <h3 className="text-sm font-medium text-base-content/70">Rotation</h3>
+        <h3 className="text-sm font-medium text-base-content/70">回転角度</h3>
         <label className="flex flex-col gap-1">
-          <span className="text-xs">Degrees</span>
+          <span className="text-xs">度</span>
           <input
             type="number"
             min={-180}
@@ -276,7 +276,7 @@ export function TrackballSettings() {
       {/* Axis Controls */}
       <section className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-base-content/70">
-          Axis Controls
+          軸の設定
         </h3>
         <div className="flex flex-col gap-1">
           <label className="flex items-center gap-2">
@@ -286,7 +286,7 @@ export function TrackballSettings() {
               onChange={(e) => setXInvert(e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm">Invert X axis</span>
+            <span className="text-sm">X軸を反転</span>
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -295,7 +295,7 @@ export function TrackballSettings() {
               onChange={(e) => setYInvert(e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm">Invert Y axis</span>
+            <span className="text-sm">Y軸を反転</span>
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -304,7 +304,7 @@ export function TrackballSettings() {
               onChange={(e) => setXySwap(e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm">Swap X/Y axes</span>
+            <span className="text-sm">X/Y軸を入れ替え</span>
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -313,7 +313,7 @@ export function TrackballSettings() {
               onChange={(e) => setXyToScroll(e.target.checked)}
               className="rounded"
             />
-            <span className="text-sm">XY to Scroll mode</span>
+            <span className="text-sm">スクロールモード</span>
           </label>
         </div>
       </section>
@@ -321,10 +321,10 @@ export function TrackballSettings() {
       {/* Axis Snapping */}
       <section className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-base-content/70">
-          Axis Snapping
+          軸スナップ
         </h3>
         <label className="flex flex-col gap-1">
-          <span className="text-xs">Snap Mode</span>
+          <span className="text-xs">スナップモード</span>
           <select
             value={axisSnapMode}
             onChange={(e) =>
@@ -332,15 +332,15 @@ export function TrackballSettings() {
             }
             className="rounded px-2 py-1 bg-base-100 border border-base-300"
           >
-            <option value={0}>None</option>
-            <option value={1}>X axis</option>
-            <option value={2}>Y axis</option>
+            <option value={0}>なし</option>
+            <option value={1}>X軸</option>
+            <option value={2}>Y軸</option>
           </select>
         </label>
         {axisSnapMode !== 0 && (
           <div className="grid grid-cols-2 gap-2">
             <label className="flex flex-col gap-1">
-              <span className="text-xs">Threshold</span>
+              <span className="text-xs">しきい値</span>
               <input
                 type="number"
                 min={0}
@@ -352,7 +352,7 @@ export function TrackballSettings() {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs">Timeout (ms)</span>
+              <span className="text-xs">タイムアウト (ms)</span>
               <input
                 type="number"
                 min={0}
@@ -374,13 +374,13 @@ export function TrackballSettings() {
           isDisabled={saving}
           onPress={handleApply}
         >
-          {saving ? "Applying..." : "Apply"}
+          {saving ? "適用中..." : "適用"}
         </Button>
         <Button
           className="rounded bg-base-300 px-4 py-2 hover:bg-base-200"
           onPress={handleReset}
         >
-          Reset to Default
+          初期値に戻す
         </Button>
       </div>
     </div>

@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
 import { useModalRef } from "./misc/useModalRef";
-import { ExternalLink } from "./misc/ExternalLink";
 import { GenericModal } from "./GenericModal";
 import type { AvailableDevice } from "./tauri";
 
@@ -82,7 +81,7 @@ function SimpleDevicePicker({
   ));
   return (
     <div>
-      <p className="text-base">Select a connection type.</p>
+      <p className="text-base">接続方法を選択してください</p>
       <ul className="flex gap-3 pt-3">{connections}</ul>
     </div>
   );
@@ -149,19 +148,19 @@ function DeviceList({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <p className="text-base">Select a device to connect.</p>
+        <p className="text-base">接続するデバイスを選択してください</p>
         <button
           className="bg-base-300 hover:bg-primary hover:text-primary-content rounded px-2 py-1 text-sm"
           type="button"
           onClick={loadDevices}
           disabled={refreshing}
         >
-          {refreshing ? "Scanning..." : "Refresh"}
+          {refreshing ? "スキャン中..." : "更新"}
         </button>
       </div>
       {devices.length === 0 && !refreshing && (
         <p className="text-base-content/60 text-sm">
-          No devices found. Make sure your keyboard is powered on and nearby.
+          デバイスが見つかりません。キーボードの電源が入っているか確認してください
         </p>
       )}
       {devices.length > 0 && (
@@ -196,7 +195,7 @@ function DeviceList({
         onClick={connectToSelected}
         disabled={selectedIndex === null || connecting}
       >
-        {connecting ? "Connecting..." : "Connect"}
+        {connecting ? "接続中..." : "接続"}
       </button>
     </div>
   );
@@ -206,19 +205,11 @@ function NoTransportsPrompt() {
   return (
     <div className="m-4 flex flex-col gap-2">
       <p>
-        Your browser is not supported. minimal-keys Studio uses either{" "}
-        <ExternalLink href="https://caniuse.com/web-serial">
-          Web Serial
-        </ExternalLink>{" "}
-        or{" "}
-        <ExternalLink href="https://caniuse.com/web-bluetooth">
-          Web Bluetooth
-        </ExternalLink>{" "}
-        to connect to ZMK devices.
+        お使いのブラウザはWeb Serial / Web Bluetoothに対応していません。Chrome（バージョン89以降）をお使いください。またはデスクトップアプリをご利用ください。
       </p>
 
       <div>
-        <p>To use minimal-keys Studio, use a browser that supports Web Serial or Web Bluetooth (e.g. Chrome/Edge).</p>
+        <p>minimal-keys Studioを使うには、対応ブラウザまたはデスクトップアプリが必要です。</p>
       </div>
     </div>
   );

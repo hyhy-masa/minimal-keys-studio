@@ -20,17 +20,16 @@ export const UnlockModal = () => {
 
   return (
     <GenericModal ref={dialog}>
-      <h1 className="text-xl">Unlock To Continue</h1>
+      <h1 className="text-xl">ロック解除してください</h1>
       <p>
-        For security reasons, your keyboard requires unlocking before using
-        minimal-keys Studio.
+        セキュリティのため、キーマップ変更にはロック解除が必要です。
       </p>
       <p>
-        If studio unlocking hasn't been added to your keymap or a combo, see the{" "}
+        キーボードでロック解除キーを押してください。右手と左手の親指キーを同時に押すと解除できます。詳細は{" "}
         <ExternalLink href="https://zmk.dev/docs/keymaps/behaviors/studio-unlock">
           Studio Unlock Behavior
         </ExternalLink>{" "}
-        documentation for more information.
+        をご参照ください。
       </p>
     </GenericModal>
   );
