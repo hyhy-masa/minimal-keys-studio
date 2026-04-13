@@ -12,7 +12,7 @@ import {
 } from "./PhysicalLayout";
 import { HidUsageLabel } from "./HidUsageLabel";
 import { resolveTooltipData } from "./tooltip-data";
-import { detectOS } from "../behaviors/use-cases";
+import { useOsMode } from "../OsModeContext";
 import { getHidKeyDescription, getMouseKeyDescription } from "./key-descriptions";
 import { hid_usage_page_and_id_from_usage } from "../hid-usages";
 import type { ReactNode } from "react";
@@ -154,12 +154,14 @@ export const Keymap = ({
   onBindingApply,
   encoderRotationLabel,
 }: KeymapProps) => {
+  const { osMode } = useOsMode();
+
   if (!keymap.layers[selectedLayerIndex]) {
     return <></>;
   }
 
   const behaviorList = Object.values(behaviors);
-  const os = detectOS();
+  const os = osMode;
 
   const handleRecommendationClick = (rec: KeyRecommendation) => {
     const behaviorId = resolveBehaviorId(rec.behaviorDisplayName, behaviorList);

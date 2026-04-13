@@ -47,6 +47,7 @@ import { AppFooter } from "./AppFooter";
 import { AboutModal } from "./AboutModal";
 import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
 import { ToastProvider, useToast } from "./misc/Toast";
+import { OsModeProvider } from "./OsModeContext";
 
 declare global {
   interface Window {
@@ -412,7 +413,9 @@ function AppInner() {
 function App() {
   return (
     <ToastProvider>
-      <AppInner />
+      <OsModeProvider>
+        <AppInner />
+      </OsModeProvider>
     </ToastProvider>
   );
 }

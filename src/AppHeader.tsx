@@ -13,6 +13,7 @@ import { LockStateContext } from "./rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { ConnectionContext } from "./rpc/ConnectionContext";
 import { ChevronDown, Undo2, Redo2, Save, Trash2 } from "lucide-react";
+import { useOsMode } from "./OsModeContext";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
 
@@ -40,6 +41,7 @@ export const AppHeader = ({
   onResetSettings,
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
+  const { osMode, setOsMode } = useOsMode();
 
   const lockState = useContext(LockStateContext);
   const connectionState = useContext(ConnectionContext);
@@ -123,7 +125,29 @@ export const AppHeader = ({
           </Menu>
         </Popover>
       </MenuTrigger>
-      <div className="flex justify-end gap-1 px-2">
+      <div className="flex justify-end gap-1 px-2 items-center">
+        <div className="flex bg-base-200 rounded-md p-0.5 mr-1">
+          <button
+            className={`px-2.5 py-0.5 text-xs rounded transition-all ${
+              osMode === "mac"
+                ? "bg-white text-primary font-medium shadow-sm"
+                : "text-base-content/50 hover:text-base-content"
+            }`}
+            onClick={() => setOsMode("mac")}
+          >
+            Mac
+          </button>
+          <button
+            className={`px-2.5 py-0.5 text-xs rounded transition-all ${
+              osMode === "windows"
+                ? "bg-white text-primary font-medium shadow-sm"
+                : "text-base-content/50 hover:text-base-content"
+            }`}
+            onClick={() => setOsMode("windows")}
+          >
+            Windows
+          </button>
+        </div>
         {onUndo && (
           <Tooltip label="Undo">
             <Button

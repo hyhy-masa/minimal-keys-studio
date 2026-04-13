@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
-import { detectOS, type UserOS } from "../use-cases";
+import { useOsMode } from "../../OsModeContext";
 import { LettersTab } from "./LettersTab";
 import { ActionsTab } from "./ActionsTab";
 import { LayersTab } from "./LayersTab";
@@ -33,39 +33,11 @@ export function PickerTabs({
   layers,
   onApplyBinding,
 }: PickerTabsProps) {
-  const detectedOS = useMemo(() => detectOS(), []);
-  const [osMode, setOsMode] = useState<UserOS>(detectedOS);
+  const { osMode } = useOsMode();
   const [activeTab, setActiveTab] = useState<TabId>("actions");
 
   return (
     <div className="flex flex-col gap-2">
-      {/* OS mode toggle */}
-      <div className="flex items-center gap-2 px-1">
-        <span className="text-xs text-base-content/40">OS:</span>
-        <div className="flex bg-base-200 rounded-md p-0.5">
-          <button
-            className={`px-2.5 py-0.5 text-xs rounded transition-all ${
-              osMode === "mac"
-                ? "bg-white text-primary font-medium shadow-sm"
-                : "text-base-content/50 hover:text-base-content"
-            }`}
-            onClick={() => setOsMode("mac")}
-          >
-            Mac
-          </button>
-          <button
-            className={`px-2.5 py-0.5 text-xs rounded transition-all ${
-              osMode === "windows"
-                ? "bg-white text-primary font-medium shadow-sm"
-                : "text-base-content/50 hover:text-base-content"
-            }`}
-            onClick={() => setOsMode("windows")}
-          >
-            Windows
-          </button>
-        </div>
-      </div>
-
       {/* Tab bar */}
       <div className="flex gap-0.5 bg-base-200 p-1 rounded-lg overflow-x-auto">
         {tabs.map((tab) => (

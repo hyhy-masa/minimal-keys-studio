@@ -227,5 +227,3 @@ export function getUseCaseCategories(os: UserOS): UseCaseCategory[] {
   ];
 }
 
-// Backward compatibility: default categories (auto-detect OS)
-export const useCaseCategories = getUseCaseCategories(detectOS());
