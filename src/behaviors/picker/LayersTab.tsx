@@ -49,6 +49,8 @@ export function LayersTab({ behaviors, layers, onApplyBinding }: LayersTabProps)
     setSelectedTapKey(null);
   };
 
+  // ZMK layer binding param1 = layer index (0-based position in layers array).
+  // layers[].id and array index are identical in ZMK's current implementation.
   const handleLayerClick = (layerId: number) => {
     setSelectedLayer(layerId);
     if (!is2Param && selectedBehavior) {

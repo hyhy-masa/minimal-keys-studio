@@ -20,6 +20,7 @@ export function formatBindingDetail(
       return getHidKeyDescription(page, id).roleName;
     }
     case "Layer-Tap": {
+      // ZMK layer binding param1 = layer index (0-based position in layers array)
       const layerName = layers[binding.param1]?.name ?? `L${binding.param1}`;
       const [rawPage, id] = hid_usage_page_and_id_from_usage(binding.param2);
       const page = rawPage & 0xff;
@@ -40,6 +41,7 @@ export function formatBindingDetail(
     case "Toggle Layer":
     case "To Layer":
     case "Sticky Layer": {
+      // ZMK layer binding param1 = layer index (0-based position in layers array)
       return layers[binding.param1]?.name ?? `L${binding.param1}`;
     }
     case "Sticky Key": {
