@@ -124,9 +124,9 @@ export const AppHeader = ({
         </Popover>
       </MenuTrigger>
       <div className="flex justify-end gap-1 px-2 items-center">
-        <div className="flex bg-base-200 rounded-md p-0.5 mr-1">
+        <div className="flex bg-base-200 rounded-md p-0.5 mr-2">
           <button
-            className={`px-2.5 py-0.5 text-xs rounded transition-all ${
+            className={`px-3 py-1 text-sm rounded transition-all ${
               osMode === "mac"
                 ? "bg-white text-primary font-medium shadow-sm"
                 : "text-base-content/50 hover:text-base-content"
@@ -136,7 +136,7 @@ export const AppHeader = ({
             Mac
           </button>
           <button
-            className={`px-2.5 py-0.5 text-xs rounded transition-all ${
+            className={`px-3 py-1 text-sm rounded transition-all ${
               osMode === "windows"
                 ? "bg-white text-primary font-medium shadow-sm"
                 : "text-base-content/50 hover:text-base-content"
