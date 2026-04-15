@@ -111,9 +111,10 @@ export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTab
     if (!selectedModifier || selectedTapKey === null) return;
     const behaviorId = behaviorIdMap["Mod-Tap"];
     if (behaviorId === undefined) return;
+    // Mod-Tap uses &kp for both hold and tap — both params are HID usage values
     onApplyBinding({
       behaviorId,
-      param1: selectedModifier.bitmask,
+      param1: hid_usage_from_page_and_id(KB, selectedModifier.hidId),
       param2: hid_usage_from_page_and_id(KB, selectedTapKey),
     });
   };

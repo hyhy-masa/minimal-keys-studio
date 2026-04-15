@@ -66,8 +66,8 @@ describe("ModifiersTab", () => {
     fireEvent.click(screen.getByText("適用する"));
     expect(onApply).toHaveBeenCalledWith({
       behaviorId: 20,
-      param1: 0x01,
-      param2: hid_usage_from_page_and_id(7, 4),
+      param1: hid_usage_from_page_and_id(7, 224), // Left Ctrl HID usage
+      param2: hid_usage_from_page_and_id(7, 4),   // A HID usage
     });
   });
 });
