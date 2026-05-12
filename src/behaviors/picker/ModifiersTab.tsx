@@ -42,7 +42,7 @@ function getModifiers(os: import("../use-cases").UserOS): ModifierItem[] {
   }));
 }
 
-import { commonTapKeys } from "./common-tap-keys";
+import { commonTapKeys, type TapKeyItem } from "./common-tap-keys";
 
 type Mode = "standalone" | "mod-tap" | "sticky";
 
@@ -56,7 +56,7 @@ interface ModifiersTabProps {
 export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTabProps) {
   const [mode, setMode] = useState<Mode>("standalone");
   const [selectedModifier, setSelectedModifier] = useState<ModifierItem | null>(null);
-  const [selectedTapKey, setSelectedTapKey] = useState<number | null>(null);
+  const [selectedTapKey, setSelectedTapKey] = useState<TapKeyItem | null>(null);
 
   const modifiers = useMemo(() => getModifiers(osMode), [osMode]);
 
@@ -103,19 +103,22 @@ export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTab
     // mod-tap: wait for tap key selection
   };
 
-  const handleTapKeyClick = (hidId: number) => {
-    setSelectedTapKey(hidId);
+  const handleTapKeyClick = (item: TapKeyItem) => {
+    setSelectedTapKey(item);
   };
 
   const handleApply = () => {
     if (!selectedModifier || selectedTapKey === null) return;
     const behaviorId = behaviorIdMap["Mod-Tap"];
     if (behaviorId === undefined) return;
-    // Mod-Tap uses &kp for both hold and tap — both params are HID usage values
+    let param2 = hid_usage_from_page_and_id(KB, selectedTapKey.hidId);
+    if (selectedTapKey.modifier) {
+      param2 = (selectedTapKey.modifier << 24) | param2;
+    }
     onApplyBinding({
       behaviorId,
       param1: hid_usage_from_page_and_id(KB, selectedModifier.hidId),
-      param2: hid_usage_from_page_and_id(KB, selectedTapKey),
+      param2,
     });
   };
 
@@ -175,13 +178,13 @@ export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTab
           <div className="grid grid-cols-8 gap-1 max-h-32 overflow-y-auto">
             {commonTapKeys.map((key) => (
               <button
-                key={key.hidId}
+                key={key.modifier ? `s${key.hidId}` : key.hidId}
                 className={`px-2 py-1.5 text-sm rounded-md border text-center ${
-                  selectedTapKey === key.hidId
+                  selectedTapKey?.hidId === key.hidId && selectedTapKey?.modifier === key.modifier
                     ? "bg-primary/10 text-primary border-primary/30 font-medium"
                     : "border-base-300 bg-white hover:bg-base-200 text-base-content"
                 }`}
-                onClick={() => handleTapKeyClick(key.hidId)}
+                onClick={() => handleTapKeyClick(key)}
               >
                 {key.label}
               </button>

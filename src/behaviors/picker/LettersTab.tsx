@@ -8,6 +8,7 @@ const KB_PAGE = 7;
 interface KeyItem {
   label: string;
   hidId: number;
+  modifier?: number;
 }
 
 const letterKeys: KeyItem[] = Array.from({ length: 26 }, (_, i) => ({
@@ -48,6 +49,35 @@ const symbolKeys: KeyItem[] = [
   { label: "/", hidId: 56 },
 ];
 
+const LEFT_SHIFT = 0x02;
+
+const shiftNumberSymbols: KeyItem[] = [
+  { label: "!", hidId: 30, modifier: LEFT_SHIFT },
+  { label: "@", hidId: 31, modifier: LEFT_SHIFT },
+  { label: "#", hidId: 32, modifier: LEFT_SHIFT },
+  { label: "$", hidId: 33, modifier: LEFT_SHIFT },
+  { label: "%", hidId: 34, modifier: LEFT_SHIFT },
+  { label: "^", hidId: 35, modifier: LEFT_SHIFT },
+  { label: "&", hidId: 36, modifier: LEFT_SHIFT },
+  { label: "*", hidId: 37, modifier: LEFT_SHIFT },
+  { label: "(", hidId: 38, modifier: LEFT_SHIFT },
+  { label: ")", hidId: 39, modifier: LEFT_SHIFT },
+];
+
+const shiftSymbolKeys: KeyItem[] = [
+  { label: "_", hidId: 45, modifier: LEFT_SHIFT },
+  { label: "+", hidId: 46, modifier: LEFT_SHIFT },
+  { label: "{", hidId: 47, modifier: LEFT_SHIFT },
+  { label: "}", hidId: 48, modifier: LEFT_SHIFT },
+  { label: "|", hidId: 49, modifier: LEFT_SHIFT },
+  { label: ":", hidId: 51, modifier: LEFT_SHIFT },
+  { label: '"', hidId: 52, modifier: LEFT_SHIFT },
+  { label: "~", hidId: 53, modifier: LEFT_SHIFT },
+  { label: "<", hidId: 54, modifier: LEFT_SHIFT },
+  { label: ">", hidId: 55, modifier: LEFT_SHIFT },
+  { label: "?", hidId: 56, modifier: LEFT_SHIFT },
+];
+
 const specialKeys: KeyItem[] = [
   { label: "Enter", hidId: 40 },
   { label: "Esc", hidId: 41 },
@@ -83,7 +113,7 @@ const keypadKeys: KeyItem[] = [
   { label: "KP .", hidId: 99 },
 ];
 
-type SubCategory = "letters" | "numbers" | "fkeys" | "fkeys2" | "symbols" | "special" | "keypad";
+type SubCategory = "letters" | "numbers" | "fkeys" | "fkeys2" | "symbols" | "shiftSymbols" | "special" | "keypad";
 
 const subCategories: { id: SubCategory; label: string; keys: KeyItem[] }[] = [
   { id: "letters", label: "A-Z", keys: letterKeys },
@@ -91,6 +121,7 @@ const subCategories: { id: SubCategory; label: string; keys: KeyItem[] }[] = [
   { id: "fkeys", label: "F1-F12", keys: fKeys },
   { id: "fkeys2", label: "F13-F24", keys: fKeysExtended },
   { id: "symbols", label: "記号", keys: symbolKeys },
+  { id: "shiftSymbols", label: "Shift記号", keys: [...shiftNumberSymbols, ...shiftSymbolKeys] },
   { id: "special", label: "特殊", keys: specialKeys },
   { id: "keypad", label: "テンキー", keys: keypadKeys },
 ];
@@ -110,11 +141,15 @@ export function LettersTab({ behaviors, onApplyBinding }: LettersTabProps) {
 
   const activeKeys = subCategories.find((s) => s.id === activeSub)?.keys ?? [];
 
-  const handleKeyClick = (hidId: number) => {
+  const handleKeyClick = (item: KeyItem) => {
     if (keyPressBehaviorId === undefined) return;
+    let param1 = hid_usage_from_page_and_id(KB_PAGE, item.hidId);
+    if (item.modifier) {
+      param1 = (item.modifier << 24) | param1;
+    }
     onApplyBinding({
       behaviorId: keyPressBehaviorId,
-      param1: hid_usage_from_page_and_id(KB_PAGE, hidId),
+      param1,
       param2: 0,
     });
   };
@@ -139,9 +174,9 @@ export function LettersTab({ behaviors, onApplyBinding }: LettersTabProps) {
       <div className="grid grid-cols-8 gap-1">
         {activeKeys.map((key) => (
           <button
-            key={key.hidId}
+            key={key.modifier ? `s${key.hidId}` : key.hidId}
             className="px-2 py-2 text-sm rounded-md border border-base-300 bg-white hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all text-center"
-            onClick={() => handleKeyClick(key.hidId)}
+            onClick={() => handleKeyClick(key)}
           >
             {key.label}
           </button>

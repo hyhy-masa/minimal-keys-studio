@@ -6,7 +6,7 @@ import { getBehaviorDescription } from "../behavior-descriptions";
 
 const KB = 7;
 
-import { commonTapKeys } from "./common-tap-keys";
+import { commonTapKeys, type TapKeyItem } from "./common-tap-keys";
 
 const layerBehaviorNames = [
   "Momentary Layer",
@@ -26,7 +26,7 @@ interface LayersTabProps {
 export function LayersTab({ behaviors, layers, onApplyBinding }: LayersTabProps) {
   const [selectedBehavior, setSelectedBehavior] = useState<string | null>(null);
   const [selectedLayer, setSelectedLayer] = useState<number | null>(null);
-  const [selectedTapKey, setSelectedTapKey] = useState<number | null>(null);
+  const [selectedTapKey, setSelectedTapKey] = useState<TapKeyItem | null>(null);
 
   const availableBehaviors = useMemo(
     () => behaviors.filter((b) => layerBehaviorNames.includes(b.displayName)),
@@ -62,8 +62,8 @@ export function LayersTab({ behaviors, layers, onApplyBinding }: LayersTabProps)
     }
   };
 
-  const handleTapKeyClick = (hidId: number) => {
-    setSelectedTapKey(hidId);
+  const handleTapKeyClick = (item: TapKeyItem) => {
+    setSelectedTapKey(item);
   };
 
   const handleApply = () => {
@@ -71,10 +71,17 @@ export function LayersTab({ behaviors, layers, onApplyBinding }: LayersTabProps)
     const behaviorId = behaviorIdMap[selectedBehavior];
     if (behaviorId === undefined) return;
     if (is2Param && selectedTapKey === null) return;
+    let param2 = 0;
+    if (is2Param && selectedTapKey) {
+      param2 = hid_usage_from_page_and_id(KB, selectedTapKey.hidId);
+      if (selectedTapKey.modifier) {
+        param2 = (selectedTapKey.modifier << 24) | param2;
+      }
+    }
     onApplyBinding({
       behaviorId,
       param1: selectedLayer,
-      param2: is2Param ? hid_usage_from_page_and_id(KB, selectedTapKey!) : 0,
+      param2,
     });
   };
 
@@ -132,13 +139,13 @@ export function LayersTab({ behaviors, layers, onApplyBinding }: LayersTabProps)
           <div className="grid grid-cols-8 gap-1 max-h-32 overflow-y-auto">
             {commonTapKeys.map((key) => (
               <button
-                key={key.hidId}
+                key={key.modifier ? `s${key.hidId}` : key.hidId}
                 className={`px-2 py-1.5 text-sm rounded-md border text-center ${
-                  selectedTapKey === key.hidId
+                  selectedTapKey?.hidId === key.hidId && selectedTapKey?.modifier === key.modifier
                     ? "bg-primary/10 text-primary border-primary/30 font-medium"
                     : "border-base-300 bg-white hover:bg-base-200 text-base-content"
                 }`}
-                onClick={() => handleTapKeyClick(key.hidId)}
+                onClick={() => handleTapKeyClick(key)}
               >
                 {key.label}
               </button>

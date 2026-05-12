@@ -75,4 +75,51 @@ describe("LettersTab", () => {
     expect(screen.getByText("Num Lock")).toBeTruthy();
     expect(screen.getByText("KP 0")).toBeTruthy();
   });
+
+  it("switches to Shift symbols subcategory", () => {
+    const onApply = vi.fn();
+    render(<LettersTab behaviors={mockBehaviors} onApplyBinding={onApply} />);
+    fireEvent.click(screen.getByText("Shift記号"));
+    expect(screen.getByText("!")).toBeTruthy();
+    expect(screen.getByText("@")).toBeTruthy();
+    expect(screen.getByText("(")).toBeTruthy();
+    expect(screen.getByText(")")).toBeTruthy();
+    expect(screen.getByText("?")).toBeTruthy();
+  });
+
+  it("calls onApplyBinding with Shift modifier for shift number symbol", () => {
+    const onApply = vi.fn();
+    render(<LettersTab behaviors={mockBehaviors} onApplyBinding={onApply} />);
+    fireEvent.click(screen.getByText("Shift記号"));
+    fireEvent.click(screen.getByText("!"));
+    expect(onApply).toHaveBeenCalledWith({
+      behaviorId: 1,
+      param1: (0x02 << 24) | hid_usage_from_page_and_id(7, 30),
+      param2: 0,
+    });
+  });
+
+  it("calls onApplyBinding with Shift modifier for shift symbol key", () => {
+    const onApply = vi.fn();
+    render(<LettersTab behaviors={mockBehaviors} onApplyBinding={onApply} />);
+    fireEvent.click(screen.getByText("Shift記号"));
+    fireEvent.click(screen.getByText("_"));
+    expect(onApply).toHaveBeenCalledWith({
+      behaviorId: 1,
+      param1: (0x02 << 24) | hid_usage_from_page_and_id(7, 45),
+      param2: 0,
+    });
+  });
+
+  it("non-shift symbols still work without modifier", () => {
+    const onApply = vi.fn();
+    render(<LettersTab behaviors={mockBehaviors} onApplyBinding={onApply} />);
+    fireEvent.click(screen.getByText("記号"));
+    fireEvent.click(screen.getByText("-"));
+    expect(onApply).toHaveBeenCalledWith({
+      behaviorId: 1,
+      param1: hid_usage_from_page_and_id(7, 45),
+      param2: 0,
+    });
+  });
 });

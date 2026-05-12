@@ -2,6 +2,7 @@
 export interface TapKeyItem {
   label: string;
   hidId: number;
+  modifier?: number;
 }
 
 export const commonTapKeys: TapKeyItem[] = [
@@ -40,6 +41,28 @@ export const commonTapKeys: TapKeyItem[] = [
   { label: ",", hidId: 54 },
   { label: ".", hidId: 55 },
   { label: "/", hidId: 56 },
+  // Shift symbols (US layout)
+  { label: "!", hidId: 30, modifier: 0x02 },
+  { label: "@", hidId: 31, modifier: 0x02 },
+  { label: "#", hidId: 32, modifier: 0x02 },
+  { label: "$", hidId: 33, modifier: 0x02 },
+  { label: "%", hidId: 34, modifier: 0x02 },
+  { label: "^", hidId: 35, modifier: 0x02 },
+  { label: "&", hidId: 36, modifier: 0x02 },
+  { label: "*", hidId: 37, modifier: 0x02 },
+  { label: "(", hidId: 38, modifier: 0x02 },
+  { label: ")", hidId: 39, modifier: 0x02 },
+  { label: "_", hidId: 45, modifier: 0x02 },
+  { label: "+", hidId: 46, modifier: 0x02 },
+  { label: "{", hidId: 47, modifier: 0x02 },
+  { label: "}", hidId: 48, modifier: 0x02 },
+  { label: "|", hidId: 49, modifier: 0x02 },
+  { label: ":", hidId: 51, modifier: 0x02 },
+  { label: '"', hidId: 52, modifier: 0x02 },
+  { label: "~", hidId: 53, modifier: 0x02 },
+  { label: "<", hidId: 54, modifier: 0x02 },
+  { label: ">", hidId: 55, modifier: 0x02 },
+  { label: "?", hidId: 56, modifier: 0x02 },
   // Special keys
   { label: "Caps Lock", hidId: 57 },
   { label: "Insert", hidId: 73 },
