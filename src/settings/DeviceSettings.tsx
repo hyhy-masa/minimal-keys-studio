@@ -7,9 +7,11 @@ import {
 } from "../rpc/useCustomSubsystem";
 import { useToast } from "../misc/Toast";
 import * as SETTINGS from "../proto/settings";
+import { useTelemetry } from "../telemetry/TelemetryProvider";
 
 export function DeviceSettings() {
   const { toast } = useToast();
+  const { isOptedIn, setOptedIn } = useTelemetry();
   const subsystem = useCustomSubsystem(SETTINGS.SUBSYSTEM_ID);
   const [deviceSettings, setDeviceSettings] = useState<
     Map<number, SETTINGS.ActivitySettings>
@@ -219,6 +221,29 @@ export function DeviceSettings() {
 
       {/* Feedback */}
       {feedback && <p className="text-sm text-success">{feedback}</p>}
+
+      {/* Telemetry (Tauri only) */}
+      {window.__TAURI_INTERNALS__ && (
+        <section className="flex flex-col gap-2 pt-4 border-t border-base-300">
+          <h3 className="text-sm font-medium text-base-content/70">
+            利用データの送信
+          </h3>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isOptedIn}
+              onChange={(e) => setOptedIn(e.target.checked)}
+              className="toggle toggle-sm"
+            />
+            <span className="text-sm">
+              {isOptedIn ? "送信する" : "送信しない"}
+            </span>
+          </label>
+          <p className="text-xs text-base-content/50">
+            匿名の操作ログ・エラー情報・キーマップ設定を開発者に送信します
+          </p>
+        </section>
+      )}
     </div>
   );
 }

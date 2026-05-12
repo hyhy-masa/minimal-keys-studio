@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { enqueueEvent } from "./telemetry/telemetry-client";
 
 interface Props {
   children: ReactNode;
@@ -21,6 +22,20 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     console.error("ErrorBoundary caught:", error, errorInfo);
+    try {
+      const deviceId = localStorage.getItem("telemetry-device-id") || "unknown";
+      enqueueEvent({
+        type: "error",
+        deviceId,
+        appVersion: "unknown",
+        timestamp: new Date().toISOString(),
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack ?? undefined,
+      });
+    } catch {
+      // telemetry must never break error recovery
+    }
   }
 
   handleReload = () => {

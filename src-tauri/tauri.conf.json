@@ -61,7 +61,7 @@
       ],
       "csp": {
         "default-src": "'self' customprotocol: asset:",
-        "connect-src": "ipc: http://ipc.localhost"
+        "connect-src": "ipc: http://ipc.localhost https://script.google.com https://script.googleusercontent.com"
       }
     },
     "windows": [

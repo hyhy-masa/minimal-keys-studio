@@ -21,6 +21,7 @@
     "@tailwindcss/container-queries": "^0.1.1",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-cli": "^2.0.0",
+    "@tauri-apps/plugin-http": "^2.0.0",
     "@zmkfirmware/zmk-studio-ts-client": "github:hyhy-masa/zmk-studio-ts-client#custom-studio-protocol",
     "emittery": "^1.0.3",
     "immer": "^10.1.1",

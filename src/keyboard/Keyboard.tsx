@@ -34,6 +34,8 @@ import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { useEncoderBindings } from "./useEncoderBindings";
 import { computeOneU, DEFAULT_ONE_U } from "./compute-one-u";
 import { LoadingSpinner } from "../misc/LoadingSkeleton";
+import { useTelemetry } from "../telemetry/TelemetryProvider";
+import { useSub } from "../usePubSub";
 
 // Keeps loading state visible for at least minMs so users always see feedback.
 function useMinLoadingTime(isLoading: boolean, minMs = 500): boolean {
@@ -215,11 +217,37 @@ export default function Keyboard() {
   const conn = useContext(ConnectionContext);
   const undoRedo = useContext(UndoRedoContext);
   const { toast } = useToast();
+  const { trackKeymap } = useTelemetry();
 
   useEffect(() => {
     setSelectedLayerIndex(0);
     setSelectedKeyPosition(undefined);
   }, [conn]);
+
+  const keymapSentRef = useRef(false);
+  useEffect(() => {
+    if (!isDataLoading && keymap && !keymapSentRef.current) {
+      keymapSentRef.current = true;
+      try {
+        trackKeymap("connect", JSON.stringify(keymap));
+      } catch {
+        // telemetry must never break the app
+      }
+    }
+    if (isDataLoading) {
+      keymapSentRef.current = false;
+    }
+  }, [isDataLoading, keymap, trackKeymap]);
+
+  useSub("keymap_saved_success", () => {
+    if (keymap) {
+      try {
+        trackKeymap("save", JSON.stringify(keymap));
+      } catch {
+        // telemetry must never break the app
+      }
+    }
+  });
 
   useEffect(() => {
     async function performSetRequest() {

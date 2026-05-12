@@ -14,6 +14,7 @@ use transport::serial::{serial_connect, serial_list_devices};
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_cli::init())
+        .plugin(tauri_plugin_http::init())
         .manage(ActiveConnection {
             conn: Mutex::new(None),
         })

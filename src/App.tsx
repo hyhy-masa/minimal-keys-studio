@@ -14,7 +14,7 @@ import { call_rpc } from "./rpc/logging";
 
 import type { Notification } from "@zmkfirmware/zmk-studio-ts-client/studio";
 import { ConnectionState, ConnectionContext } from "./rpc/ConnectionContext";
-import { Dispatch, useCallback, useEffect, useState } from "react";
+import { Dispatch, useCallback, useEffect, useRef, useState } from "react";
 import { ConnectModal, TransportFactory } from "./ConnectModal";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
@@ -48,6 +48,8 @@ import { AboutModal } from "./AboutModal";
 import { LicenseNoticeModal } from "./misc/LicenseNoticeModal";
 import { ToastProvider, useToast } from "./misc/Toast";
 import { OsModeProvider } from "./OsModeContext";
+import { TelemetryProvider, useTelemetry } from "./telemetry/TelemetryProvider";
+import { OptInDialog } from "./telemetry/OptInDialog";
 
 declare global {
   interface Window {
@@ -202,6 +204,7 @@ const TAB_GROUPS: TabGroup[] = [
 
 function AppInner() {
   const { toast } = useToast();
+  const { trackEvent } = useTelemetry();
   const [conn, setConn] = useState<ConnectionState>({ conn: null });
   const [connectedDeviceName, setConnectedDeviceName] = useState<
     string | undefined
@@ -221,6 +224,20 @@ function AppInner() {
   useSub("rpc_notification.core.lockStateChanged", (ls) => {
     setLockState(ls);
   });
+
+  useEffect(() => {
+    trackEvent("app_launched");
+  }, [trackEvent]);
+
+  const prevConnRef = useRef(conn.conn);
+  useEffect(() => {
+    if (conn.conn && !prevConnRef.current) {
+      trackEvent("device_connected");
+    } else if (!conn.conn && prevConnRef.current) {
+      trackEvent("device_disconnected");
+    }
+    prevConnRef.current = conn.conn;
+  }, [conn.conn, trackEvent]);
 
   useEffect(() => {
     if (!conn) {
@@ -259,11 +276,13 @@ function AppInner() {
         toast("保存できませんでした", "error");
       } else {
         toast("保存しました", "success");
+        trackEvent("keymap_saved");
+        pub("keymap_saved_success", true);
       }
     }
 
     doSave();
-  }, [conn, toast]);
+  }, [conn, toast, trackEvent]);
 
   const discard = useCallback(() => {
     async function doDiscard() {
@@ -278,6 +297,7 @@ function AppInner() {
         toast("破棄できませんでした", "error");
       } else {
         toast("破棄しました", "info");
+        trackEvent("keymap_discarded");
       }
 
       reset();
@@ -286,7 +306,7 @@ function AppInner() {
     }
 
     doDiscard();
-  }, [conn, toast, reset]);
+  }, [conn, toast, reset, trackEvent]);
 
   const resetSettings = useCallback(() => {
     async function doReset() {
@@ -378,6 +398,7 @@ function AppInner() {
                         onClick={() => {
                           setActiveTab(tab.id);
                           setMountedTabs((prev) => new Set(prev).add(tab.id));
+                          trackEvent("tab_switched", { tab: tab.id });
                         }}
                       >
                         {tab.icon}
@@ -414,7 +435,10 @@ function App() {
   return (
     <ToastProvider>
       <OsModeProvider>
-        <AppInner />
+        <TelemetryProvider>
+          <OptInDialog />
+          <AppInner />
+        </TelemetryProvider>
       </OsModeProvider>
     </ToastProvider>
   );
