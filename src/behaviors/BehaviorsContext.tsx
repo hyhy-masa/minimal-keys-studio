@@ -10,9 +10,10 @@ type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 interface BehaviorsState {
   map: BehaviorMap;
   list: GetBehaviorDetailsResponse[];
+  loading: boolean;
 }
 
-const BehaviorsContext = createContext<BehaviorsState>({ map: {}, list: [] });
+const BehaviorsContext = createContext<BehaviorsState>({ map: {}, list: [], loading: false });
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useBehaviorMap(): BehaviorMap {
@@ -24,17 +25,22 @@ export function useBehaviorList(): GetBehaviorDetailsResponse[] {
   return useContext(BehaviorsContext).list;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
+export function useBehaviorsLoading(): boolean {
+  return useContext(BehaviorsContext).loading;
+}
+
 export function BehaviorsProvider({ children }: { children: React.ReactNode }) {
   const connection = useContext(ConnectionContext);
   const lockState = useContext(LockStateContext);
-  const [state, setState] = useState<BehaviorsState>({ map: {}, list: [] });
+  const [state, setState] = useState<BehaviorsState>({ map: {}, list: [], loading: false });
 
   useEffect(() => {
     if (
       !connection.conn ||
       lockState !== LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED
     ) {
-      setState({ map: {}, list: [] });
+      setState({ map: {}, list: [], loading: false });
       return;
     }
 
@@ -43,7 +49,7 @@ export function BehaviorsProvider({ children }: { children: React.ReactNode }) {
     async function load() {
       if (!connection.conn) return;
 
-      setState({ map: {}, list: [] });
+      setState({ map: {}, list: [], loading: true });
 
       const resp = await call_rpc(connection.conn, {
         behaviors: { listAllBehaviors: true },
@@ -68,7 +74,7 @@ export function BehaviorsProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      if (!ignore) setState({ map, list });
+      if (!ignore) setState({ map, list, loading: false });
     }
 
     load();

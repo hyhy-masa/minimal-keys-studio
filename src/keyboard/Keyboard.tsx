@@ -26,20 +26,47 @@ import { useConnectedDeviceData } from "../rpc/useConnectedDeviceData";
 import { ConnectionContext } from "../rpc/ConnectionContext";
 import { UndoRedoContext } from "../undoRedo";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
-import { useBehaviorMap } from "../behaviors/BehaviorsContext";
+import { useBehaviorMap, useBehaviorsLoading } from "../behaviors/BehaviorsContext";
 import { produce } from "immer";
 import { useToast } from "../misc/Toast";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { useEncoderBindings } from "./useEncoderBindings";
 import { computeOneU, DEFAULT_ONE_U } from "./compute-one-u";
+import { LoadingSpinner } from "../misc/LoadingSkeleton";
+
+// Keeps loading state visible for at least minMs so users always see feedback.
+function useMinLoadingTime(isLoading: boolean, minMs = 500): boolean {
+  const [show, setShow] = useState(isLoading);
+  const startRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (isLoading) {
+      startRef.current = Date.now();
+      setShow(true);
+    } else if (startRef.current !== null) {
+      const remaining = minMs - (Date.now() - startRef.current);
+      if (remaining > 0) {
+        const timer = setTimeout(() => {
+          setShow(false);
+          startRef.current = null;
+        }, remaining);
+        return () => clearTimeout(timer);
+      }
+      setShow(false);
+      startRef.current = null;
+    }
+  }, [isLoading, minMs]);
+
+  return show;
+}
 
 // Separate component for keyboard area — measures container and computes oneU.
 // Isolated so ResizeObserver doesn't cause feedback loops with the keyboard rendering.
 function KeyboardArea({
   layouts, keymap, behaviors, selectedPhysicalLayoutIndex,
   selectedLayerIndex, selectedKeyPosition, onKeyPositionClicked,
-  onBindingApply, encoderRotationLabel,
+  onBindingApply, encoderRotationLabel, showLoading,
 }: {
   layouts: PhysicalLayout[] | undefined;
   keymap: Keymap | undefined;
@@ -50,6 +77,7 @@ function KeyboardArea({
   onKeyPositionClicked: (pos: number) => void;
   onBindingApply: (binding: import("@zmkfirmware/zmk-studio-ts-client/keymap").BehaviorBinding) => void;
   encoderRotationLabel?: string;
+  showLoading: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [oneU, setOneU] = useState(DEFAULT_ONE_U);
@@ -84,7 +112,7 @@ function KeyboardArea({
       ref={containerRef}
       className="p-4 col-start-2 row-start-1 flex items-center justify-center min-w-0 overflow-hidden bg-gray-200/50 rounded-lg"
     >
-      {layouts && keymap && behaviors ? (
+      {!showLoading && layouts && keymap && behaviors ? (
         <KeymapComp
           keymap={keymap}
           layout={layouts[selectedPhysicalLayoutIndex]}
@@ -97,7 +125,7 @@ function KeyboardArea({
           encoderRotationLabel={encoderRotationLabel}
         />
       ) : (
-        <div className="text-base-content/30 text-sm">読み込み中...</div>
+        <LoadingSpinner label="キーマップを読み込んでいます..." />
       )}
     </div>
   );
@@ -180,6 +208,9 @@ export default function Keyboard() {
     number | undefined
   >(undefined);
   const behaviors = useBehaviorMap();
+  const behaviorsLoading = useBehaviorsLoading();
+  const isDataLoading = !layouts || !keymap || behaviorsLoading;
+  const showLoading = useMinLoadingTime(isDataLoading);
 
   const conn = useContext(ConnectionContext);
   const undoRedo = useContext(UndoRedoContext);
@@ -506,7 +537,7 @@ export default function Keyboard() {
   return (
     <div className="grid grid-cols-[auto_1fr] grid-rows-[55fr_45fr] bg-base-300 max-w-full min-w-0 min-h-0 h-full">
       <div className="p-2 flex flex-col gap-2 bg-gray-50 border-r border-gray-200 row-span-2">
-        {layouts && (
+        {!showLoading && layouts ? (
           <div className="col-start-3 row-start-1 row-end-2">
             <PhysicalLayoutPicker
               layouts={layouts}
@@ -514,9 +545,14 @@ export default function Keyboard() {
               onPhysicalLayoutClicked={doSelectPhysicalLayout}
             />
           </div>
+        ) : (
+          <div className="w-20 space-y-2 animate-pulse">
+            <div className="h-3 w-12 bg-base-300 rounded" />
+            <div className="h-8 w-full bg-base-300 rounded" />
+          </div>
         )}
 
-        {keymap && (
+        {!showLoading && keymap ? (
           <div className="col-start-1 row-start-1 row-end-2">
             <LayerPicker
               layers={keymap.layers}
@@ -530,6 +566,13 @@ export default function Keyboard() {
               onLayerNameChanged={changeLayerName}
             />
           </div>
+        ) : (
+          <div className="w-20 space-y-1.5 animate-pulse">
+            <div className="h-3 w-14 bg-base-300 rounded" />
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-7 w-full bg-base-300 rounded" />
+            ))}
+          </div>
         )}
       </div>
       <KeyboardArea
@@ -542,27 +585,28 @@ export default function Keyboard() {
         onKeyPositionClicked={setSelectedKeyPosition}
         onBindingApply={doUpdateBinding}
         encoderRotationLabel={encoderSummary?.rotationLabel}
+        showLoading={showLoading}
       />
-      {keymap && (
-        <div className="p-3 col-start-2 row-start-2 bg-white border-t border-gray-200 overflow-y-auto">
-          {selectedBinding != null ? (
-            <BehaviorBindingPicker
-              binding={selectedBinding}
-              behaviors={Object.values(behaviors)}
-              layers={keymap.layers.map(({ id, name }, li) => ({
-                id,
-                name: name || li.toLocaleString(),
-              }))}
-              onBindingChanged={doUpdateBinding}
-              keyPosition={selectedKeyPosition}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full text-base-content/40 text-sm">
-              キーをクリックして設定を変更
-            </div>
-          )}
-        </div>
-      )}
+      <div className="p-3 col-start-2 row-start-2 bg-white border-t border-gray-200 overflow-y-auto">
+        {!showLoading && keymap && selectedBinding != null ? (
+          <BehaviorBindingPicker
+            binding={selectedBinding}
+            behaviors={Object.values(behaviors)}
+            layers={keymap.layers.map(({ id, name }, li) => ({
+              id,
+              name: name || li.toLocaleString(),
+            }))}
+            onBindingChanged={doUpdateBinding}
+            keyPosition={selectedKeyPosition}
+          />
+        ) : !showLoading && keymap ? (
+          <div className="flex items-center justify-center h-full text-base-content/40 text-sm">
+            キーをクリックして設定を変更
+          </div>
+        ) : (
+          <LoadingSpinner label="設定パネルを準備しています..." />
+        )}
+      </div>
     </div>
   );
 }
