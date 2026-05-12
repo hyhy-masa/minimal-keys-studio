@@ -2,7 +2,7 @@
 // Deploy: Execute as "Me", Access "Anyone"
 // After deploy, set the URL in src/telemetry/telemetry-client.ts
 
-const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE";
+const SPREADSHEET_ID = "18fBy7YK94eBcUuIdKizA9sMM_wL9ZNJHd9Na4BTZqHE";
 
 function doPost(e) {
   try {

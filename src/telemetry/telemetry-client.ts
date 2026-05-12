@@ -1,6 +1,6 @@
 import type { TelemetryPayload } from "./events";
 
-const GAS_ENDPOINT = "__GAS_ENDPOINT_PLACEHOLDER__";
+const GAS_ENDPOINT = "https://script.google.com/macros/s/AKfycbwfHvOyiSE8_WNVaA26Vg0AhcHlP--1wfS-iC9yscnuhrKVMMURWOGagrLCew7iGKCIag/exec";
 
 const FLUSH_INTERVAL_MS = 30_000;
 const FLUSH_BATCH_SIZE = 10;
@@ -54,8 +54,6 @@ export async function flushQueue(): Promise<void> {
 
 async function sendBatch(batch: TelemetryPayload[]): Promise<boolean> {
   try {
-    if (GAS_ENDPOINT === "__GAS_ENDPOINT_PLACEHOLDER__") return true;
-
     const { fetch } = await import("@tauri-apps/plugin-http");
     const resp = await fetch(GAS_ENDPOINT, {
       method: "POST",
