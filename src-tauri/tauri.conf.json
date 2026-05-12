@@ -6,10 +6,10 @@
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist/"
   },
-  "productName": "minimal-keys Studio",
-  "mainBinaryName": "minimal-keys-studio",
+  "productName": "minimal-keys カスタマイズ",
+  "mainBinaryName": "minimal-keys-customize",
   "version": "1.0.0",
-  "identifier": "com.hyhy-masa.minimal-keys-studio",
+  "identifier": "com.hyhy-masa.minimal-keys-customize",
   "bundle": {
     "active": true,
     "category": "Productivity",
@@ -69,7 +69,7 @@
         "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "title": "minimal-keys Studio",
+        "title": "minimal-keys カスタマイズ",
         "width": 800
       }
     ]

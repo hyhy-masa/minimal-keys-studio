@@ -11,6 +11,7 @@ const OsModeContext = createContext<OsModeContextValue>({
   setOsMode: () => {},
 });
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useOsMode(): OsModeContextValue {
   return useContext(OsModeContext);
 }
