@@ -16,20 +16,18 @@ export function TrackballSettings() {
   const [saving, setSaving] = useState(false);
 
   // Local form state (editable copy of selected processor)
-  // Speed is represented as multiplier/divisor. We use divisor=2 as base
-  // so 0.5 steps work: 0.5x=1/2, 1.0x=2/2, 1.5x=3/2, 2.0x=4/2, etc.
+  // Speed is represented as multiplier/divisor. We use divisor=5 as base
+  // so 0.2 steps work: 0.2x=1/5, 0.4x=2/5, 1.0x=5/5, 2.0x=10/5, etc.
   const [multiplier, setMultiplier] = useState(1);
   const [divisor, setDivisor] = useState(1);
   const [rotation, setRotation] = useState(0);
 
-  // Derived speed value for slider (in 0.5 steps)
+  // Derived speed value for slider (in 0.2 steps)
   const speedValue = divisor > 0 ? multiplier / divisor : 1;
   const setSpeed = useCallback((speed: number) => {
-    // Convert speed to multiplier/divisor with divisor=2
-    // speed 0.5 → 1/2, speed 1.0 → 2/2=1/1, speed 1.5 → 3/2, etc.
-    const newMultiplier = Math.round(speed * 2);
+    const newMultiplier = Math.round(speed * 5);
     setMultiplier(newMultiplier);
-    setDivisor(2);
+    setDivisor(5);
   }, []);
   const [xInvert, setXInvert] = useState(false);
   const [yInvert, setYInvert] = useState(false);
@@ -240,12 +238,12 @@ export function TrackballSettings() {
           速度
         </h3>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-base-content/50 w-8">0.5x</span>
+          <span className="text-xs text-base-content/50 w-8">0.2x</span>
           <input
             type="range"
-            min={0.5}
+            min={0.2}
             max={5}
-            step={0.5}
+            step={0.2}
             value={speedValue}
             onChange={(e) => setSpeed(parseFloat(e.target.value))}
             className="flex-1 accent-primary"

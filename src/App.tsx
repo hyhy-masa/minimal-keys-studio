@@ -7,6 +7,7 @@ import {
   Bluetooth,
   BatteryMedium,
   SlidersHorizontal,
+  Combine,
 } from "lucide-react";
 
 import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
@@ -35,6 +36,7 @@ import { BleManagement } from "./bluetooth/BleManagement";
 import { BatteryHistory } from "./battery/BatteryHistory";
 import { DeviceSettings } from "./settings/DeviceSettings";
 import { HoldTapSettings } from "./holdtap/HoldTapSettings";
+import { ComboSettings } from "./combos/ComboSettings";
 import { BehaviorsProvider } from "./behaviors/BehaviorsContext";
 import { CustomSubsystemsProvider } from "./rpc/useCustomSubsystem";
 import { UndoRedoContext, useUndoRedo } from "./undoRedo";
@@ -179,7 +181,7 @@ async function connect(
   setConn({ conn });
 }
 
-type ActiveTab = "keymap" | "trackball" | "encoder" | "bluetooth" | "battery" | "holdtap" | "settings";
+type ActiveTab = "keymap" | "trackball" | "encoder" | "combo" | "bluetooth" | "battery" | "holdtap" | "settings";
 
 type TabDef = { id: ActiveTab; label: string; icon: React.ReactNode };
 type TabGroup = { tabs: TabDef[] };
@@ -190,6 +192,7 @@ const TAB_GROUPS: TabGroup[] = [
       { id: "keymap", label: "キーマップ", icon: <Grid3x3 className="w-4 h-4" /> },
       { id: "holdtap", label: "長押し設定", icon: <Timer className="w-4 h-4" /> },
       { id: "encoder", label: "エンコーダー", icon: <RotateCw className="w-4 h-4" /> },
+      { id: "combo", label: "コンボ", icon: <Combine className="w-4 h-4" /> },
     ],
   },
   {
@@ -413,6 +416,7 @@ function AppInner() {
               <div className={activeTab === "keymap" ? "h-full" : "hidden"}><Keyboard key={keymapVersion} /></div>
               {mountedTabs.has("trackball") && <div className={activeTab === "trackball" ? "h-full" : "hidden"}><TrackballSettings /></div>}
               {mountedTabs.has("encoder") && <div className={activeTab === "encoder" ? "h-full" : "hidden"}><EncoderSettings /></div>}
+              {mountedTabs.has("combo") && <div className={activeTab === "combo" ? "h-full" : "hidden"}><ComboSettings /></div>}
               {mountedTabs.has("bluetooth") && <div className={activeTab === "bluetooth" ? "h-full" : "hidden"}><BleManagement /></div>}
               {mountedTabs.has("holdtap") && <div className={activeTab === "holdtap" ? "h-full" : "hidden"}><HoldTapSettings /></div>}
               {mountedTabs.has("battery") && <div className={activeTab === "battery" ? "h-full" : "hidden"}><BatteryHistory /></div>}
