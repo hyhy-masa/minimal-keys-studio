@@ -22,6 +22,8 @@ function trackGlobalError(message: string, stack?: string): void {
 }
 
 window.addEventListener("unhandledrejection", (event) => {
+  const msg = event.reason instanceof Error ? event.reason.message : String(event.reason);
+  if (msg.includes("fetch_cancel_body")) return;
   console.error("Unhandled promise rejection:", event.reason);
   const reason = event.reason;
   trackGlobalError(

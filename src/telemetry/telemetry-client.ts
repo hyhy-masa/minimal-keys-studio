@@ -33,7 +33,7 @@ export function enqueueEvent(payload: TelemetryPayload): void {
       flushQueue();
     }
   } catch {
-    // telemetry must never break the app
+    // silently drop
   }
 }
 
@@ -48,7 +48,7 @@ export async function flushQueue(): Promise<void> {
       await sendBatch(batch);
     }
   } catch {
-    // silently discard on failure
+    // silently drop
   }
 }
 
@@ -60,6 +60,7 @@ async function sendBatch(batch: TelemetryPayload[]): Promise<boolean> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(batch),
     });
+    try { await resp.text(); } catch { /* consume body to prevent fetch_cancel_body */ }
     return resp.ok || resp.status === 302;
   } catch {
     return false;

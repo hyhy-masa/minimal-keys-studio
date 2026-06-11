@@ -16,6 +16,13 @@
     "core:menu:default",
     "core:tray:default",
     "cli:default",
-    "http:default"
+    "http:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://script.google.com/**" },
+        { "url": "https://script.googleusercontent.com/**" }
+      ]
+    }
   ]
 }
