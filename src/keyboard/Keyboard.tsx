@@ -36,6 +36,8 @@ import { computeOneU, DEFAULT_ONE_U } from "./compute-one-u";
 import { LoadingSpinner } from "../misc/LoadingSkeleton";
 import { useTelemetry } from "../telemetry/TelemetryProvider";
 import { useSub } from "../usePubSub";
+import { ModifierPanel } from "./ModifierPanel";
+import { useOsMode } from "../OsModeContext";
 
 // Keeps loading state visible for at least minMs so users always see feedback.
 function useMinLoadingTime(isLoading: boolean, minMs = 500): boolean {
@@ -209,6 +211,7 @@ export default function Keyboard() {
   const [selectedKeyPosition, setSelectedKeyPosition] = useState<
     number | undefined
   >(undefined);
+  const [modifierFlags, setModifierFlags] = useState(0);
   const behaviors = useBehaviorMap();
   const behaviorsLoading = useBehaviorsLoading();
   const isDataLoading = !layouts || !keymap || behaviorsLoading;
@@ -217,6 +220,7 @@ export default function Keyboard() {
   const conn = useContext(ConnectionContext);
   const undoRedo = useContext(UndoRedoContext);
   const { toast } = useToast();
+  const { osMode } = useOsMode();
   const { trackKeymap } = useTelemetry();
 
   useEffect(() => {
@@ -602,6 +606,12 @@ export default function Keyboard() {
             ))}
           </div>
         )}
+
+        <ModifierPanel
+          modifierFlags={modifierFlags}
+          onModifierFlagsChanged={setModifierFlags}
+          osMode={osMode}
+        />
       </div>
       <KeyboardArea
         layouts={layouts}
@@ -626,6 +636,7 @@ export default function Keyboard() {
             }))}
             onBindingChanged={doUpdateBinding}
             keyPosition={selectedKeyPosition}
+            modifierFlags={modifierFlags}
           />
         ) : !showLoading && keymap ? (
           <div className="flex items-center justify-center h-full text-base-content/40 text-sm">
