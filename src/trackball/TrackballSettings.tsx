@@ -16,18 +16,18 @@ export function TrackballSettings() {
   const [saving, setSaving] = useState(false);
 
   // Local form state (editable copy of selected processor)
-  // Speed is represented as multiplier/divisor. We use divisor=5 as base
-  // so 0.2 steps work: 0.2x=1/5, 0.4x=2/5, 1.0x=5/5, 2.0x=10/5, etc.
+  // Speed is represented as multiplier/divisor. We use divisor=10 as base
+  // so 0.1 steps work: 0.1x=1/10, 0.5x=5/10, 1.0x=10/10, 2.0x=20/10, etc.
   const [multiplier, setMultiplier] = useState(1);
   const [divisor, setDivisor] = useState(1);
   const [rotation, setRotation] = useState(0);
 
-  // Derived speed value for slider (in 0.2 steps)
+  // Derived speed value for slider (in 0.1 steps)
   const speedValue = divisor > 0 ? multiplier / divisor : 1;
   const setSpeed = useCallback((speed: number) => {
-    const newMultiplier = Math.round(speed * 5);
+    const newMultiplier = Math.round(speed * 10);
     setMultiplier(newMultiplier);
-    setDivisor(5);
+    setDivisor(10);
   }, []);
   const [xInvert, setXInvert] = useState(false);
   const [yInvert, setYInvert] = useState(false);
@@ -243,7 +243,7 @@ export function TrackballSettings() {
             type="range"
             min={0.2}
             max={5}
-            step={0.2}
+            step={0.1}
             value={speedValue}
             onChange={(e) => setSpeed(parseFloat(e.target.value))}
             className="flex-1 accent-primary"
@@ -259,7 +259,7 @@ export function TrackballSettings() {
       <section className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-base-content/70">回転角度</h3>
         <label className="flex flex-col gap-1">
-          <span className="text-xs">度</span>
+          <span className="text-sm">度</span>
           <input
             type="number"
             min={-180}
@@ -322,7 +322,7 @@ export function TrackballSettings() {
           軸スナップ
         </h3>
         <label className="flex flex-col gap-1">
-          <span className="text-xs">スナップモード</span>
+          <span className="text-sm">スナップモード</span>
           <select
             value={axisSnapMode}
             onChange={(e) =>
@@ -338,7 +338,7 @@ export function TrackballSettings() {
         {axisSnapMode !== 0 && (
           <div className="grid grid-cols-2 gap-2">
             <label className="flex flex-col gap-1">
-              <span className="text-xs">しきい値</span>
+              <span className="text-sm">しきい値</span>
               <input
                 type="number"
                 min={0}
@@ -350,7 +350,7 @@ export function TrackballSettings() {
               />
             </label>
             <label className="flex flex-col gap-1">
-              <span className="text-xs">タイムアウト (ms)</span>
+              <span className="text-sm">タイムアウト (ms)</span>
               <input
                 type="number"
                 min={0}

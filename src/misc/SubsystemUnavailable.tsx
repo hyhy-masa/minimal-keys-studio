@@ -23,7 +23,7 @@ export function SubsystemUnavailable({
         <p className="text-sm text-base-content/50">{explanation}</p>
       </div>
       {technicalDetails && (
-        <details className="text-xs text-base-content/30 mt-2">
+        <details className="text-sm text-base-content/30 mt-2">
           <summary className="cursor-pointer hover:text-base-content/50">
             技術的な詳細
           </summary>

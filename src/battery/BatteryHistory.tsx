@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "react-aria-components";
 import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
 import {
@@ -226,11 +226,13 @@ export function BatteryHistory() {
   }, [subsystem]);
 
   // Auto-fetch on connect
-  const prevSubsystem = useRef(subsystem);
-  if (subsystem && !prevSubsystem.current) {
-    fetchHistory();
-  }
-  prevSubsystem.current = subsystem;
+  const prevSubsystemRef = useRef(subsystem);
+  useEffect(() => {
+    if (subsystem && !prevSubsystemRef.current) {
+      fetchHistory();
+    }
+    prevSubsystemRef.current = subsystem;
+  }, [subsystem, fetchHistory]);
 
   const devices = useMemo(() => {
     return Array.from(deviceData.values())
@@ -282,7 +284,7 @@ export function BatteryHistory() {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">バッテリー</h2>
         <Button
-          className="text-xs rounded bg-base-300 hover:bg-base-200 px-2 py-1"
+          className="text-sm rounded bg-base-300 hover:bg-base-200 px-2 py-1"
           isDisabled={loading}
           onPress={fetchHistory}
         >

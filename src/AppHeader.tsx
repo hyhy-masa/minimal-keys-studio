@@ -69,7 +69,7 @@ export const AppHeader = ({
   return (
     <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-12 max-w-full border-b border-gray-200 bg-white">
       <div className="flex px-3 items-center gap-2">
-        <img src={`${import.meta.env.BASE_URL}zmk.svg`} alt="Logo" className="h-8 rounded" />
+        <img src={`${import.meta.env.BASE_URL}minimal-keys-logo.png`} alt="Logo" className="h-8 rounded" />
         <p className="font-semibold text-base">minimal-keys カスタマイズ</p>
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">

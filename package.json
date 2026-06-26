@@ -1,7 +1,7 @@
 {
   "name": "minimal-keys-studio",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,7 +20,9 @@
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-cli": "^2.0.0",
+    "@tauri-apps/plugin-cli": "^2.4.1",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
+    "@tauri-apps/plugin-fs": "^2.5.1",
     "@tauri-apps/plugin-http": "^2.0.0",
     "@zmkfirmware/zmk-studio-ts-client": "github:hyhy-masa/zmk-studio-ts-client#custom-studio-protocol",
     "emittery": "^1.0.3",

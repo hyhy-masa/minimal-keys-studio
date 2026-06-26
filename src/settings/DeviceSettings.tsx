@@ -150,7 +150,7 @@ export function DeviceSettings() {
         <h3 className="text-sm font-medium text-base-content/70">
           アイドルタイムアウト
         </h3>
-        <p className="text-xs text-base-content/50">
+        <p className="text-sm text-base-content/50">
           アイドルモード（LED消灯）に移行するまでの時間。0で無効化。
         </p>
         <div className="flex items-center gap-2">
@@ -171,7 +171,7 @@ export function DeviceSettings() {
         <h3 className="text-sm font-medium text-base-content/70">
           スリープタイムアウト
         </h3>
-        <p className="text-xs text-base-content/50">
+        <p className="text-sm text-base-content/50">
           ディープスリープに移行するまでの時間。0で無効化。
         </p>
         <div className="flex items-center gap-2">
@@ -239,7 +239,7 @@ export function DeviceSettings() {
               {isOptedIn ? "送信する" : "送信しない"}
             </span>
           </label>
-          <p className="text-xs text-base-content/50">
+          <p className="text-sm text-base-content/50">
             匿名の操作ログ・エラー情報・キーマップ設定を開発者に送信します
           </p>
         </section>

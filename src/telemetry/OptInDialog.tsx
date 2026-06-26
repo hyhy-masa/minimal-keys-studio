@@ -40,7 +40,7 @@ export function OptInDialog() {
         </p>
         <div>
           <p className="font-medium mb-1">送信するもの:</p>
-          <ul className="list-disc list-inside text-xs text-base-content/60">
+          <ul className="list-disc list-inside text-sm text-base-content/60">
             <li>アプリの操作ログ（接続・保存・タブ切替など）</li>
             <li>エラー情報</li>
             <li>キーマップ設定（キー配置のみ）</li>
@@ -48,12 +48,12 @@ export function OptInDialog() {
         </div>
         <div>
           <p className="font-medium mb-1">送信しないもの:</p>
-          <ul className="list-disc list-inside text-xs text-base-content/60">
+          <ul className="list-disc list-inside text-sm text-base-content/60">
             <li>名前・メールアドレスなどの個人情報</li>
             <li>デバイスの識別情報（MACアドレスなど）</li>
           </ul>
         </div>
-        <p className="text-xs text-base-content/50">
+        <p className="text-sm text-base-content/50">
           この設定は「設定」タブからいつでも変更できます。
         </p>
       </div>

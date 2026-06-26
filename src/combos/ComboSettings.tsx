@@ -17,6 +17,7 @@ import { call_rpc } from "../rpc/logging";
 
 interface LayerDisplay {
   id: number;
+  index: number;
   name: string;
 }
 
@@ -38,7 +39,7 @@ function useLayers(): LayerDisplay[] {
       const km = resp?.keymap?.getKeymap;
       if (km?.layers) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        setLayers(km.layers.map((l: any, i: number) => ({ id: l.id ?? i, name: l.name || `Layer ${i}` })));
+        setLayers(km.layers.map((l: any, i: number) => ({ id: l.id ?? i, index: i, name: l.name || `Layer ${i}` })));
       }
     }
     load();
@@ -235,14 +236,14 @@ export function ComboSettings() {
 
           {/* Key positions */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-base-content/70">
+            <label className="text-sm font-medium text-base-content/70">
               同時押しするキー（2〜4個）
             </label>
             <div className="flex flex-wrap gap-1">
               {Array.from({ length: 43 }, (_, i) => (
                 <button
                   key={i}
-                  className={`w-8 h-8 text-xs rounded border transition-all ${
+                  className={`w-8 h-8 text-sm rounded border transition-all ${
                     editing.keyPositions.includes(i)
                       ? "bg-primary text-primary-content border-primary font-bold"
                       : "bg-white border-base-300 hover:border-primary/30"
@@ -253,7 +254,7 @@ export function ComboSettings() {
                 </button>
               ))}
             </div>
-            <span className="text-xs text-base-content/50">
+            <span className="text-sm text-base-content/50">
               選択中: {editing.keyPositions.length > 0
                 ? editing.keyPositions.sort((a, b) => a - b).join(", ")
                 : "なし"}
@@ -262,7 +263,7 @@ export function ComboSettings() {
 
           {/* Timeout */}
           <div className="flex items-center gap-2">
-            <label className="text-xs font-medium text-base-content/70">タイムアウト</label>
+            <label className="text-sm font-medium text-base-content/70">タイムアウト</label>
             <input
               type="number"
               min={10}
@@ -275,12 +276,12 @@ export function ComboSettings() {
               }
               className="w-20 px-2 py-1 text-sm border rounded"
             />
-            <span className="text-xs text-base-content/50">ms</span>
+            <span className="text-sm text-base-content/50">ms</span>
           </div>
 
           {/* Binding picker */}
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-base-content/70">割り当てる動作</label>
+            <label className="text-sm font-medium text-base-content/70">割り当てる動作</label>
             {behaviors.length > 0 ? (
               <BehaviorBindingPicker
                 binding={editing.binding
@@ -349,7 +350,7 @@ function ComboCard({
   return (
     <div className="flex items-center justify-between px-3 py-2 rounded-lg border bg-white">
       <div className="flex items-center gap-3">
-        <span className="text-xs font-mono bg-base-200 px-2 py-1 rounded">
+        <span className="text-sm font-mono bg-base-200 px-2 py-1 rounded">
           {combo.keyPositions.join(" + ")}
         </span>
         <span className="text-base-content/50">→</span>
@@ -357,17 +358,17 @@ function ComboCard({
           {desc?.label ?? "未設定"}
           {detail && <span className="text-base-content/60 ml-1">{detail}</span>}
         </span>
-        <span className="text-xs text-base-content/40">{combo.timeoutMs}ms</span>
+        <span className="text-sm text-base-content/40">{combo.timeoutMs}ms</span>
       </div>
       <div className="flex gap-1">
         <button
-          className="text-xs px-2 py-1 rounded hover:bg-base-200 text-base-content/60"
+          className="text-sm px-2 py-1 rounded hover:bg-base-200 text-base-content/60"
           onClick={onEdit}
         >
           編集
         </button>
         <button
-          className="text-xs px-2 py-1 rounded hover:bg-error/10 text-error/60 hover:text-error"
+          className="text-sm px-2 py-1 rounded hover:bg-error/10 text-error/60 hover:text-error"
           onClick={onDelete}
         >
           <Trash2 className="w-3.5 h-3.5" />

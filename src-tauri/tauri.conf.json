@@ -8,7 +8,7 @@
   },
   "productName": "minimal-keys カスタマイズ",
   "mainBinaryName": "minimal-keys-customize",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "identifier": "com.hyhy-masa.minimal-keys-customize",
   "bundle": {
     "active": true,

@@ -38,6 +38,13 @@ import { useTelemetry } from "../telemetry/TelemetryProvider";
 import { useSub } from "../usePubSub";
 import { ModifierPanel } from "./ModifierPanel";
 import { useOsMode } from "../OsModeContext";
+import { Download, Upload } from "lucide-react";
+import {
+  serializeKeymap,
+  deserializeKeymap,
+  downloadJson,
+  openFilePicker,
+} from "./keymap-io";
 
 // Keeps loading state visible for at least minMs so users always see feedback.
 function useMinLoadingTime(isLoading: boolean, minMs = 500): boolean {
@@ -566,6 +573,94 @@ export default function Keyboard() {
     }
   }, [keymap, selectedLayerIndex]);
 
+  const [importing, setImporting] = useState(false);
+
+  const handleExport = useCallback(async () => {
+    if (!keymap) return;
+    const behaviorList = Object.values(behaviors);
+    const exported = serializeKeymap(keymap, behaviorList, "1.0.0");
+    const date = new Date().toISOString().slice(0, 10);
+    const saved = await downloadJson(exported, `minimal-keys-keymap-${date}.json`);
+    if (saved) {
+      toast("キーマップをエクスポートしました", "success");
+    }
+  }, [keymap, behaviors, toast]);
+
+  const handleImport = useCallback(async () => {
+    if (!keymap || !conn.conn || !layouts) return;
+    let json: string;
+    try {
+      json = await openFilePicker();
+    } catch {
+      return;
+    }
+
+    const behaviorList = Object.values(behaviors);
+    const keyCount = layouts[selectedPhysicalLayoutIndex]?.keys?.length ?? 0;
+    const maxLayers = keymap.layers.length + (keymap.availableLayers ?? 0);
+    const result = deserializeKeymap(json, behaviorList, keyCount, maxLayers);
+
+    if (!result.ok) {
+      const err = result.error;
+      const messages: Record<string, string> = {
+        parse: "JSONの形式が正しくありません",
+        format: "対応していないファイル形式です",
+        structure: "ファイル構造が不正です",
+        layerCount: `レイヤー数が上限を超えています`,
+        bindingCount: `キー数がデバイスと一致しません`,
+        layerIndex: `レイヤー参照が範囲外です`,
+      };
+      const msg = err.type === "behavior"
+        ? `未対応のキー動作: ${err.names.join(", ")}`
+        : messages[err.type] ?? "インポートに失敗しました";
+      toast(msg, "error");
+      return;
+    }
+
+    if (!confirm(`${result.layers.length} レイヤー、${keyCount} キー/レイヤーをインポートします。\n現在のキーマップを上書きします。続けますか？`)) {
+      return;
+    }
+
+    setImporting(true);
+    try {
+      for (let li = 0; li < result.layers.length; li++) {
+        const importedLayer = result.layers[li];
+        if (li < keymap.layers.length) {
+          const layerId = keymap.layers[li].id;
+          if (importedLayer.name !== keymap.layers[li].name) {
+            await call_rpc(conn.conn, {
+              keymap: { setLayerProps: { layerId, name: importedLayer.name } },
+            });
+          }
+          for (let ki = 0; ki < importedLayer.bindings.length; ki++) {
+            await call_rpc(conn.conn, {
+              keymap: {
+                setLayerBinding: {
+                  layerId,
+                  keyPosition: ki,
+                  binding: importedLayer.bindings[ki],
+                },
+              },
+            });
+          }
+        }
+      }
+
+      const resp = await call_rpc(conn.conn, { keymap: { getKeymap: true } });
+      const refreshed = resp?.keymap?.getKeymap;
+      if (refreshed) {
+        setKeymap(() => refreshed);
+      }
+
+      toast("キーマップをインポートしました", "success");
+    } catch (e) {
+      console.error("Import failed:", e);
+      toast("インポート中にエラーが発生しました", "error");
+    } finally {
+      setImporting(false);
+    }
+  }, [keymap, conn, behaviors, layouts, selectedPhysicalLayoutIndex, toast, setKeymap]);
+
   return (
     <div className="grid grid-cols-[auto_1fr] grid-rows-[55fr_45fr] bg-base-300 max-w-full min-w-0 min-h-0 h-full">
       <div className="p-2 flex flex-col gap-2 bg-gray-50 border-r border-gray-200 row-span-2">
@@ -607,6 +702,28 @@ export default function Keyboard() {
           </div>
         )}
 
+        {!showLoading && keymap && (
+          <div className="flex gap-1">
+            <button
+              className="flex items-center gap-1 px-2 py-1 text-sm rounded border border-base-300 bg-white hover:bg-base-200 text-base-content/70 hover:text-base-content transition-colors"
+              onClick={handleExport}
+              title="キーマップをエクスポート"
+            >
+              <Download className="w-4 h-4" />
+              保存
+            </button>
+            <button
+              className="flex items-center gap-1 px-2 py-1 text-sm rounded border border-base-300 bg-white hover:bg-base-200 text-base-content/70 hover:text-base-content transition-colors disabled:opacity-40"
+              onClick={handleImport}
+              disabled={importing}
+              title="キーマップをインポート"
+            >
+              <Upload className="w-4 h-4" />
+              {importing ? "読込中..." : "読込"}
+            </button>
+          </div>
+        )}
+
         <ModifierPanel
           modifierFlags={modifierFlags}
           onModifierFlagsChanged={setModifierFlags}
@@ -632,6 +749,7 @@ export default function Keyboard() {
             behaviors={Object.values(behaviors)}
             layers={keymap.layers.map(({ id, name }, li) => ({
               id,
+              index: li,
               name: name || li.toLocaleString(),
             }))}
             onBindingChanged={doUpdateBinding}

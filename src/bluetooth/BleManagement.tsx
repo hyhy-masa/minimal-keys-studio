@@ -216,13 +216,13 @@ export function BleManagement() {
                     autoFocus
                   />
                   <Button
-                    className="text-xs rounded bg-primary text-primary-content px-2"
+                    className="text-sm rounded bg-primary text-primary-content px-2"
                     onPress={() => saveName(profile.index)}
                   >
                     保存
                   </Button>
                   <Button
-                    className="text-xs rounded bg-base-300 px-2"
+                    className="text-sm rounded bg-base-300 px-2"
                     onPress={() => setEditingName(null)}
                   >
                     キャンセル
@@ -248,7 +248,7 @@ export function BleManagement() {
             <div className="flex gap-1">
               {!profile.isActive && (
                 <Button
-                  className="text-xs rounded bg-base-300 hover:bg-base-200 px-2 py-1"
+                  className="text-sm rounded bg-base-300 hover:bg-base-200 px-2 py-1"
                   isDisabled={loading}
                   onPress={() => switchProfile(profile.index)}
                 >
@@ -257,7 +257,7 @@ export function BleManagement() {
               )}
               {profile.address && (
                 <Button
-                  className="text-xs rounded bg-error/20 text-error hover:bg-error/30 px-2 py-1"
+                  className="text-sm rounded bg-error/20 text-error hover:bg-error/30 px-2 py-1"
                   isDisabled={loading}
                   onPress={() => unpairProfile(profile.index)}
                 >

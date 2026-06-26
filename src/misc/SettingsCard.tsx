@@ -16,11 +16,11 @@ export function SettingsCard({
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium">{title}</h3>
         {defaultNote && (
-          <span className="text-xs text-base-content/40">{defaultNote}</span>
+          <span className="text-sm text-base-content/40">{defaultNote}</span>
         )}
       </div>
       {description && (
-        <p className="text-xs text-base-content/50">{description}</p>
+        <p className="text-sm text-base-content/50">{description}</p>
       )}
       <div className="mt-1">{children}</div>
     </section>

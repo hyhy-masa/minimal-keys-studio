@@ -255,7 +255,7 @@ export const ConnectModal = ({
   return (
     <GenericModal ref={dialog} className="max-w-xl">
       <div className="flex flex-col items-center gap-3 py-2 mb-4">
-        <img src={`${import.meta.env.BASE_URL}zmk.svg`} alt="Logo" className="h-12 rounded" />
+        <img src={`${import.meta.env.BASE_URL}minimal-keys-logo.png`} alt="Logo" className="h-12 rounded" />
         <h1 className="text-xl font-semibold">minimal-keys カスタマイズ</h1>
         <p className="text-sm text-base-content/60 text-center">
           キーボードを接続して設定を始めましょう

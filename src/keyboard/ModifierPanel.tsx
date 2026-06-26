@@ -31,7 +31,7 @@ export function ModifierPanel({ modifierFlags, onModifierFlagsChanged, osMode }:
 
   return (
     <div className={`flex flex-col gap-1.5 p-2 rounded-lg transition-colors ${isActive ? "bg-primary/10 border border-primary/30" : ""}`}>
-      <span className="text-xs font-medium text-base-content/60">修飾キー</span>
+      <span className="text-sm font-medium text-base-content/60">修飾キー</span>
       <div className="grid grid-cols-2 gap-1">
         {modifiers.map((mod) => {
           const checked = (modifierFlags & mod.bitmask) !== 0;
@@ -39,7 +39,7 @@ export function ModifierPanel({ modifierFlags, onModifierFlagsChanged, osMode }:
           return (
             <button
               key={mod.bitmask}
-              className={`flex items-center gap-1 px-1.5 py-1 text-xs rounded border transition-all ${
+              className={`flex items-center gap-1 px-1.5 py-1 text-sm rounded border transition-all ${
                 checked
                   ? "bg-primary text-primary-content border-primary font-medium"
                   : "bg-white border-base-300 hover:border-primary/30 hover:bg-primary/5 text-base-content"
@@ -53,7 +53,7 @@ export function ModifierPanel({ modifierFlags, onModifierFlagsChanged, osMode }:
       </div>
       {isActive && (
         <button
-          className="text-xs text-primary hover:underline self-start"
+          className="text-sm text-primary hover:underline self-start"
           onClick={() => onModifierFlagsChanged(0)}
         >
           クリア

@@ -48,7 +48,7 @@ type Mode = "standalone" | "mod-tap" | "sticky";
 
 interface ModifiersTabProps {
   behaviors: GetBehaviorDetailsResponse[];
-  layers: { id: number; name: string }[];
+  layers: { id: number; index: number; name: string }[];
   osMode: import("../use-cases").UserOS;
   onApplyBinding: (binding: BehaviorBinding) => void;
 }
@@ -117,7 +117,7 @@ export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTab
     }
     onApplyBinding({
       behaviorId,
-      param1: hid_usage_from_page_and_id(KB, selectedModifier.hidId),
+      param1: selectedModifier.bitmask,
       param2,
     });
   };
@@ -143,7 +143,7 @@ export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTab
             onClick={() => handleModeChange(m.id)}
           >
             <span className="font-medium">{m.label}</span>
-            <span className="text-xs text-base-content/50">{m.description}</span>
+            <span className="text-sm text-base-content/50">{m.description}</span>
           </button>
         ))}
       </div>
