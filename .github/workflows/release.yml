@@ -4,6 +4,10 @@ on:
   push:
     tags: ['v*']
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -15,10 +19,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: '.node-version'
           cache: "npm"
 
-      - run: npm ci
+      - run: npm install
       - run: npm run lint
       - run: npm test
       - run: npm run build
@@ -29,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest
+          - platform: macos-15
             args: --target universal-apple-darwin
           - platform: windows-latest
             args: --target x86_64-pc-windows-msvc
@@ -39,14 +43,16 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: '.node-version'
           cache: "npm"
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-15' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
-      - run: npm ci
+      - uses: swatinem/rust-cache@v2
+
+      - run: npm install
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -55,5 +61,5 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: 'minimal-keys カスタマイズ ${{ github.ref_name }}'
           releaseDraft: true
-          prerelease: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
           args: ${{ matrix.args }}
