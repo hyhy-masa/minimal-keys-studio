@@ -33,7 +33,7 @@ async function writeWithRetry(
 ): Promise<void> {
   for (let attempt = 0; attempt < WRITE_MAX_RETRIES; attempt++) {
     try {
-      await char.writeValueWithResponse(data);
+      await char.writeValueWithResponse(data as unknown as BufferSource);
       return;
     } catch (e) {
       console.warn(

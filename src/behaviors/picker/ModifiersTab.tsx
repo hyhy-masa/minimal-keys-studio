@@ -48,7 +48,7 @@ type Mode = "standalone" | "mod-tap" | "sticky";
 
 interface ModifiersTabProps {
   behaviors: GetBehaviorDetailsResponse[];
-  layers: { id: number; index: number; name: string }[];
+  layers: { id: number; name: string }[];
   osMode: import("../use-cases").UserOS;
   onApplyBinding: (binding: BehaviorBinding) => void;
 }
