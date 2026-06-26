@@ -38,7 +38,7 @@ import { DeviceSettings } from "./settings/DeviceSettings";
 import { HoldTapSettings } from "./holdtap/HoldTapSettings";
 import { ComboSettings } from "./combos/ComboSettings";
 import { BehaviorsProvider } from "./behaviors/BehaviorsContext";
-import { CustomSubsystemsProvider } from "./rpc/useCustomSubsystem";
+import { CustomSubsystemsProvider } from "./rpc/CustomSubsystemsProvider";
 import { UndoRedoContext, useUndoRedo } from "./undoRedo";
 import { pub, useSub } from "./usePubSub";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
@@ -243,7 +243,7 @@ function AppInner() {
   }, [conn.conn, trackEvent]);
 
   useEffect(() => {
-    if (!conn) {
+    if (!conn.conn) {
       reset();
       setLockState(LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED);
       setMountedTabs(new Set(["keymap"]));
