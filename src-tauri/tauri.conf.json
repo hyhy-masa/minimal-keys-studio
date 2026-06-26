@@ -37,8 +37,12 @@
     },
     "resources": [],
     "shortDescription": "",
-    "targets": "all",
-    "windows": {}
+    "targets": ["app", "dmg", "nsis"],
+    "windows": {
+      "nsis": {
+        "languages": ["Japanese", "English"]
+      }
+    }
   },
   "plugins": {
     "cli": {
