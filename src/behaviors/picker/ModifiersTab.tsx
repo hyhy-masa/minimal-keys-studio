@@ -117,7 +117,7 @@ export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTab
     }
     onApplyBinding({
       behaviorId,
-      param1: selectedModifier.bitmask,
+      param1: hid_usage_from_page_and_id(KB, selectedModifier.hidId),
       param2,
     });
   };
