@@ -22,7 +22,7 @@ jobs:
           node-version-file: '.node-version'
           cache: "npm"
 
-      - run: npm install
+      - run: npm ci
       - run: npm run lint
       - run: npm test
       - run: npm run build
@@ -52,7 +52,7 @@ jobs:
 
       - uses: swatinem/rust-cache@v2
 
-      - run: npm install
+      - run: npm ci
 
       - uses: tauri-apps/tauri-action@v0
         env:
