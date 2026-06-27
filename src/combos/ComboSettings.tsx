@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "react-aria-components";
 import { Plus, Trash2, X } from "lucide-react";
 import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
@@ -10,6 +10,8 @@ import { useBehaviorList } from "../behaviors/BehaviorsContext";
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { formatBindingDetail } from "../behaviors/binding-display";
 import { getBehaviorDescription } from "../behaviors/behavior-descriptions";
+import { getHidKeyDescription } from "../keyboard/key-descriptions";
+import { hid_usage_page_and_id_from_usage } from "../hid-usages";
 import { ConnectionContext } from "../rpc/ConnectionContext";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
@@ -21,14 +23,22 @@ interface LayerDisplay {
   name: string;
 }
 
-function useLayers(): LayerDisplay[] {
+interface KeymapInfo {
+  layers: LayerDisplay[];
+  keyLabels: string[];
+  keyCount: number;
+}
+
+function useKeymapInfo(behaviors: ReturnType<typeof useBehaviorList>): KeymapInfo {
   const connection = useContext(ConnectionContext);
   const lockState = useContext(LockStateContext);
   const [layers, setLayers] = useState<LayerDisplay[]>([]);
+  const [baseBindings, setBaseBindings] = useState<BehaviorBinding[]>([]);
 
   useEffect(() => {
     if (!connection.conn || lockState !== LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED) {
       setLayers([]);
+      setBaseBindings([]);
       return;
     }
     let ignore = false;
@@ -40,20 +50,61 @@ function useLayers(): LayerDisplay[] {
       if (km?.layers) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setLayers(km.layers.map((l: any, i: number) => ({ id: l.id ?? i, index: i, name: l.name || `Layer ${i}` })));
+        if (km.layers[0]?.bindings) {
+          setBaseBindings(km.layers[0].bindings);
+        }
       }
     }
     load();
     return () => { ignore = true; };
   }, [connection, lockState]);
 
-  return layers;
+  const keyLabels = useMemo(() => {
+    return baseBindings.map((binding) => {
+      const behavior = behaviors.find((b) => b.id === binding.behaviorId);
+      if (!behavior) return "?";
+
+      switch (behavior.displayName) {
+        case "Key Press": {
+          if (!binding.param1) return "?";
+          const [rawPage, id] = hid_usage_page_and_id_from_usage(binding.param1);
+          const page = rawPage & 0xff;
+          return getHidKeyDescription(page, id).roleName;
+        }
+        case "Mod-Tap":
+        case "Hold-Tap":
+        case "Layer-Tap": {
+          if (!binding.param2) return "?";
+          const [rawPage, id] = hid_usage_page_and_id_from_usage(binding.param2);
+          const page = rawPage & 0xff;
+          return getHidKeyDescription(page, id).roleName;
+        }
+        case "Momentary Layer":
+        case "Toggle Layer":
+        case "To Layer":
+          return `L${binding.param1}`;
+        case "None":
+          return "-";
+        case "Transparent":
+          return "▽";
+        default:
+          return behavior.displayName.substring(0, 3);
+      }
+    });
+  }, [baseBindings, behaviors]);
+
+  return { layers, keyLabels, keyCount: baseBindings.length || 43 };
+}
+
+function getKeyLabel(position: number, keyLabels: string[]): string {
+  return keyLabels[position] ?? `${position}`;
 }
 
 export function ComboSettings() {
   const subsystem = useCustomSubsystem(Combos.SUBSYSTEM_ID);
   const { toast } = useToast();
   const behaviors = useBehaviorList();
-  const layers = useLayers();
+  const { layers, keyLabels, keyCount } = useKeymapInfo(behaviors);
 
   const [combos, setCombos] = useState<Combos.ComboConfig[]>([]);
   const [loading, setLoading] = useState(false);
@@ -214,6 +265,7 @@ export function ComboSettings() {
           combo={combo}
           behaviors={behaviors}
           layers={layers}
+          keyLabels={keyLabels}
           onEdit={() => handleEdit(combo)}
           onDelete={() => handleDelete(combo.comboId)}
         />
@@ -237,26 +289,33 @@ export function ComboSettings() {
           {/* Key positions */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-base-content/70">
-              同時押しするキー（2〜4個）
+              同時押しするキーを選択（2〜4個）
             </label>
-            <div className="flex flex-wrap gap-1">
-              {Array.from({ length: 43 }, (_, i) => (
-                <button
-                  key={i}
-                  className={`w-8 h-8 text-sm rounded border transition-all ${
-                    editing.keyPositions.includes(i)
-                      ? "bg-primary text-primary-content border-primary font-bold"
-                      : "bg-white border-base-300 hover:border-primary/30"
-                  }`}
-                  onClick={() => handleKeyPositionToggle(i)}
-                >
-                  {i}
-                </button>
-              ))}
+            <div className="grid grid-cols-11 gap-1">
+              {Array.from({ length: keyCount }, (_, i) => {
+                const label = getKeyLabel(i, keyLabels);
+                return (
+                  <button
+                    key={i}
+                    className={`h-8 px-1 text-xs rounded border transition-all truncate ${
+                      editing.keyPositions.includes(i)
+                        ? "bg-primary text-primary-content border-primary font-bold"
+                        : "bg-white border-base-300 hover:border-primary/30"
+                    }`}
+                    onClick={() => handleKeyPositionToggle(i)}
+                    title={label}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
             <span className="text-sm text-base-content/50">
               選択中: {editing.keyPositions.length > 0
-                ? editing.keyPositions.sort((a, b) => a - b).join(", ")
+                ? [...editing.keyPositions]
+                    .sort((a, b) => a - b)
+                    .map((p) => getKeyLabel(p, keyLabels))
+                    .join(" + ")
                 : "なし"}
             </span>
           </div>
@@ -326,12 +385,14 @@ function ComboCard({
   combo,
   behaviors,
   layers,
+  keyLabels,
   onEdit,
   onDelete,
 }: {
   combo: Combos.ComboConfig;
   behaviors: ReturnType<typeof useBehaviorList>;
   layers: LayerDisplay[];
+  keyLabels: string[];
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -347,11 +408,15 @@ function ComboCard({
       }, layers)
     : "";
 
+  const keysDisplay = combo.keyPositions
+    .map((p) => getKeyLabel(p, keyLabels))
+    .join(" + ");
+
   return (
     <div className="flex items-center justify-between px-3 py-2 rounded-lg border bg-white">
       <div className="flex items-center gap-3">
         <span className="text-sm font-mono bg-base-200 px-2 py-1 rounded">
-          {combo.keyPositions.join(" + ")}
+          {keysDisplay}
         </span>
         <span className="text-base-content/50">→</span>
         <span className="text-sm font-medium">

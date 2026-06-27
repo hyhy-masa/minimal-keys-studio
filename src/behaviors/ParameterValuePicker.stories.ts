@@ -19,8 +19,8 @@ const meta = {
   // Use `fn` to spy on the onClick arg, which will appear in the actions panel once invoked: https://storybook.js.org/docs/essentials/actions#action-args
   args: {
     layers: [
-      { name: "Base", id: 0 },
-      { id: 1, name: "Num" },
+      { name: "Base", id: 0, index: 0 },
+      { id: 1, index: 1, name: "Num" },
     ],
     onValueChanged: fn(),
   },

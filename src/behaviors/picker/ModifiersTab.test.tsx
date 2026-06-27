@@ -6,7 +6,6 @@ import { hid_usage_from_page_and_id } from "../../hid-usages";
 const mockBehaviors = [
   { id: 1, displayName: "Key Press", metadata: [] },
   { id: 20, displayName: "Mod-Tap", metadata: [] },
-  { id: 21, displayName: "Sticky Key", metadata: [] },
 ];
 
 describe("ModifiersTab", () => {
@@ -16,7 +15,7 @@ describe("ModifiersTab", () => {
     expect(screen.getByText("修飾キー")).toBeTruthy();
     expect(screen.getByText("Mod-Tap")).toBeTruthy();
     expect(screen.getByText("短押し=キー、長押し=修飾キー")).toBeTruthy();
-    expect(screen.getByText("ワンショット")).toBeTruthy();
+    expect(screen.queryByText("ワンショット")).toBeNull();
   });
 
   it("renders modifier options", () => {
@@ -26,10 +25,12 @@ describe("ModifiersTab", () => {
     expect(screen.getByText("Shift (左)")).toBeTruthy();
   });
 
-  it("standalone mode: apply immediately on modifier click", () => {
+  it("standalone mode: select modifier then apply", () => {
     const onApply = vi.fn();
     render(<ModifiersTab behaviors={mockBehaviors} layers={[]} osMode="mac" onApplyBinding={onApply} />);
     fireEvent.click(screen.getByText("Ctrl (左)"));
+    expect(onApply).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText("適用する"));
     expect(onApply).toHaveBeenCalledWith({
       behaviorId: 1,
       param1: hid_usage_from_page_and_id(7, 224),
@@ -37,16 +38,11 @@ describe("ModifiersTab", () => {
     });
   });
 
-  it("sticky mode: apply immediately on modifier click", () => {
+  it("standalone mode: apply disabled without selection", () => {
     const onApply = vi.fn();
     render(<ModifiersTab behaviors={mockBehaviors} layers={[]} osMode="mac" onApplyBinding={onApply} />);
-    fireEvent.click(screen.getByText("ワンショット"));
-    fireEvent.click(screen.getByText("Shift (左)"));
-    expect(onApply).toHaveBeenCalledWith({
-      behaviorId: 21,
-      param1: 0x02,
-      param2: 0,
-    });
+    const applyBtn = screen.getByText("適用する");
+    expect(applyBtn).toHaveAttribute("disabled");
   });
 
   it("mod-tap mode: apply button disabled until both params set", () => {

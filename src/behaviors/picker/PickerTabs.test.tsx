@@ -17,7 +17,7 @@ describe("PickerTabs", () => {
         <PickerTabs
           keyPosition={37}
           behaviors={fakeBehaviors}
-          layers={[{ id: 0, name: "Layer 0" }]}
+          layers={[{ id: 0, index: 0, name: "Layer 0" }]}
           onApplyBinding={() => {}}
         />
       </OsModeProvider>
@@ -37,7 +37,7 @@ describe("PickerTabs", () => {
         <PickerTabs
           keyPosition={37}
           behaviors={fakeBehaviors}
-          layers={[{ id: 0, name: "Layer 0" }]}
+          layers={[{ id: 0, index: 0, name: "Layer 0" }]}
           onApplyBinding={() => {}}
         />
       </OsModeProvider>
@@ -51,7 +51,7 @@ describe("PickerTabs", () => {
         <PickerTabs
           keyPosition={9999}
           behaviors={fakeBehaviors}
-          layers={[{ id: 0, name: "Layer 0" }]}
+          layers={[{ id: 0, index: 0, name: "Layer 0" }]}
           onApplyBinding={() => {}}
         />
       </OsModeProvider>

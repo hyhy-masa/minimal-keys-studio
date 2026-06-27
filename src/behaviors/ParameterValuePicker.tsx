@@ -4,7 +4,7 @@ import { HidUsagePicker } from "./HidUsagePicker";
 export interface ParameterValuePickerProps {
   value?: number;
   values: BehaviorParameterValueDescription[];
-  layers: { id: number; name: string }[];
+  layers: { id: number; index: number; name: string }[];
   onValueChanged: (value?: number) => void;
 }
 

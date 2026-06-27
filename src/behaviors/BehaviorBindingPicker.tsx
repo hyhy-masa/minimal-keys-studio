@@ -10,7 +10,7 @@ import { PickerTabs } from "./picker/PickerTabs";
 export interface BehaviorBindingPickerProps {
   binding: BehaviorBinding;
   behaviors: GetBehaviorDetailsResponse[];
-  layers: { id: number; name: string }[];
+  layers: { id: number; index: number; name: string }[];
   onBindingChanged: (binding: BehaviorBinding) => void;
   keyPosition?: number;
   modifierFlags?: number;

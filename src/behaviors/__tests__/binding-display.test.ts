@@ -3,9 +3,9 @@ import { formatBindingDetail } from "../binding-display";
 
 describe("formatBindingDetail", () => {
   const layers = [
-    { id: 0, name: "Base" },
-    { id: 1, name: "Symbols" },
-    { id: 2, name: "Nav" },
+    { id: 0, index: 0, name: "Base" },
+    { id: 1, index: 1, name: "Symbols" },
+    { id: 2, index: 2, name: "Nav" },
   ];
 
   it("shows key name for Key Press", () => {

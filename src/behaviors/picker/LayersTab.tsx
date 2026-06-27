@@ -19,7 +19,7 @@ const layerBehaviorNames = [
 
 interface LayersTabProps {
   behaviors: GetBehaviorDetailsResponse[];
-  layers: { id: number; name: string }[];
+  layers: { id: number; index: number; name: string }[];
   onApplyBinding: (binding: BehaviorBinding) => void;
 }
 
@@ -49,15 +49,13 @@ export function LayersTab({ behaviors, layers, onApplyBinding }: LayersTabProps)
     setSelectedTapKey(null);
   };
 
-  // ZMK layer binding param1 = layer index (0-based position in layers array).
-  // layers[].id and array index are identical in ZMK's current implementation.
   const handleLayerClick = (layerId: number) => {
     setSelectedLayer(layerId);
     if (!is2Param && selectedBehavior) {
-      // 1-param behavior: apply immediately
       const behaviorId = behaviorIdMap[selectedBehavior];
+      const layerIndex = layers.find((l) => l.id === layerId)?.index ?? 0;
       if (behaviorId !== undefined) {
-        onApplyBinding({ behaviorId, param1: layerId, param2: 0 });
+        onApplyBinding({ behaviorId, param1: layerIndex, param2: 0 });
       }
     }
   };
@@ -78,9 +76,10 @@ export function LayersTab({ behaviors, layers, onApplyBinding }: LayersTabProps)
         param2 = (selectedTapKey.modifier << 24) | param2;
       }
     }
+    const layerIndex = layers.find((l) => l.id === selectedLayer)?.index ?? 0;
     onApplyBinding({
       behaviorId,
-      param1: selectedLayer,
+      param1: layerIndex,
       param2,
     });
   };
@@ -125,7 +124,7 @@ export function LayersTab({ behaviors, layers, onApplyBinding }: LayersTabProps)
                 }`}
                 onClick={() => handleLayerClick(layer.id)}
               >
-                {layer.name || `Layer ${layer.id}`}
+                {layer.name || `Layer ${layer.index}`}
               </button>
             ))}
           </div>

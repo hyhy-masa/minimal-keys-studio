@@ -47,7 +47,7 @@ const subCategories: { id: SubCategory; label: string }[] = [
 interface ActionsTabProps {
   keyPosition?: number;
   behaviors: GetBehaviorDetailsResponse[];
-  layers: { id: number; name: string }[];
+  layers: { id: number; index: number; name: string }[];
   osMode: import("../use-cases").UserOS;
   onApplyBinding: (binding: BehaviorBinding) => void;
 }

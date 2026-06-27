@@ -63,6 +63,11 @@ export const commonTapKeys: TapKeyItem[] = [
   { label: "<", hidId: 54, modifier: 0x02 },
   { label: ">", hidId: 55, modifier: 0x02 },
   { label: "?", hidId: 56, modifier: 0x02 },
+  // Modifier keys (left HID IDs as representatives)
+  { label: "Ctrl", hidId: 224 },
+  { label: "Shift", hidId: 225 },
+  { label: "Alt", hidId: 226 },
+  { label: "Cmd", hidId: 227 },
   // Special keys
   { label: "Caps Lock", hidId: 57 },
   { label: "Insert", hidId: 73 },

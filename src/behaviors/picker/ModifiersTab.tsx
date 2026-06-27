@@ -44,7 +44,7 @@ function getModifiers(os: import("../use-cases").UserOS): ModifierItem[] {
 
 import { commonTapKeys, type TapKeyItem } from "./common-tap-keys";
 
-type Mode = "standalone" | "mod-tap" | "sticky";
+type Mode = "standalone" | "mod-tap";
 
 interface ModifiersTabProps {
   behaviors: GetBehaviorDetailsResponse[];
@@ -69,7 +69,7 @@ export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTab
   }, [behaviors]);
 
   const hasModTap = behaviorIdMap["Mod-Tap"] !== undefined;
-  const hasStickyKey = behaviorIdMap["Sticky Key"] !== undefined;
+
 
   const handleModeChange = (newMode: Mode) => {
     setMode(newMode);
@@ -80,27 +80,6 @@ export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTab
   const handleModifierClick = (mod: ModifierItem) => {
     setSelectedModifier(mod);
     setSelectedTapKey(null);
-
-    if (mode === "standalone") {
-      const behaviorId = behaviorIdMap["Key Press"];
-      if (behaviorId !== undefined) {
-        onApplyBinding({
-          behaviorId,
-          param1: hid_usage_from_page_and_id(KB, mod.hidId),
-          param2: 0,
-        });
-      }
-    } else if (mode === "sticky") {
-      const behaviorId = behaviorIdMap["Sticky Key"];
-      if (behaviorId !== undefined) {
-        onApplyBinding({
-          behaviorId,
-          param1: mod.bitmask,
-          param2: 0,
-        });
-      }
-    }
-    // mod-tap: wait for tap key selection
   };
 
   const handleTapKeyClick = (item: TapKeyItem) => {
@@ -108,24 +87,35 @@ export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTab
   };
 
   const handleApply = () => {
-    if (!selectedModifier || selectedTapKey === null) return;
-    const behaviorId = behaviorIdMap["Mod-Tap"];
-    if (behaviorId === undefined) return;
-    let param2 = hid_usage_from_page_and_id(KB, selectedTapKey.hidId);
-    if (selectedTapKey.modifier) {
-      param2 = (selectedTapKey.modifier << 24) | param2;
+    if (!selectedModifier) return;
+
+    if (mode === "standalone") {
+      const behaviorId = behaviorIdMap["Key Press"];
+      if (behaviorId === undefined) return;
+      onApplyBinding({
+        behaviorId,
+        param1: hid_usage_from_page_and_id(KB, selectedModifier.hidId),
+        param2: 0,
+      });
+    } else if (mode === "mod-tap") {
+      if (selectedTapKey === null) return;
+      const behaviorId = behaviorIdMap["Mod-Tap"];
+      if (behaviorId === undefined) return;
+      let param2 = hid_usage_from_page_and_id(KB, selectedTapKey.hidId);
+      if (selectedTapKey.modifier) {
+        param2 = (selectedTapKey.modifier << 24) | param2;
+      }
+      onApplyBinding({
+        behaviorId,
+        param1: hid_usage_from_page_and_id(KB, selectedModifier.hidId),
+        param2,
+      });
     }
-    onApplyBinding({
-      behaviorId,
-      param1: hid_usage_from_page_and_id(KB, selectedModifier.hidId),
-      param2,
-    });
   };
 
   const modes: { id: Mode; label: string; description: string; available: boolean }[] = [
     { id: "standalone", label: "修飾キー", description: "押している間だけ修飾", available: true },
     { id: "mod-tap", label: "Mod-Tap", description: "短押し=キー、長押し=修飾キー", available: hasModTap },
-    { id: "sticky", label: "ワンショット", description: "次の1キーだけ修飾", available: hasStickyKey },
   ];
 
   return (
@@ -151,7 +141,7 @@ export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTab
       {/* Modifier selection */}
       <div>
         <div className="text-sm text-base-content/60 mb-1">
-          {mode === "standalone" ? "修飾キーを選択（即適用）" : "修飾キーを選択"}
+          修飾キーを選択
         </div>
         <div className="grid grid-cols-2 gap-1">
           {modifiers.map((mod) => (
@@ -193,16 +183,17 @@ export function ModifiersTab({ behaviors, osMode, onApplyBinding }: ModifiersTab
         </div>
       )}
 
-      {/* Apply button for Mod-Tap */}
-      {mode === "mod-tap" && (
-        <button
-          className="self-start px-4 py-2 text-sm rounded-md bg-primary text-primary-content font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-          disabled={selectedModifier === null || selectedTapKey === null}
-          onClick={handleApply}
-        >
-          適用する
-        </button>
-      )}
+      {/* Apply button */}
+      <button
+        className="self-start px-4 py-2 text-sm rounded-md bg-primary text-primary-content font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+        disabled={
+          selectedModifier === null ||
+          (mode === "mod-tap" && selectedTapKey === null)
+        }
+        onClick={handleApply}
+      >
+        適用する
+      </button>
     </div>
   );
 }

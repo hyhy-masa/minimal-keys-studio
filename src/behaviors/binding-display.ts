@@ -10,7 +10,7 @@ import { modifierSymbols } from "../keyboard/key-label-utils";
 export function formatBindingDetail(
   displayName: string,
   binding: BehaviorBinding,
-  layers: { id: number; name: string }[],
+  layers: { id: number; index: number; name: string }[],
 ): string {
   switch (displayName) {
     case "Key Press": {

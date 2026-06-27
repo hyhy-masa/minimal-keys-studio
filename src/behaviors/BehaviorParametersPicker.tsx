@@ -6,7 +6,7 @@ export interface BehaviorParametersPickerProps {
   param1?: number;
   param2?: number;
   metadata: BehaviorBindingParametersSet[];
-  layers: { id: number; name: string }[];
+  layers: { id: number; index: number; name: string }[];
   onParam1Changed: (value?: number) => void;
   onParam2Changed: (value?: number) => void;
 }

@@ -16,6 +16,7 @@ import { useBehaviorList } from "../behaviors/BehaviorsContext";
 
 interface LayerDisplay {
   id: number;
+  index: number;
   name: string;
 }
 
@@ -48,6 +49,7 @@ function useLayers(): LayerDisplay[] {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           km.layers.map((l: any, i: number) => ({
             id: l.id ?? i,
+            index: i,
             name: l.name || `Layer ${i}`,
           }))
         );

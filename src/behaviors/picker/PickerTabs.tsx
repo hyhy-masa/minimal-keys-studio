@@ -14,7 +14,7 @@ type TabId = "actions" | "letters" | "layers" | "modifiers" | "japanese" | "syst
 interface PickerTabsProps {
   keyPosition: number;
   behaviors: GetBehaviorDetailsResponse[];
-  layers: { id: number; name: string }[];
+  layers: { id: number; index: number; name: string }[];
   onApplyBinding: (binding: BehaviorBinding) => void;
 }
 
