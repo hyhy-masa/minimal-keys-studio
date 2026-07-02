@@ -121,6 +121,7 @@ function KeyboardArea({
   return (
     <div
       ref={containerRef}
+      data-tour="keymap-area"
       className="p-4 col-start-2 row-start-1 flex items-center justify-center min-w-0 overflow-hidden bg-gray-200/50 rounded-lg"
     >
       {!showLoading && layouts && keymap && behaviors ? (
@@ -680,7 +681,7 @@ export default function Keyboard() {
         )}
 
         {!showLoading && keymap ? (
-          <div className="col-start-1 row-start-1 row-end-2">
+          <div className="col-start-1 row-start-1 row-end-2" data-tour="layer-picker">
             <LayerPicker
               layers={keymap.layers}
               selectedLayerIndex={selectedLayerIndex}
@@ -703,7 +704,7 @@ export default function Keyboard() {
         )}
 
         {!showLoading && keymap && (
-          <div className="flex gap-1">
+          <div className="flex gap-1" data-tour="export-import">
             <button
               className="flex items-center gap-1 px-2 py-1 text-sm rounded border border-base-300 bg-white hover:bg-base-200 text-base-content/70 hover:text-base-content transition-colors"
               onClick={handleExport}
@@ -742,7 +743,10 @@ export default function Keyboard() {
         encoderRotationLabel={encoderSummary?.rotationLabel}
         showLoading={showLoading}
       />
-      <div className="p-3 col-start-2 row-start-2 bg-white border-t border-gray-200 overflow-y-auto">
+      <div
+        className="p-3 col-start-2 row-start-2 bg-white border-t border-gray-200 overflow-y-auto"
+        data-tour="binding-panel"
+      >
         {!showLoading && keymap && selectedBinding != null ? (
           <BehaviorBindingPicker
             binding={selectedBinding}

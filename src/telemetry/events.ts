@@ -4,7 +4,11 @@ export type EventName =
   | "device_disconnected"
   | "keymap_saved"
   | "keymap_discarded"
-  | "tab_switched";
+  | "tab_switched"
+  | "tour_started"
+  | "tour_completed"
+  | "tour_skipped"
+  | "tour_declined";
 
 export type TelemetryPayload =
   | TelemetryEvent

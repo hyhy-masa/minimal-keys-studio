@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
   <key>NSBluetoothAlwaysUsageDescription</key>
-  <string>Request bluetooth access for wireless access for config</string>
+  <string>キーボードと無線接続して設定を行うためにBluetoothを使用します。</string>
 </dict>
 </plist>

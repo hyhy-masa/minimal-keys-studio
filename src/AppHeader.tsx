@@ -12,7 +12,7 @@ import { useModalRef } from "./misc/useModalRef";
 import { LockStateContext } from "./rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { ConnectionContext } from "./rpc/ConnectionContext";
-import { ChevronDown, Undo2, Redo2, Save, Trash2 } from "lucide-react";
+import { ChevronDown, Undo2, Redo2, Save, Trash2, CircleHelp } from "lucide-react";
 import { useOsMode } from "./OsModeContext";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
@@ -25,6 +25,7 @@ export interface AppHeaderProps {
   onRedo?: () => Promise<void>;
   onResetSettings?: () => void | Promise<void>;
   onDisconnect?: () => void | Promise<void>;
+  onStartTour?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
 }
@@ -39,6 +40,7 @@ export const AppHeader = ({
   onDiscard,
   onDisconnect,
   onResetSettings,
+  onStartTour,
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
   const { osMode, setOsMode } = useOsMode();
@@ -124,7 +126,7 @@ export const AppHeader = ({
         </Popover>
       </MenuTrigger>
       <div className="flex justify-end gap-1 px-2 items-center">
-        <div className="flex bg-base-200 rounded-md p-0.5 mr-2">
+        <div className="flex bg-base-200 rounded-md p-0.5 mr-2" data-tour="os-toggle">
           <button
             className={`px-3 py-1 text-sm rounded transition-all ${
               osMode === "mac"
@@ -146,47 +148,62 @@ export const AppHeader = ({
             Windows
           </button>
         </div>
-        {onUndo && (
-          <Tooltip label="元に戻す">
-            <Button
-              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
-              isDisabled={!canUndo}
-              onPress={onUndo}
-            >
-              <Undo2 className="inline-block w-4 mx-1" aria-label="元に戻す" />
-            </Button>
-          </Tooltip>
-        )}
+        <div className="flex items-center gap-1" data-tour="undo-redo">
+          {onUndo && (
+            <Tooltip label="元に戻す">
+              <Button
+                className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+                isDisabled={!canUndo}
+                onPress={onUndo}
+              >
+                <Undo2 className="inline-block w-4 mx-1" aria-label="元に戻す" />
+              </Button>
+            </Tooltip>
+          )}
 
-        {onRedo && (
-          <Tooltip label="やり直し">
+          {onRedo && (
+            <Tooltip label="やり直し">
+              <Button
+                className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+                isDisabled={!canRedo}
+                onPress={onRedo}
+              >
+                <Redo2 className="inline-block w-4 mx-1" aria-label="やり直し" />
+              </Button>
+            </Tooltip>
+          )}
+        </div>
+        <div className="flex items-center gap-1" data-tour="save-discard">
+          <Tooltip label="保存">
             <Button
               className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
-              isDisabled={!canRedo}
-              onPress={onRedo}
+              isDisabled={!unsaved}
+              onPress={onSave}
             >
-              <Redo2 className="inline-block w-4 mx-1" aria-label="やり直し" />
+              <Save className="inline-block w-4 mx-1" aria-label="保存" />
+            </Button>
+          </Tooltip>
+          <Tooltip label="破棄">
+            <Button
+              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+              onPress={onDiscard}
+              isDisabled={!unsaved}
+            >
+              <Trash2 className="inline-block w-4 mx-1" aria-label="破棄" />
+            </Button>
+          </Tooltip>
+        </div>
+        {onStartTour && (
+          <Tooltip label="使い方を見る">
+            <Button
+              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300"
+              onPress={onStartTour}
+              aria-label="使い方を見る"
+            >
+              <CircleHelp className="inline-block w-4 mx-1" />
             </Button>
           </Tooltip>
         )}
-        <Tooltip label="保存">
-          <Button
-            className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
-            isDisabled={!unsaved}
-            onPress={onSave}
-          >
-            <Save className="inline-block w-4 mx-1" aria-label="保存" />
-          </Button>
-        </Tooltip>
-        <Tooltip label="破棄">
-          <Button
-            className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
-            onPress={onDiscard}
-            isDisabled={!unsaved}
-          >
-            <Trash2 className="inline-block w-4 mx-1" aria-label="破棄" />
-          </Button>
-        </Tooltip>
       </div>
     </header>
   );

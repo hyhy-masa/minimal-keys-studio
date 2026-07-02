@@ -52,6 +52,8 @@ import { ToastProvider, useToast } from "./misc/Toast";
 import { OsModeProvider } from "./OsModeContext";
 import { TelemetryProvider, useTelemetry } from "./telemetry/TelemetryProvider";
 import { OptInDialog } from "./telemetry/OptInDialog";
+import { useTour } from "./tour/useTour";
+import { TourPromptDialog } from "./tour/TourPromptDialog";
 
 declare global {
   interface Window {
@@ -228,6 +230,13 @@ function AppInner() {
     setLockState(ls);
   });
 
+  const { startTour, promptOpen, acceptPrompt, declinePrompt } = useTour({
+    connected: !!conn.conn,
+    unlocked: lockState === LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED,
+    activeTab,
+    setActiveTab,
+  });
+
   useEffect(() => {
     trackEvent("app_launched");
   }, [trackEvent]);
@@ -363,6 +372,11 @@ function AppInner() {
           <BehaviorsProvider>
           <CustomSubsystemsProvider>
           <UnlockModal />
+          <TourPromptDialog
+            open={promptOpen}
+            onAccept={acceptPrompt}
+            onDecline={declinePrompt}
+          />
           <ConnectModal
             open={!conn.conn}
             transports={TRANSPORTS}
@@ -384,6 +398,7 @@ function AppInner() {
               onDiscard={discard}
               onDisconnect={disconnect}
               onResetSettings={resetSettings}
+              onStartTour={startTour}
             />
             {conn.conn && (
               <nav className="flex items-center gap-1 border-b border-gray-200 bg-gray-50 px-3 py-1">
@@ -393,6 +408,7 @@ function AppInner() {
                     {group.tabs.map((tab) => (
                       <button
                         key={tab.id}
+                        data-tour={`tab-${tab.id}`}
                         className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all ${
                           activeTab === tab.id
                             ? "bg-primary/10 text-primary font-medium"
@@ -425,6 +441,7 @@ function AppInner() {
             <AppFooter
               onShowAbout={() => setShowAbout(true)}
               onShowLicenseNotice={() => setShowLicenseNotice(true)}
+              onStartTour={startTour}
             />
           </div>
         </CustomSubsystemsProvider>
