@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
-import { call_rpc } from "./rpc/logging";
+import { call_rpc, registerForceDisconnect } from "./rpc/logging";
 
 import type { Notification } from "@zmkfirmware/zmk-studio-ts-client/studio";
 import { ConnectionState, ConnectionContext } from "./rpc/ConnectionContext";
@@ -149,10 +149,11 @@ async function connect(
   transport: RpcTransport,
   setConn: Dispatch<ConnectionState>,
   setConnectedDeviceName: Dispatch<string | undefined>,
-  signal: AbortSignal,
+  abortController: AbortController,
   onError: (msg: string) => void,
   isWireless?: boolean
 ) {
+  const signal = abortController.signal;
   const conn = await create_rpc_connection(transport, { signal });
 
   const timeout = isWireless ? 5000 : 1000;
@@ -166,6 +167,9 @@ async function connect(
 
   if (!details) {
     onError("デバイスへの接続に失敗しました");
+    // Tear the transport down; a still-pending getDeviceInfo would otherwise
+    // hold the client's global RPC mutex and poison every later attempt.
+    abortController.abort("connect-failed");
     return;
   }
 
@@ -360,10 +364,24 @@ function AppInner() {
     (t: RpcTransport, isWireless?: boolean) => {
       const ac = new AbortController();
       setConnectionAbort(ac);
-      connect(t, setConn, setConnectedDeviceName, ac.signal, (msg) => toast(msg, "error"), isWireless);
+      connect(t, setConn, setConnectedDeviceName, ac, (msg) => toast(msg, "error"), isWireless);
     },
     [setConn, setConnectedDeviceName, toast]
   );
+
+  useEffect(() => {
+    if (!conn.conn) {
+      registerForceDisconnect(null);
+      return;
+    }
+
+    registerForceDisconnect(() => {
+      toast("デバイスの応答がありません。接続を解除しました", "error");
+      connectionAbort.abort("rpc-timeout");
+    });
+
+    return () => registerForceDisconnect(null);
+  }, [conn.conn, connectionAbort, toast]);
 
   return (
     <ConnectionContext.Provider value={conn}>

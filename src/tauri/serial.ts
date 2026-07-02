@@ -46,6 +46,11 @@ export async function connect(dev: AvailableDevice): Promise<RpcTransport> {
   const abort_cb = async () => {
     unlisten_data();
     unlisten_disconnected();
+    try {
+      await response_writable.close();
+    } catch {
+      // Already closed
+    }
     await invoke("transport_close");
     signal.removeEventListener("abort", abort_cb);
   };

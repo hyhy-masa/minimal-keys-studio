@@ -26,7 +26,11 @@ import { useConnectedDeviceData } from "../rpc/useConnectedDeviceData";
 import { ConnectionContext } from "../rpc/ConnectionContext";
 import { UndoRedoContext } from "../undoRedo";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
-import { useBehaviorMap, useBehaviorsLoading } from "../behaviors/BehaviorsContext";
+import {
+  useBehaviorMap,
+  useBehaviorsLoading,
+  useBehaviorsStatus,
+} from "../behaviors/BehaviorsContext";
 import { produce } from "immer";
 import { useToast } from "../misc/Toast";
 import { LockStateContext } from "../rpc/LockStateContext";
@@ -75,13 +79,14 @@ function useMinLoadingTime(isLoading: boolean, minMs = 500): boolean {
 // Separate component for keyboard area — measures container and computes oneU.
 // Isolated so ResizeObserver doesn't cause feedback loops with the keyboard rendering.
 function KeyboardArea({
-  layouts, keymap, behaviors, selectedPhysicalLayoutIndex,
+  layouts, keymap, behaviors, behaviorsLoading, selectedPhysicalLayoutIndex,
   selectedLayerIndex, selectedKeyPosition, onKeyPositionClicked,
   onBindingApply, encoderRotationLabel, showLoading,
 }: {
   layouts: PhysicalLayout[] | undefined;
   keymap: Keymap | undefined;
   behaviors: Record<number, import("@zmkfirmware/zmk-studio-ts-client/behaviors").GetBehaviorDetailsResponse> | undefined;
+  behaviorsLoading: boolean;
   selectedPhysicalLayoutIndex: number;
   selectedLayerIndex: number;
   selectedKeyPosition: number | undefined;
@@ -129,6 +134,7 @@ function KeyboardArea({
           keymap={keymap}
           layout={layouts[selectedPhysicalLayoutIndex]}
           behaviors={behaviors}
+          behaviorsLoading={behaviorsLoading}
           oneU={oneU}
           selectedLayerIndex={selectedLayerIndex}
           selectedKeyPosition={selectedKeyPosition}
@@ -147,7 +153,9 @@ function useLayouts(): [
   PhysicalLayout[] | undefined,
   React.Dispatch<SetStateAction<PhysicalLayout[] | undefined>>,
   number,
-  React.Dispatch<SetStateAction<number>>
+  React.Dispatch<SetStateAction<number>>,
+  boolean,
+  () => void
 ] {
   const connection = useContext(ConnectionContext);
   const lockState = useContext(LockStateContext);
@@ -157,6 +165,10 @@ function useLayouts(): [
   );
   const [selectedPhysicalLayoutIndex, setSelectedPhysicalLayoutIndex] =
     useState<number>(0);
+  const [error, setError] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const retry = useCallback(() => setReloadToken((t) => t + 1), []);
 
   useEffect(() => {
     if (
@@ -164,25 +176,34 @@ function useLayouts(): [
       lockState != LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED
     ) {
       setLayouts(undefined);
+      setError(false);
       return;
     }
 
     async function startRequest() {
       setLayouts(undefined);
+      setError(false);
 
       if (!connection.conn) {
         return;
       }
 
-      const response = await call_rpc(connection.conn, {
-        keymap: { getPhysicalLayouts: true },
-      });
+      try {
+        const response = await call_rpc(connection.conn, {
+          keymap: { getPhysicalLayouts: true },
+        });
 
-      if (!ignore) {
-        setLayouts(response?.keymap?.getPhysicalLayouts?.layouts);
-        setSelectedPhysicalLayoutIndex(
-          response?.keymap?.getPhysicalLayouts?.activeLayoutIndex || 0
-        );
+        if (!ignore) {
+          setLayouts(response?.keymap?.getPhysicalLayouts?.layouts);
+          setSelectedPhysicalLayoutIndex(
+            response?.keymap?.getPhysicalLayouts?.activeLayoutIndex || 0
+          );
+        }
+      } catch (e) {
+        console.error("Failed to load physical layouts:", e);
+        if (!ignore) {
+          setError(true);
+        }
       }
     }
 
@@ -192,13 +213,15 @@ function useLayouts(): [
     return () => {
       ignore = true;
     };
-  }, [connection, lockState]);
+  }, [connection, lockState, reloadToken]);
 
   return [
     layouts,
     setLayouts,
     selectedPhysicalLayoutIndex,
     setSelectedPhysicalLayoutIndex,
+    error,
+    retry,
   ];
 }
 
@@ -208,12 +231,15 @@ export default function Keyboard() {
     ,
     selectedPhysicalLayoutIndex,
     setSelectedPhysicalLayoutIndex,
+    layoutsError,
+    layoutsRetry,
   ] = useLayouts();
-  const [keymap, setKeymap] = useConnectedDeviceData<Keymap>(
-    { keymap: { getKeymap: true } },
-    (keymap) => keymap?.keymap?.getKeymap,
-    true
-  );
+  const [keymap, setKeymap, keymapError, keymapRetry] =
+    useConnectedDeviceData<Keymap>(
+      { keymap: { getKeymap: true } },
+      (keymap) => keymap?.keymap?.getKeymap,
+      true
+    );
 
   const [selectedLayerIndex, setSelectedLayerIndex] = useState<number>(0);
   const [selectedKeyPosition, setSelectedKeyPosition] = useState<
@@ -222,8 +248,18 @@ export default function Keyboard() {
   const [modifierFlags, setModifierFlags] = useState(0);
   const behaviors = useBehaviorMap();
   const behaviorsLoading = useBehaviorsLoading();
-  const isDataLoading = !layouts || !keymap || behaviorsLoading;
-  const showLoading = useMinLoadingTime(isDataLoading);
+  const { error: behaviorsError, reload: behaviorsReload } =
+    useBehaviorsStatus();
+  // The keyboard grid only needs layouts + keymap; behavior details stream
+  // in afterwards so the first paint is not blocked on N detail RPCs.
+  const isDataLoading = !layouts || !keymap;
+  const showLoading = useMinLoadingTime(isDataLoading, 300);
+  const loadError = layoutsError || keymapError || behaviorsError;
+  const retryAll = useCallback(() => {
+    layoutsRetry();
+    keymapRetry();
+    behaviorsReload();
+  }, [layoutsRetry, keymapRetry, behaviorsReload]);
 
   const conn = useContext(ConnectionContext);
   const undoRedo = useContext(UndoRedoContext);
@@ -662,6 +698,20 @@ export default function Keyboard() {
     }
   }, [keymap, conn, behaviors, layouts, selectedPhysicalLayoutIndex, toast, setKeymap]);
 
+  if (loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 h-full bg-base-300">
+        <p className="text-base-content/70">読み込みに失敗しました</p>
+        <button
+          className="px-4 py-2 rounded bg-primary text-primary-content hover:opacity-90 text-sm"
+          onClick={retryAll}
+        >
+          再試行
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-[auto_1fr] grid-rows-[55fr_45fr] bg-base-300 max-w-full min-w-0 min-h-0 h-full">
       <div className="p-2 flex flex-col gap-2 bg-gray-50 border-r border-gray-200 row-span-2">
@@ -735,6 +785,7 @@ export default function Keyboard() {
         layouts={layouts}
         keymap={keymap}
         behaviors={behaviors}
+        behaviorsLoading={behaviorsLoading}
         selectedPhysicalLayoutIndex={selectedPhysicalLayoutIndex}
         selectedLayerIndex={selectedLayerIndex}
         selectedKeyPosition={selectedKeyPosition}
@@ -747,7 +798,9 @@ export default function Keyboard() {
         className="p-3 col-start-2 row-start-2 bg-white border-t border-gray-200 overflow-y-auto"
         data-tour="binding-panel"
       >
-        {!showLoading && keymap && selectedBinding != null ? (
+        {!showLoading && keymap && selectedBinding != null && behaviorsLoading ? (
+          <LoadingSpinner label="キー情報を読み込んでいます..." />
+        ) : !showLoading && keymap && selectedBinding != null ? (
           <BehaviorBindingPicker
             binding={selectedBinding}
             behaviors={Object.values(behaviors)}

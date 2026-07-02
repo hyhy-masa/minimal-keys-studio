@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import { ConnectionContext } from "../rpc/ConnectionContext";
 import { LockStateContext } from "../rpc/LockStateContext";
@@ -11,9 +17,20 @@ interface BehaviorsState {
   map: BehaviorMap;
   list: GetBehaviorDetailsResponse[];
   loading: boolean;
+  error: boolean;
 }
 
-const BehaviorsContext = createContext<BehaviorsState>({ map: {}, list: [], loading: false });
+interface BehaviorsContextValue extends BehaviorsState {
+  reload: () => void;
+}
+
+const BehaviorsContext = createContext<BehaviorsContextValue>({
+  map: {},
+  list: [],
+  loading: false,
+  error: false,
+  reload: () => {},
+});
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useBehaviorMap(): BehaviorMap {
@@ -30,17 +47,66 @@ export function useBehaviorsLoading(): boolean {
   return useContext(BehaviorsContext).loading;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
+export function useBehaviorsStatus(): {
+  loading: boolean;
+  error: boolean;
+  reload: () => void;
+} {
+  const { loading, error, reload } = useContext(BehaviorsContext);
+  return { loading, error, reload };
+}
+
+// Behavior details are static per firmware build, so they are cached across
+// sessions; the id list from the device decides whether the cache is valid.
+export const BEHAVIORS_CACHE_KEY = "behaviors-cache-v1";
+
+interface BehaviorsCache {
+  ids: number[];
+  details: GetBehaviorDetailsResponse[];
+}
+
+function readCache(): BehaviorsCache | null {
+  try {
+    const raw = localStorage.getItem(BEHAVIORS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as BehaviorsCache;
+    if (!Array.isArray(parsed?.ids) || !Array.isArray(parsed?.details)) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(cache: BehaviorsCache): void {
+  try {
+    localStorage.setItem(BEHAVIORS_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // ignore
+  }
+}
+
 export function BehaviorsProvider({ children }: { children: React.ReactNode }) {
   const connection = useContext(ConnectionContext);
   const lockState = useContext(LockStateContext);
-  const [state, setState] = useState<BehaviorsState>({ map: {}, list: [], loading: false });
+  const [state, setState] = useState<BehaviorsState>({
+    map: {},
+    list: [],
+    loading: false,
+    error: false,
+  });
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const reload = useCallback(() => setReloadToken((t) => t + 1), []);
 
   useEffect(() => {
     if (
       !connection.conn ||
       lockState !== LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED
     ) {
-      setState({ map: {}, list: [], loading: false });
+      setState({ map: {}, list: [], loading: false, error: false });
       return;
     }
 
@@ -49,42 +115,85 @@ export function BehaviorsProvider({ children }: { children: React.ReactNode }) {
     async function load() {
       if (!connection.conn) return;
 
-      setState({ map: {}, list: [], loading: true });
+      setState({ map: {}, list: [], loading: true, error: false });
 
-      const resp = await call_rpc(connection.conn, {
-        behaviors: { listAllBehaviors: true },
-      });
-      if (ignore) return;
-
-      const behaviorIds =
-        resp.behaviors?.listAllBehaviors?.behaviors ?? [];
-
-      const map: BehaviorMap = {};
-      const list: GetBehaviorDetailsResponse[] = [];
-
-      for (const behaviorId of behaviorIds) {
-        if (ignore) break;
-        const detail = await call_rpc(connection.conn!, {
-          behaviors: { getBehaviorDetails: { behaviorId } },
+      try {
+        const resp = await call_rpc(connection.conn, {
+          behaviors: { listAllBehaviors: true },
         });
-        const dets = detail?.behaviors?.getBehaviorDetails;
-        if (dets) {
-          map[dets.id] = dets;
-          list.push(dets);
+        if (ignore) return;
+
+        const behaviorIds = resp.behaviors?.listAllBehaviors?.behaviors ?? [];
+
+        const cached = readCache();
+        const cachedById = new Map(
+          (cached?.details ?? []).map((d) => [d.id, d])
+        );
+
+        const map: BehaviorMap = {};
+        const missing: number[] = [];
+        for (const id of behaviorIds) {
+          const hit = cachedById.get(id);
+          if (hit) {
+            map[id] = hit;
+          } else {
+            missing.push(id);
+          }
+        }
+
+        const listInDeviceOrder = () =>
+          behaviorIds
+            .map((id) => map[id])
+            .filter((d): d is GetBehaviorDetailsResponse => !!d);
+
+        // Show whatever the cache already covers before fetching the rest.
+        setState({
+          map: { ...map },
+          list: listInDeviceOrder(),
+          loading: missing.length > 0,
+          error: false,
+        });
+
+        for (const behaviorId of missing) {
+          if (ignore) return;
+          const detail = await call_rpc(connection.conn!, {
+            behaviors: { getBehaviorDetails: { behaviorId } },
+          });
+          const dets = detail?.behaviors?.getBehaviorDetails;
+          if (dets) {
+            map[dets.id] = dets;
+            if (!ignore) {
+              setState({
+                map: { ...map },
+                list: listInDeviceOrder(),
+                loading: true,
+                error: false,
+              });
+            }
+          }
+        }
+
+        if (!ignore) {
+          const list = listInDeviceOrder();
+          setState({ map, list, loading: false, error: false });
+          writeCache({ ids: [...behaviorIds], details: list });
+        }
+      } catch (e) {
+        console.error("Failed to load behaviors:", e);
+        if (!ignore) {
+          setState({ map: {}, list: [], loading: false, error: true });
         }
       }
-
-      if (!ignore) setState({ map, list, loading: false });
     }
 
     load();
     return () => {
       ignore = true;
     };
-  }, [connection, lockState]);
+  }, [connection, lockState, reloadToken]);
 
   return (
-    <BehaviorsContext.Provider value={state}>
+    <BehaviorsContext.Provider value={{ ...state, reload }}>
       {children}
     </BehaviorsContext.Provider>
   );

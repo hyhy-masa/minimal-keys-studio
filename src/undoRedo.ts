@@ -28,14 +28,22 @@ export function useUndoRedo(): [
   );
 
   const doIt = async (doCb: DoCallback, preserveRedo?: boolean) => {
-    setLocked(true);
-    const undo = await doCb();
-
-    setUndoStack([[doCb, undo], ...undoStack]);
-    if (!preserveRedo) {
-      setRedoStack([]);
+    if (locked) {
+      console.warn("doIt ignored: another operation is in progress");
+      return;
     }
-    setLocked(false);
+
+    setLocked(true);
+    try {
+      const undo = await doCb();
+
+      setUndoStack((stack) => [[doCb, undo], ...stack]);
+      if (!preserveRedo) {
+        setRedoStack([]);
+      }
+    } finally {
+      setLocked(false);
+    }
   };
 
   const undo = async () => {
@@ -48,13 +56,15 @@ export function useUndoRedo(): [
     }
 
     setLocked(true);
-    const [doCb, undoCb] = undoStack[0];
-    setUndoStack(undoStack.slice(1));
-    setRedoStack([doCb, ...redoStack]);
+    try {
+      const [doCb, undoCb] = undoStack[0];
+      setUndoStack((stack) => stack.slice(1));
+      setRedoStack((stack) => [doCb, ...stack]);
 
-    await undoCb();
-
-    setLocked(false);
+      await undoCb();
+    } finally {
+      setLocked(false);
+    }
   };
 
   const redo = async () => {
@@ -68,7 +78,7 @@ export function useUndoRedo(): [
 
     const doCb = redoStack[0];
 
-    setRedoStack(redoStack.slice(1));
+    setRedoStack((stack) => stack.slice(1));
 
     return await doIt(doCb, true);
   };

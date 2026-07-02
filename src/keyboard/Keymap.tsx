@@ -135,6 +135,7 @@ export interface KeymapProps {
   layout: PhysicalLayout;
   keymap: KeymapMsg;
   behaviors: BehaviorMap;
+  behaviorsLoading?: boolean;
   oneU: number;
   selectedLayerIndex: number;
   selectedKeyPosition: number | undefined;
@@ -147,6 +148,7 @@ export const Keymap = ({
   layout,
   keymap,
   behaviors,
+  behaviorsLoading,
   oneU,
   selectedLayerIndex,
   selectedKeyPosition,
@@ -185,7 +187,9 @@ export const Keymap = ({
     }
 
     const binding = keymap.layers[selectedLayerIndex].bindings[i];
-    const displayName = behaviors[binding.behaviorId]?.displayName || "Unknown";
+    const displayName =
+      behaviors[binding.behaviorId]?.displayName ||
+      (behaviorsLoading ? "…" : "Unknown");
     const layerNames = keymap.layers.map((l, li) => l.name || `L${li}`);
     const { header, children } = getKeyDisplay(binding, displayName, layerNames);
 
