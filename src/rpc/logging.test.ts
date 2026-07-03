@@ -73,4 +73,36 @@ describe("call_rpc timeout", () => {
     await assertion;
     expect(forceDisconnect).toHaveBeenCalledTimes(1);
   });
+
+  // Core of the "combo tab disconnect" fix: a request queued behind a slow one
+  // must not start its timer (nor be dispatched) until the previous request
+  // settles, so its wait in the queue can never trigger a force-disconnect.
+  it("does not dispatch or time out a queued request while the previous one is in flight", async () => {
+    const forceDisconnect = vi.fn();
+    registerForceDisconnect(forceDisconnect);
+
+    let resolveFirst!: (v: never) => void;
+    const first = new Promise<never>((res) => {
+      resolveFirst = res as (v: never) => void;
+    });
+    vi.mocked(inner_call_rpc)
+      .mockReturnValueOnce(first as never)
+      .mockResolvedValueOnce({ requestId: 2 } as never);
+
+    const p1 = call_rpc(conn, req);
+    const p2 = call_rpc(conn, req);
+
+    // First is dispatched; second stays queued. Even after more than a full
+    // timeout of wall-clock, the queued second has not started its own timer.
+    await vi.advanceTimersByTimeAsync(7000);
+    expect(inner_call_rpc).toHaveBeenCalledTimes(1);
+    expect(forceDisconnect).not.toHaveBeenCalled();
+
+    // Once the first settles, the second is dispatched and resolves in order.
+    resolveFirst({ requestId: 1 } as never);
+    await expect(p1).resolves.toEqual({ requestId: 1 });
+    await expect(p2).resolves.toEqual({ requestId: 2 });
+    expect(inner_call_rpc).toHaveBeenCalledTimes(2);
+    expect(forceDisconnect).not.toHaveBeenCalled();
+  });
 });

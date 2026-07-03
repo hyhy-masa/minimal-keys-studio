@@ -45,7 +45,14 @@ function useKeymapInfo(behaviors: ReturnType<typeof useBehaviorList>): KeymapInf
     let ignore = false;
     async function load() {
       if (!connection.conn) return;
-      const resp = await call_rpc(connection.conn, { keymap: { getKeymap: true } });
+      // getKeymap transfers the full keymap (several KB over BLE) and is by far
+      // the heaviest RPC this tab issues; give it a longer budget than the 8s
+      // default so a slow-but-alive link is not force-disconnected mid-load.
+      const resp = await call_rpc(
+        connection.conn,
+        { keymap: { getKeymap: true } },
+        15000
+      );
       if (ignore) return;
       const km = resp?.keymap?.getKeymap;
       if (km?.layers) {
@@ -118,11 +125,16 @@ export function ComboSettings() {
   const callWithTimeout = useCallback(
     async (label: string, payload: Uint8Array, timeoutMs = 5000) => {
       if (!subsystem) throw new Error("No subsystem");
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`RPC timeout: ${label}`)), timeoutMs)
-      );
-      const data = await Promise.race([subsystem.callRPC(payload), timeout]);
-      return Combos.decodeResponse(data);
+      // The timeout (and its force-disconnect on a truly dead link) is owned by
+      // call_rpc; pass it through instead of racing a second timer that could
+      // never win. See rpc/logging.ts.
+      try {
+        const data = await subsystem.callRPC(payload, timeoutMs);
+        return Combos.decodeResponse(data);
+      } catch (e) {
+        console.error(`[Combos] RPC ${label} failed:`, e);
+        throw e;
+      }
     },
     [subsystem]
   );

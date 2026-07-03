@@ -3,7 +3,7 @@ import type { CustomSubsystemInfo } from "@zmkfirmware/zmk-studio-ts-client/cust
 
 export interface CustomSubsystemConnection {
   subsystemIndex: number;
-  callRPC: (payload: Uint8Array) => Promise<Uint8Array>;
+  callRPC: (payload: Uint8Array, timeoutMs?: number) => Promise<Uint8Array>;
 }
 
 export const CustomSubsystemsContext = createContext<CustomSubsystemInfo[]>([]);

@@ -108,12 +108,16 @@ export function TrackballSettings() {
   const selectedProcessor = processors.find((p) => p.id === selectedId) ?? null;
 
   const callWithTimeout = useCallback(
-    async (label: string, payload: Uint8Array) => {
+    async (label: string, payload: Uint8Array, timeoutMs = 5000) => {
       if (!subsystem) throw new Error("No subsystem");
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error(`RPC timeout: ${label}`)), 5000)
-      );
-      await Promise.race([subsystem.callRPC(payload), timeout]);
+      // Timeout + force-disconnect are owned by call_rpc; pass it through
+      // rather than racing a second timer that can never win. See rpc/logging.ts.
+      try {
+        await subsystem.callRPC(payload, timeoutMs);
+      } catch (e) {
+        console.error(`[Trackball] RPC ${label} failed:`, e);
+        throw e;
+      }
     },
     [subsystem]
   );

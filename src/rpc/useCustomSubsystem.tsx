@@ -17,18 +17,22 @@ export function useCustomSubsystem(
   );
 
   const callRPC = useCallback(
-    async (payload: Uint8Array): Promise<Uint8Array> => {
+    async (payload: Uint8Array, timeoutMs?: number): Promise<Uint8Array> => {
       if (!conn.conn || !subsystem) {
         throw new Error(`Custom subsystem ${identifier} not connected`);
       }
-      const resp = await call_rpc(conn.conn, {
-        custom: {
-          call: {
-            subsystemIndex: subsystem.index,
-            payload,
+      const resp = await call_rpc(
+        conn.conn,
+        {
+          custom: {
+            call: {
+              subsystemIndex: subsystem.index,
+              payload,
+            },
           },
         },
-      });
+        timeoutMs
+      );
       return resp.custom?.call?.payload ?? new Uint8Array(0);
     },
     [conn.conn, subsystem, identifier]
