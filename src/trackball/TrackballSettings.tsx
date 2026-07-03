@@ -7,6 +7,7 @@ import {
 } from "../rpc/useCustomSubsystem";
 import { useToast } from "../misc/Toast";
 import * as RIP from "../proto/rip";
+import { ConfirmDialog } from "../ConfirmDialog";
 
 export function TrackballSettings() {
   const subsystem = useCustomSubsystem(RIP.SUBSYSTEM_ID);
@@ -14,6 +15,7 @@ export function TrackballSettings() {
   const [processors, setProcessors] = useState<RIP.InputProcessorInfo[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Local form state (editable copy of selected processor)
   // Speed is represented as multiplier/divisor. We use divisor=10 as base
@@ -42,6 +44,7 @@ export function TrackballSettings() {
     if (!subsystem) {
       setProcessors([]);
       setSelectedId(null);
+      setShowResetConfirm(false);
       return;
     }
 
@@ -376,11 +379,27 @@ export function TrackballSettings() {
         </Button>
         <Button
           className="rounded bg-base-300 px-4 py-2 hover:bg-base-200"
-          onPress={handleReset}
+          onPress={() => setShowResetConfirm(true)}
         >
           初期値に戻す
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={showResetConfirm}
+        title="設定を初期値に戻す"
+        destructive
+        confirmLabel="初期値に戻す"
+        onConfirm={() => {
+          setShowResetConfirm(false);
+          handleReset();
+        }}
+        onCancel={() => setShowResetConfirm(false)}
+      >
+        <p>
+          トラックボールの設定を初期値に戻します。現在の設定値は失われ、元に戻せません。続けますか？
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }

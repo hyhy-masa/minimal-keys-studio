@@ -20,6 +20,7 @@ import {
 } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 
 import { LayerPicker } from "./LayerPicker";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { PhysicalLayoutPicker } from "./PhysicalLayoutPicker";
 import { Keymap as KeymapComp } from "./Keymap";
 import { useConnectedDeviceData } from "../rpc/useConnectedDeviceData";
@@ -242,6 +243,7 @@ export default function Keyboard() {
     );
 
   const [selectedLayerIndex, setSelectedLayerIndex] = useState<number>(0);
+  const [showRemoveLayerConfirm, setShowRemoveLayerConfirm] = useState(false);
   const [selectedKeyPosition, setSelectedKeyPosition] = useState<
     number | undefined
   >(undefined);
@@ -270,6 +272,9 @@ export default function Keyboard() {
   useEffect(() => {
     setSelectedLayerIndex(0);
     setSelectedKeyPosition(undefined);
+    // Close a pending delete confirmation on (re)connect so it cannot be
+    // confirmed against a different layer after selection resets to 0.
+    setShowRemoveLayerConfirm(false);
   }, [conn]);
 
   const keymapSentRef = useRef(false);
@@ -740,7 +745,7 @@ export default function Keyboard() {
               canAdd={(keymap.availableLayers || 0) > 0}
               canRemove={(keymap.layers?.length || 0) > 1}
               onAddClicked={addLayer}
-              onRemoveClicked={removeLayer}
+              onRemoveClicked={() => setShowRemoveLayerConfirm(true)}
               onLayerNameChanged={changeLayerName}
             />
           </div>
@@ -821,6 +826,22 @@ export default function Keyboard() {
           <LoadingSpinner label="設定パネルを準備しています..." />
         )}
       </div>
+
+      <ConfirmDialog
+        open={showRemoveLayerConfirm}
+        title="レイヤーを削除"
+        destructive
+        confirmLabel="削除する"
+        onConfirm={() => {
+          setShowRemoveLayerConfirm(false);
+          removeLayer();
+        }}
+        onCancel={() => setShowRemoveLayerConfirm(false)}
+      >
+        <p>
+          選択中のレイヤーを削除します。削除後もヘッダーの「元に戻す」（⌘/Ctrl+Z）で復元できます。続けますか？
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }

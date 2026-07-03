@@ -16,6 +16,7 @@ import { ConnectionContext } from "../rpc/ConnectionContext";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { call_rpc } from "../rpc/logging";
+import { ConfirmDialog } from "../ConfirmDialog";
 
 interface LayerDisplay {
   id: number;
@@ -110,6 +111,7 @@ export function ComboSettings() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<Combos.ComboConfig | null>(null);
   const [saving, setSaving] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   const nextIdRef = useRef(1);
 
@@ -130,6 +132,7 @@ export function ComboSettings() {
   useEffect(() => {
     if (!subsystem) {
       setCombos([]);
+      setPendingDeleteId(null);
       return;
     }
     const version = ++discoveryVersionRef.current;
@@ -267,7 +270,7 @@ export function ComboSettings() {
           layers={layers}
           keyLabels={keyLabels}
           onEdit={() => handleEdit(combo)}
-          onDelete={() => handleDelete(combo.comboId)}
+          onDelete={() => setPendingDeleteId(combo.comboId)}
         />
       ))}
 
@@ -377,6 +380,21 @@ export function ComboSettings() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="コンボを削除"
+        destructive
+        confirmLabel="削除する"
+        onConfirm={() => {
+          const id = pendingDeleteId;
+          setPendingDeleteId(null);
+          if (id !== null) handleDelete(id);
+        }}
+        onCancel={() => setPendingDeleteId(null)}
+      >
+        <p>このコンボを削除します。この操作は元に戻せません。続けますか？</p>
+      </ConfirmDialog>
     </div>
   );
 }

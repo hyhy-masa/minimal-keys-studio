@@ -6,6 +6,7 @@ import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
 import { SettingsCard } from "../misc/SettingsCard";
 import { LoadingSkeleton } from "../misc/LoadingSkeleton";
 import * as HT from "../proto/holdtap";
+import { ConfirmDialog } from "../ConfirmDialog";
 
 // -1 as uint32 in protobuf = "not configured in device tree" = effectively 0ms
 const SENTINEL = 0xFFFFFFFF;
@@ -35,6 +36,7 @@ export function HoldTapSettings() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Local form state
   const [tappingTerm, setTappingTerm] = useState(200);
@@ -67,6 +69,7 @@ export function HoldTapSettings() {
     if (!subsystem) {
       setHoldTaps([]);
       setSelectedId(null);
+      setShowResetConfirm(false);
       return;
     }
 
@@ -360,13 +363,29 @@ export function HoldTapSettings() {
             </Button>
             <Button
               className="rounded-md bg-base-200 px-4 py-2 hover:bg-base-300 transition-colors"
-              onPress={handleReset}
+              onPress={() => setShowResetConfirm(true)}
             >
               初期値に戻す
             </Button>
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={showResetConfirm}
+        title="設定を初期値に戻す"
+        destructive
+        confirmLabel="初期値に戻す"
+        onConfirm={() => {
+          setShowResetConfirm(false);
+          handleReset();
+        }}
+        onCancel={() => setShowResetConfirm(false)}
+      >
+        <p>
+          長押し（ホールドタップ）の設定を初期値に戻します。現在の設定値は失われ、元に戻せません。続けますか？
+        </p>
+      </ConfirmDialog>
     </div>
   );
 }
