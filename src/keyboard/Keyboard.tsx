@@ -239,7 +239,10 @@ export default function Keyboard() {
     useConnectedDeviceData<Keymap>(
       { keymap: { getKeymap: true } },
       (keymap) => keymap?.keymap?.getKeymap,
-      true
+      true,
+      // getKeymap transfers the full keymap (several KB) over BLE and can take
+      // longer than the 8s default on a slow link; don't force-disconnect it.
+      15000
     );
 
   const [selectedLayerIndex, setSelectedLayerIndex] = useState<number>(0);
@@ -688,7 +691,11 @@ export default function Keyboard() {
         }
       }
 
-      const resp = await call_rpc(conn.conn, { keymap: { getKeymap: true } });
+      const resp = await call_rpc(
+        conn.conn,
+        { keymap: { getKeymap: true } },
+        15000
+      );
       const refreshed = resp?.keymap?.getKeymap;
       if (refreshed) {
         setKeymap(() => refreshed);

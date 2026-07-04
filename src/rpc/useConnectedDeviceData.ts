@@ -16,7 +16,8 @@ import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 export function useConnectedDeviceData<T>(
   req: Omit<Request, "requestId">,
   response_mapper: (resp: RequestResponse) => T | undefined,
-  requireUnlock?: boolean
+  requireUnlock?: boolean,
+  timeoutMs?: number
 ): [
   T | undefined,
   React.Dispatch<SetStateAction<T | undefined>>,
@@ -52,7 +53,7 @@ export function useConnectedDeviceData<T>(
 
         try {
           const response = response_mapper(
-            await call_rpc(connection.conn, req)
+            await call_rpc(connection.conn, req, timeoutMs)
           );
 
           if (!ignore) {
