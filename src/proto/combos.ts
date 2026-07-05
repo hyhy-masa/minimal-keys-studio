@@ -84,7 +84,20 @@ function decodeComboConfig(reader: _m0.Reader, length: number): ComboConfig {
     const tag = reader.uint32();
     switch (tag >>> 3) {
       case 1: c.comboId = reader.uint32(); break;
-      case 2: c.keyPositions.push(reader.uint32()); break;
+      case 2: {
+        // key_positions is a `repeated uint32`, which nanopb (the firmware's
+        // encoder) always sends PACKED (wire type 2: a length-delimited block
+        // of varints). The previous single read assumed the non-packed form and
+        // misread the length byte as a key position, cascading into a corrupt
+        // protobuf parse ("invalid wire type"). Handle both forms.
+        if ((tag & 7) === 2) {
+          const end2 = reader.uint32() + reader.pos;
+          while (reader.pos < end2) c.keyPositions.push(reader.uint32());
+        } else {
+          c.keyPositions.push(reader.uint32());
+        }
+        break;
+      }
       case 3: c.timeoutMs = reader.uint32(); break;
       case 4: c.binding = decodeBinding(reader, reader.uint32()); break;
       case 5: c.layerMask = reader.uint32(); break;
