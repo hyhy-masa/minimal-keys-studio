@@ -103,7 +103,7 @@ export function buildTourSteps(): DriveStep[] {
       element: TOUR_SELECTORS.tab("combo"),
       popover: {
         title: "コンボ",
-        description: "複数キーの同時押しに動作を割り当てます。",
+        description: "複数キーの同時押しに動作を割り当てます。（近日対応予定）",
         side: "bottom",
       },
     },

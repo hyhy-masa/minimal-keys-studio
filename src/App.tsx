@@ -36,7 +36,7 @@ import { BleManagement } from "./bluetooth/BleManagement";
 import { BatteryHistory } from "./battery/BatteryHistory";
 import { DeviceSettings } from "./settings/DeviceSettings";
 import { HoldTapSettings } from "./holdtap/HoldTapSettings";
-import { ComboSettings } from "./combos/ComboSettings";
+import { ComboComingSoon } from "./combos/ComboComingSoon";
 import { BehaviorsProvider } from "./behaviors/BehaviorsContext";
 import { CustomSubsystemsProvider } from "./rpc/CustomSubsystemsProvider";
 import { UndoRedoContext, useUndoRedo } from "./undoRedo";
@@ -450,7 +450,7 @@ function AppInner() {
               <div className={activeTab === "keymap" ? "h-full" : "hidden"}><Keyboard key={keymapVersion} /></div>
               {mountedTabs.has("trackball") && <div className={activeTab === "trackball" ? "h-full" : "hidden"}><TrackballSettings /></div>}
               {mountedTabs.has("encoder") && <div className={activeTab === "encoder" ? "h-full" : "hidden"}><EncoderSettings /></div>}
-              {mountedTabs.has("combo") && <div className={activeTab === "combo" ? "h-full" : "hidden"}><ComboSettings /></div>}
+              {mountedTabs.has("combo") && <div className={activeTab === "combo" ? "h-full" : "hidden"}><ComboComingSoon /></div>}
               {mountedTabs.has("bluetooth") && <div className={activeTab === "bluetooth" ? "h-full" : "hidden"}><BleManagement /></div>}
               {mountedTabs.has("holdtap") && <div className={activeTab === "holdtap" ? "h-full" : "hidden"}><HoldTapSettings /></div>}
               {mountedTabs.has("battery") && <div className={activeTab === "battery" ? "h-full" : "hidden"}><BatteryHistory /></div>}
