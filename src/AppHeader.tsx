@@ -12,7 +12,7 @@ import { useModalRef } from "./misc/useModalRef";
 import { LockStateContext } from "./rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { ConnectionContext } from "./rpc/ConnectionContext";
-import { ChevronDown, Undo2, Redo2, Save, Trash2, CircleHelp } from "lucide-react";
+import { ChevronDown, Undo2, Redo2, Save, Trash2, CircleHelp, Download } from "lucide-react";
 import { useOsMode } from "./OsModeContext";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
@@ -126,16 +126,8 @@ export const AppHeader = ({
             >
               切断
             </MenuItem>
-            {fwUpdateEnabled && (
-              <MenuItem
-                className="px-2 py-1 hover:bg-base-200"
-                onAction={() => setShowFirmwareUpdate(true)}
-              >
-                ファームウェア更新
-              </MenuItem>
-            )}
             <MenuItem
-              className="px-2 py-1 hover:bg-base-200 border-t border-base-200 text-danger"
+              className="px-2 py-1 hover:bg-base-200"
               onAction={() => setShowSettingsReset(true)}
             >
               設定を初期化
@@ -211,6 +203,15 @@ export const AppHeader = ({
             </Button>
           </Tooltip>
         </div>
+        {fwUpdateEnabled && (
+          <Button
+            className="flex items-center gap-1 px-2 py-1.5 rounded text-sm enabled:hover:bg-base-300"
+            onPress={() => setShowFirmwareUpdate(true)}
+          >
+            <Download className="inline-block w-4" />
+            ファーム更新
+          </Button>
+        )}
         {onStartTour && (
           <Tooltip label="使い方を見る">
             <Button
