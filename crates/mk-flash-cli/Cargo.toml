@@ -1,0 +1,15 @@
+[package]
+name = "mk-flash-cli"
+description = "CLI harness / rescue tool for minimal-keys firmware flashing (WebView-free)."
+# Standalone values (S1.2-a): inlined from the flasher workspace inheritance.
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/hyhy-masa/minimal-keys-flash"
+
+[[bin]]
+name = "mk-flash"
+path = "src/main.rs"
+
+[dependencies]
+mk-flash-core = { path = "../mk-flash-core", features = ["download"] }

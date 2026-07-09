@@ -1,0 +1,23 @@
+[package]
+name = "mk-flash-core"
+description = "OS-agnostic UF2 flashing core for minimal-keys (volume detection, UF2 validation, write state machine)."
+# Standalone values (S1.2-a): Studio has no root workspace, so the flasher
+# workspace inheritance (version.workspace = true, etc.) is inlined here.
+# Source values copied from minimal-keys-flash Cargo.toml [workspace.package].
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/hyhy-masa/minimal-keys-flash"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "1"
+# Networking is only needed by the `download` feature so the flashing core
+# (and its unit tests) build and run with zero network dependencies.
+ureq = { version = "2", optional = true }
+
+[features]
+default = []
+download = ["dep:ureq"]

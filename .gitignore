@@ -25,3 +25,7 @@ src/data
 *.sw?
 
 *storybook.log
+
+# Rust vendored crates (src-tauri has its own anchored /target/ in src-tauri/.gitignore)
+/crates/**/target/
+/crates/**/Cargo.lock
