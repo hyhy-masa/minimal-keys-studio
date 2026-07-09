@@ -21,6 +21,7 @@ pub use error::FlashError;
 pub use fsops::{parse_board_id, FlashEnv, RealEnv, VolumeEntry, WriteAttempt};
 pub use machine::{
     flash_uf2, CancelFlag, FlashConfig, FlashOutcome, FlashProgress, Timings,
+    MINIMAL_KEYS_BOARD_ID_PREFIX,
 };
 pub use manifest::{parse_hex_u32, parse_manifest, version_ge, FwAsset, FwManifest};
 pub use uf2::{

@@ -66,6 +66,14 @@ impl Default for Timings {
     }
 }
 
+/// INFO_UF2.TXT Board-ID prefix for minimal-keys hardware. The shipping Seeed
+/// XIAO nRF52840 Sense reports Board-ID `Seeed_XIAO_nRF52840_Sense` (measured on
+/// hardware 2026-07-09, plan U-2 — NOT the Adafruit-upstream
+/// `nRF52840-SeeedXiaoSense-v1`). Single source of truth (design 08 S1.8②): both
+/// [`FlashConfig::default`] and the Tauri command layer reference this constant so
+/// bootloader detection and the write-side preflight can never silently diverge.
+pub const MINIMAL_KEYS_BOARD_ID_PREFIX: &str = "Seeed_XIAO_nRF52840";
+
 /// Everything the flash needs besides the data/volume. Bundled to keep
 /// [`flash_uf2`]'s signature small.
 #[derive(Debug, Clone)]
@@ -81,10 +89,7 @@ impl Default for FlashConfig {
     fn default() -> Self {
         Self {
             timings: Timings::default(),
-            // Real INFO_UF2.TXT Board-ID on the shipping Seeed XIAO nRF52840 Sense
-            // is `Seeed_XIAO_nRF52840_Sense` (measured on hardware, 2026-07-09,
-            // plan U-2 — NOT the Adafruit-upstream `nRF52840-SeeedXiaoSense-v1`).
-            board_id_prefix: Some("Seeed_XIAO_nRF52840".to_string()),
+            board_id_prefix: Some(MINIMAL_KEYS_BOARD_ID_PREFIX.to_string()),
         }
     }
 }
@@ -565,7 +570,7 @@ mod tests {
     fn board_id_gate_rejects_foreign_volume() {
         let env = MockEnv::new(vec![], vec![]).with_info("Board-ID: RPI-RP2\r\n");
         let mut c = cfg();
-        c.board_id_prefix = Some("Seeed_XIAO_nRF52840".to_string());
+        c.board_id_prefix = Some(MINIMAL_KEYS_BOARD_ID_PREFIX.to_string());
         assert!(matches!(
             flash(&env, &vec![0u8; 1000], &c),
             Err(FlashError::NotUf2Volume { .. })
@@ -581,7 +586,7 @@ mod tests {
         )
         .with_info("Model: Seeed XIAO nRF52840 Sense\r\nBoard-ID: Seeed_XIAO_nRF52840_Sense\r\n");
         let mut c = cfg();
-        c.board_id_prefix = Some("Seeed_XIAO_nRF52840".to_string());
+        c.board_id_prefix = Some(MINIMAL_KEYS_BOARD_ID_PREFIX.to_string());
         assert_eq!(flash(&env, &vec![0u8; 1000], &c), Ok(FlashOutcome::ProvisionalSuccess));
     }
 
