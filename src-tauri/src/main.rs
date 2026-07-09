@@ -5,6 +5,7 @@ use std::env;
 
 use futures::lock::Mutex;
 
+mod flash;
 mod transport;
 use transport::commands::{transport_close, transport_send_data, ActiveConnection};
 
@@ -20,6 +21,7 @@ fn main() {
         .manage(ActiveConnection {
             conn: Mutex::new(None),
         })
+        .manage(flash::FlashState::new())
         .invoke_handler(tauri::generate_handler![
             transport_send_data,
             transport_close,
@@ -27,6 +29,12 @@ fn main() {
             gatt_connect,
             serial_list_devices,
             serial_connect,
+            flash::fw_fetch_manifest,
+            flash::fw_download_asset,
+            flash::flash_scan_volumes,
+            flash::flash_wait_for_bootloader,
+            flash::flash_write_uf2,
+            flash::flash_cancel,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
