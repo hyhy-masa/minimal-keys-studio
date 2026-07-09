@@ -38,6 +38,9 @@ export function semverGe(have: string, need: string): boolean {
   return true;
 }
 
+/** Which half of the split a recovery re-flash targets. R = central, L = peripheral. */
+export type Side = "R" | "L";
+
 export type WizardState =
   | { step: "idle" }
   | { step: "fetching_manifest" }
@@ -54,7 +57,15 @@ export type WizardState =
   | { step: "done"; manifest: Manifest }
   | { step: "blocked"; reason: BlockReason }
   | { step: "error"; message: string; from: string }
-  | { step: "recovery" };
+  // Recovery sub-flow (S1.12b). `from` is the re-drivable origin state that
+  // "retry current step" (mode 1) returns to, or null when there is none.
+  // `message` surfaces a failed one-side reflash. The sub-flow is intentionally
+  // manifest-free: mode 2 re-acquires its own bootloader volume, so recovery
+  // never needs to thread the manifest and stays a self-contained safety net.
+  | { step: "recovery"; from: WizardState | null; message?: string }
+  | { step: "recovery_waiting"; side: Side; from: WizardState | null }
+  | { step: "recovery_flashing"; side: Side; from: WizardState | null }
+  | { step: "recovery_done"; side: Side };
 
 export type BlockReason = "settings_reset_unsupported" | "tool_too_old";
 
@@ -77,6 +88,11 @@ export type WizardEvent =
   | { type: "CHECKLIST_OK" }
   | { type: "CHECKLIST_FAIL" }
   | { type: "ENTER_RECOVERY" }
+  | { type: "RETRY_CURRENT_STEP" }
+  | { type: "RECOVERY_FLASH_SIDE"; side: Side }
+  | { type: "RECOVERY_VOLUME_OK" }
+  | { type: "RECOVERY_FLASH_OK" }
+  | { type: "RECOVERY_FLASH_ERR"; message: string }
   | { type: "RESET" };
 
 export const initialState: WizardState = { step: "idle" };
@@ -85,9 +101,46 @@ function fail(from: string, message: string): WizardState {
   return { step: "error", message, from };
 }
 
+/**
+ * The origin state that "retry current step" (recovery mode 1) returns to.
+ * Only steps that meaningfully re-drive on re-entry qualify (bootloader waits,
+ * confirms, the checklist, the swap prompt). Flashing/terminal/error states are
+ * excluded: a failed write is re-driven through mode 2 (flash_one_side), which
+ * re-acquires the volume safely, not by blindly re-writing.
+ */
+function redrivableOrigin(state: WizardState): WizardState | null {
+  switch (state.step) {
+    case "downloading":
+    case "r_confirm":
+    case "r_bootloader_guide":
+    case "swap_to_l":
+    case "l_confirm":
+    case "l_bootloader_guide":
+    case "verify_checklist":
+      return state;
+    default:
+      return null;
+  }
+}
+
+/** Enter recovery, preserving the retry-origin when already inside the sub-flow. */
+function enterRecovery(state: WizardState): WizardState {
+  switch (state.step) {
+    case "recovery":
+      return state;
+    case "recovery_waiting":
+    case "recovery_flashing":
+      return { step: "recovery", from: state.from };
+    case "recovery_done":
+      return { step: "recovery", from: null };
+    default:
+      return { step: "recovery", from: redrivableOrigin(state) };
+  }
+}
+
 export function reduce(state: WizardState, event: WizardEvent): WizardState {
   if (event.type === "RESET") return initialState;
-  if (event.type === "ENTER_RECOVERY") return { step: "recovery" };
+  if (event.type === "ENTER_RECOVERY") return enterRecovery(state);
 
   switch (state.step) {
     case "idle":
@@ -151,13 +204,32 @@ export function reduce(state: WizardState, event: WizardEvent): WizardState {
 
     case "verify_checklist":
       if (event.type === "CHECKLIST_OK") return { step: "done", manifest: state.manifest };
-      if (event.type === "CHECKLIST_FAIL") return { step: "recovery" };
+      if (event.type === "CHECKLIST_FAIL") return { step: "recovery", from: state };
+      return state;
+
+    case "recovery":
+      if (event.type === "RECOVERY_FLASH_SIDE")
+        return { step: "recovery_waiting", side: event.side, from: state.from };
+      if (event.type === "RETRY_CURRENT_STEP") return state.from ?? state;
+      return state;
+
+    case "recovery_waiting":
+      if (event.type === "RECOVERY_VOLUME_OK")
+        return { step: "recovery_flashing", side: state.side, from: state.from };
+      if (event.type === "RECOVERY_FLASH_ERR")
+        return { step: "recovery", from: state.from, message: event.message };
+      return state;
+
+    case "recovery_flashing":
+      if (event.type === "RECOVERY_FLASH_OK") return { step: "recovery_done", side: state.side };
+      if (event.type === "RECOVERY_FLASH_ERR")
+        return { step: "recovery", from: state.from, message: event.message };
       return state;
 
     case "done":
     case "blocked":
     case "error":
-    case "recovery":
+    case "recovery_done":
       return state;
   }
 }

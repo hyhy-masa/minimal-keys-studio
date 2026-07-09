@@ -17,7 +17,10 @@ export const stepTitle: Record<WizardState["step"], string> = {
   done: "更新が完了しました",
   blocked: "この更新はアプリからは行えません",
   error: "エラーが発生しました",
-  recovery: "リカバリモード",
+  recovery: "うまくいかないとき",
+  recovery_waiting: "書き込みモードを待っています…",
+  recovery_flashing: "片側を書き直しています…",
+  recovery_done: "書き直しが完了しました",
 };
 
 export const blockReasonText: Record<BlockReason, string> = {

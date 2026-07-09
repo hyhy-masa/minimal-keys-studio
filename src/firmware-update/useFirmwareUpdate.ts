@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import { invoke, Channel } from "@tauri-apps/api/core";
-import { reduce, initialState, type Manifest, type WizardEvent } from "./machine";
+import { reduce, initialState, type Manifest, type WizardEvent, type WizardState } from "./machine";
 import { formatError } from "./ja";
+import {
+  newSupportLogAccumulator,
+  type SupportLogAccumulator,
+  type VolumeInfo,
+} from "./supportLog";
+import { useRecoveryActions, type RecoveryActions } from "./useRecoveryActions";
 
 // Default = the public GitHub Releases manifest. Overridable via
 // VITE_MK_MANIFEST_URL for dev / staging / local test releases.
@@ -9,7 +15,7 @@ const MANIFEST_URL =
   import.meta.env.VITE_MK_MANIFEST_URL ??
   "https://github.com/hyhy-masa/minimal-keys-farmware/releases/latest/download/manifest.json";
 
-interface Asset {
+export interface Asset {
   role: string;
   name: string;
   url: string;
@@ -20,7 +26,7 @@ interface Asset {
   target_addr_max?: string;
 }
 
-interface FullManifest extends Manifest {
+export interface FullManifest extends Manifest {
   assets: Asset[];
 }
 
@@ -34,13 +40,44 @@ export interface Progress {
  * (manifest fetch, download, bootloader wait, write) are fired by an effect
  * keyed on `state.step`. All hardware work — and all UF2 validation and the
  * Board-ID gate — happens in the (tested) Rust core; this hook only marshals.
+ *
+ * Alongside the flow it accumulates a SupportLog (steps / volumes / errors /
+ * manifest) so the recovery panel's "save log" is a real artifact (S1.12b), and
+ * it exposes the recovery actions from `useRecoveryActions` (kept out of the
+ * normal-flow effect switch).
  */
-export function useFirmwareUpdate() {
-  const [state, dispatch] = useReducer(reduce, initialState);
+export function useFirmwareUpdate(): {
+  state: WizardState;
+  progress: Progress | null;
+  start: () => Promise<void>;
+  cancel: () => void;
+  dispatch: (e: WizardEvent) => void;
+  recovery: RecoveryActions;
+} {
+  const [state, rawDispatch] = useReducer(reduce, initialState);
   const [progress, setProgress] = useState<Progress | null>(null);
   const manifestRef = useRef<FullManifest | null>(null);
   const pathsRef = useRef<Record<string, string>>({});
   const volumeRef = useRef<string>("");
+
+  // --- Support-log accumulation (S1.12b) -----------------------------------
+  const accRef = useRef<SupportLogAccumulator>(newSupportLogAccumulator());
+  const stepRef = useRef(state.step);
+  stepRef.current = state.step;
+
+  const recordVolume = useCallback((v: VolumeInfo) => {
+    accRef.current.volumes.push(v);
+  }, []);
+  const recordError = useCallback((e: unknown) => {
+    accRef.current.errors.push(e);
+  }, []);
+
+  // Every dispatch is logged (step it fired in + event) so the SupportLog holds
+  // the exact sequence the customer walked, including internal transitions.
+  const dispatch = useCallback((e: WizardEvent) => {
+    accRef.current.steps.push({ ts: Date.now(), step: stepRef.current, event: e.type });
+    rawDispatch(e);
+  }, []);
 
   const start = useCallback(async () => {
     setProgress(null);
@@ -48,11 +85,16 @@ export function useFirmwareUpdate() {
     try {
       const m = await invoke<FullManifest>("fw_fetch_manifest", { url: MANIFEST_URL });
       manifestRef.current = m;
+      accRef.current.manifest = {
+        version: m.version,
+        assets: m.assets.map((a) => ({ role: a.role, name: a.name, sha256: a.sha256 })),
+      };
       dispatch({ type: "FETCH_OK", manifest: m });
     } catch (e) {
+      recordError(e);
       dispatch({ type: "FETCH_ERR", message: formatError(e) });
     }
-  }, []);
+  }, [dispatch, recordError]);
 
   // Cancel the current operation. `flash_cancel` cooperatively unblocks a
   // waiting Rust op (bootloader wait) so its BusyGuard is released immediately;
@@ -63,7 +105,17 @@ export function useFirmwareUpdate() {
   const cancel = useCallback(() => {
     void invoke("flash_cancel").catch(() => {});
     dispatch({ type: "RESET" });
-  }, []);
+  }, [dispatch]);
+
+  const recovery = useRecoveryActions({
+    dispatch,
+    setProgress,
+    manifestRef,
+    pathsRef,
+    accRef,
+    recordVolume,
+    recordError,
+  });
 
   useEffect(() => {
     const m = manifestRef.current;
@@ -82,22 +134,26 @@ export function useFirmwareUpdate() {
         }
         if (!cancelled) dispatch({ type: "DOWNLOAD_OK" });
       } catch (e) {
-        if (!cancelled) dispatch({ type: "DOWNLOAD_ERR", message: formatError(e) });
+        if (!cancelled) {
+          recordError(e);
+          dispatch({ type: "DOWNLOAD_ERR", message: formatError(e) });
+        }
       }
     };
 
     const waitBootloader = async (onDetected: WizardEvent) => {
       try {
-        const vols = await invoke<{ path: string }[]>("flash_scan_volumes");
+        const vols = await invoke<VolumeInfo[]>("flash_scan_volumes");
         const baseline = vols.map((v) => v.path);
-        const vol = await invoke<{ path: string }>("flash_wait_for_bootloader", {
+        const vol = await invoke<VolumeInfo>("flash_wait_for_bootloader", {
           baseline,
           timeoutSecs: 60,
         });
         volumeRef.current = vol.path;
+        recordVolume(vol);
         if (!cancelled) dispatch(onDetected);
       } catch (e) {
-        console.error(e);
+        recordError(e);
         if (!cancelled) dispatch({ type: "ENTER_RECOVERY" });
       }
     };
@@ -122,7 +178,10 @@ export function useFirmwareUpdate() {
         });
         if (!cancelled) dispatch(ok);
       } catch (e) {
-        if (!cancelled) dispatch({ type: errType, message: formatError(e) });
+        if (!cancelled) {
+          recordError(e);
+          dispatch({ type: errType, message: formatError(e) });
+        }
       }
     };
 
@@ -148,7 +207,8 @@ export function useFirmwareUpdate() {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.step]);
 
-  return { state, progress, start, cancel, dispatch };
+  return { state, progress, start, cancel, dispatch, recovery };
 }

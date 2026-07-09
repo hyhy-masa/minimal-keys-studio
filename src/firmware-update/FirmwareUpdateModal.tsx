@@ -8,6 +8,7 @@ import { useFirmwareVersion } from "./useFirmwareVersion";
 import { isUpdateAvailable } from "./versions";
 import { stepTitle, blockReasonText } from "./ja";
 import { ProgressBar } from "./ProgressBar";
+import { RecoveryPanel } from "./RecoveryPanel";
 
 function progressPct(p: Progress | null): number {
   const total = p?.detail?.total ?? 0;
@@ -90,10 +91,13 @@ export interface FirmwareUpdateModalProps {
 }
 
 export function FirmwareUpdateModal({ open, onClose }: FirmwareUpdateModalProps) {
-  const { state, progress, start, cancel, dispatch } = useFirmwareUpdate();
+  const { state, progress, start, cancel, dispatch, recovery } = useFirmwareUpdate();
   const fw = useFirmwareVersion();
 
-  const flashing = state.step === "r_flashing" || state.step === "l_flashing";
+  const flashing =
+    state.step === "r_flashing" ||
+    state.step === "l_flashing" ||
+    state.step === "recovery_flashing";
   const ref = useModalRef(open, false, !flashing);
 
   // Fresh start every time the modal opens.
@@ -112,7 +116,9 @@ export function FirmwareUpdateModal({ open, onClose }: FirmwareUpdateModalProps)
     state.step === "done" ||
     state.step === "blocked" ||
     state.step === "error" ||
-    state.step === "recovery";
+    state.step === "recovery" ||
+    state.step === "recovery_waiting" ||
+    state.step === "recovery_done";
 
   const currentVersion = fw.version ?? "不明";
 
@@ -331,18 +337,18 @@ export function FirmwareUpdateModal({ open, onClose }: FirmwareUpdateModalProps)
         );
 
       case "recovery":
+      case "recovery_waiting":
+      case "recovery_flashing":
+      case "recovery_done":
         return (
-          <div>
-            <p className="mb-2">
-              うまくいかない場合は、一度ケーブルを抜き差しして最初からやり直してみてください。
-            </p>
-            <p className="text-sm text-base-content/60 mb-4">
-              解決しないときは、公式 LINE / Discord のサポートにご連絡ください。
-            </p>
-            <div className="flex justify-end">
-              <PrimaryButton onPress={() => dispatch({ type: "RESET" })}>最初に戻る</PrimaryButton>
-            </div>
-          </div>
+          <RecoveryPanel
+            state={state}
+            progress={progress}
+            actions={recovery}
+            dispatch={dispatch}
+            cancel={cancel}
+            onClose={handleClose}
+          />
         );
     }
   })();
