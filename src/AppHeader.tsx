@@ -16,6 +16,8 @@ import { ChevronDown, Undo2, Redo2, Save, Trash2, CircleHelp } from "lucide-reac
 import { useOsMode } from "./OsModeContext";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
+import { FirmwareUpdateModal } from "./firmware-update/FirmwareUpdateModal";
+import { isFirmwareUpdateEnabled } from "./firmware-update/isTauri";
 
 export interface AppHeaderProps {
   connectedDeviceLabel?: string;
@@ -43,6 +45,8 @@ export const AppHeader = ({
   onStartTour,
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
+  const [showFirmwareUpdate, setShowFirmwareUpdate] = useState(false);
+  const fwUpdateEnabled = isFirmwareUpdateEnabled();
   const { osMode, setOsMode } = useOsMode();
 
   const lockState = useContext(LockStateContext);
@@ -99,6 +103,12 @@ export const AppHeader = ({
           </div>
         </div>
       </GenericModal>
+      {fwUpdateEnabled && (
+        <FirmwareUpdateModal
+          open={showFirmwareUpdate}
+          onClose={() => setShowFirmwareUpdate(false)}
+        />
+      )}
       <MenuTrigger>
         <Button
           className="text-center rac-disabled:opacity-0 hover:bg-base-300 transition-all duration-100 p-1 pl-2 rounded-lg"
@@ -116,8 +126,16 @@ export const AppHeader = ({
             >
               切断
             </MenuItem>
+            {fwUpdateEnabled && (
+              <MenuItem
+                className="px-2 py-1 hover:bg-base-200"
+                onAction={() => setShowFirmwareUpdate(true)}
+              >
+                ファームウェア更新
+              </MenuItem>
+            )}
             <MenuItem
-              className="px-2 py-1 hover:bg-base-200"
+              className="px-2 py-1 hover:bg-base-200 border-t border-base-200 text-danger"
               onAction={() => setShowSettingsReset(true)}
             >
               設定を初期化

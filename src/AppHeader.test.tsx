@@ -18,6 +18,12 @@ vi.mock("@zmkfirmware/zmk-studio-ts-client/core", () => ({
 vi.mock("./rpc/useConnectedDeviceData", () => ({
   useConnectedDeviceData: () => [false, vi.fn()],
 }));
+// The firmware-update modal pulls in the ts-client via the custom-subsystem
+// hook; stub it (these header tests don't exercise it, and it is feature-flagged
+// off outside Tauri anyway).
+vi.mock("./firmware-update/FirmwareUpdateModal", () => ({
+  FirmwareUpdateModal: () => null,
+}));
 
 import { AppHeader } from "./AppHeader";
 

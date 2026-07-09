@@ -4,5 +4,7 @@
 <dict>
   <key>NSBluetoothAlwaysUsageDescription</key>
   <string>キーボードと無線接続して設定を行うためにBluetoothを使用します。</string>
+  <key>NSRemovableVolumesUsageDescription</key>
+  <string>キーボードにファームウェアを書き込むため、書き込みモードのキーボード（リムーバブルボリューム）へアクセスします。</string>
 </dict>
 </plist>
