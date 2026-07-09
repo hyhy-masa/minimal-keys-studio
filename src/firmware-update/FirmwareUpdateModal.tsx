@@ -68,7 +68,7 @@ function GuideDiagram({ side }: { side: "R" | "L" }) {
         <circle cx={side === "R" ? 120 : 40} cy="45" r="9" className="fill-danger" />
         <circle cx={side === "R" ? 120 : 40} cy="45" r="15" className="fill-none stroke-danger" strokeWidth="2" />
       </svg>
-      <p className="text-xs text-base-content/60 text-center">
+      <p className="text-sm text-base-content/60 text-center">
         {side === "R" ? "右" : "左"}半分のリセットボタン（実機写真は準備中）
       </p>
     </div>
@@ -123,7 +123,7 @@ export function FirmwareUpdateModal({ open, onClose }: FirmwareUpdateModalProps)
           <div>
             <p className="text-sm text-base-content/70 mb-3">
               最新のファームウェアが出ているか確認します。
-              <span className="block text-xs text-base-content/50 mt-1">
+              <span className="block text-sm text-base-content/50 mt-1">
                 ファームウェア＝キーボードの中身のプログラム
               </span>
             </p>
@@ -170,7 +170,7 @@ export function FirmwareUpdateModal({ open, onClose }: FirmwareUpdateModalProps)
                 <p className="whitespace-pre-wrap">{state.manifest.notes_ja}</p>
               </div>
             )}
-            <p className="text-xs text-base-content/50">所要時間 約5分 ／ USBケーブルが必要です</p>
+            <p className="text-sm text-base-content/50">所要時間 約5分 ／ USBケーブルが必要です</p>
             <div className="flex justify-end gap-3 mt-4">
               {upToDate ? (
                 <PrimaryButton onPress={handleClose}>閉じる</PrimaryButton>
