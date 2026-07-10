@@ -55,6 +55,24 @@ describe("fwinfo proto (frozen wire format)", () => {
     expect(decoded.firmwareInfo).toHaveLength(0);
   });
 
+  it("reads the minimal shape the zmk__fwinfo firmware actually emits", () => {
+    // The FW handler (zmk-module-fw-info-rpc) fills only version / build_date /
+    // is_central; source stays 0 and git_rev "" (both omitted on the wire by
+    // proto3). This locks that the frozen decoder still yields the right values.
+    const fwEmitted: FirmwareInfo = {
+      source: 0,
+      version: "v1.4.0",
+      gitRev: "",
+      buildDate: "Jul 10 2026",
+      isCentral: true,
+    };
+    const decoded = decodeFirmwareInfoResponse(encodeFirmwareInfoResponse([fwEmitted]));
+    expect(decoded.error).toBeUndefined();
+    expect(decoded.firmwareInfo).toHaveLength(1);
+    expect(decoded.firmwareInfo[0]).toEqual(fwEmitted);
+    expect(pickCentralVersion(decoded.firmwareInfo)).toBe("v1.4.0");
+  });
+
   it("enables an accurate update-available check once versions are known", () => {
     const installed = pickCentralVersion(
       decodeFirmwareInfoResponse(encodeFirmwareInfoResponse([central])).firmwareInfo
