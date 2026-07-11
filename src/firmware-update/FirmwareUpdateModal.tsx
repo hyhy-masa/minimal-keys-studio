@@ -9,6 +9,8 @@ import { isUpdateAvailable } from "./versions";
 import { stepTitle, blockReasonText } from "./ja";
 import { ProgressBar } from "./ProgressBar";
 import { RecoveryPanel } from "./RecoveryPanel";
+import fwResetRight from "../assets/fw-reset-right.webp";
+import fwResetLeft from "../assets/fw-reset-left.webp";
 
 function progressPct(p: Progress | null): number {
   const total = p?.detail?.total ?? 0;
@@ -57,22 +59,25 @@ function GhostButton({
 }
 
 /**
- * Placeholder bootloader-guide illustration. A simple keyboard-half outline with
- * a reset-button marker — swapped for a real photo (assets A1-A4) before MVP
- * sign-off (design 09 §3.4). The marker/label are the swappable part.
+ * Bootloader-guide illustration: a real product photo of the half being flashed,
+ * with the reset button already marked (orange circle baked into the asset).
+ * R = right half (Y/U/I/O/P row + trackball) / L = left half (W/E/R/T row + knob).
+ * Assets A1/A2 + A3 overlay, design 09 §3.4. To update a photo, swap the imported
+ * file — the R/L → file mapping below is the only wiring.
  */
 function GuideDiagram({ side }: { side: "R" | "L" }) {
+  const src = side === "R" ? fwResetRight : fwResetLeft;
   return (
-    <div className="my-3 rounded-lg border border-base-300 bg-base-200 p-4 flex flex-col items-center gap-2">
-      <svg viewBox="0 0 160 90" className="w-40 h-24" aria-hidden>
-        <rect x="4" y="4" width="152" height="82" rx="10" className="fill-base-100 stroke-base-300" strokeWidth="2" />
-        <circle cx={side === "R" ? 120 : 40} cy="45" r="9" className="fill-danger" />
-        <circle cx={side === "R" ? 120 : 40} cy="45" r="15" className="fill-none stroke-danger" strokeWidth="2" />
-      </svg>
-      <p className="text-sm text-base-content/60 text-center">
-        {side === "R" ? "右" : "左"}半分のリセットボタン（実機写真は準備中）
-      </p>
-    </div>
+    <figure className="my-3 rounded-lg border border-base-300 bg-base-200 p-2">
+      <img
+        src={src}
+        alt={`${side === "R" ? "右" : "左"}半分のリセットボタンの位置（オレンジの丸で囲んだ穴）`}
+        className="w-full h-auto rounded"
+      />
+      <figcaption className="text-sm text-base-content/70 text-center mt-2">
+        オレンジの丸がリセットボタンです（{side === "R" ? "右" : "左"}半分）
+      </figcaption>
+    </figure>
   );
 }
 
@@ -81,6 +86,62 @@ function WriteWarning() {
     <div className="my-3 flex items-start gap-2 rounded bg-warning text-warning-content p-2 text-sm">
       <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
       <span>ケーブルを抜いたり、アプリを閉じたりしないでください。</span>
+    </div>
+  );
+}
+
+/**
+ * Asset A5 (design 09 §3.4): abstract "unplug from right → plug into left" diagram.
+ * Simple line-art is fine here (this shows the action, not a physical location).
+ * Inline SVG with base tokens so it adapts to Studio's light/dark themes.
+ */
+function CableSwapDiagram() {
+  return (
+    <div className="my-3 rounded-lg border border-base-300 bg-base-200 p-4">
+      <svg viewBox="0 0 240 110" className="w-full h-auto max-w-[16rem] mx-auto" aria-hidden>
+        {/* left half — the target (highlighted) */}
+        <rect x="14" y="20" width="70" height="50" rx="8" className="fill-base-100 stroke-primary" strokeWidth="2.5" />
+        {/* right half — the source */}
+        <rect x="156" y="20" width="70" height="50" rx="8" className="fill-base-100 stroke-base-300" strokeWidth="2" />
+        {/* cable being unplugged from the right (marked with ✗) */}
+        <line x1="191" y1="70" x2="191" y2="90" className="stroke-base-content/40" strokeWidth="3" strokeLinecap="round" />
+        <rect x="185" y="88" width="12" height="9" rx="1.5" className="fill-base-content/40" />
+        <g className="stroke-danger" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="205" y1="79" x2="217" y2="91" />
+          <line x1="217" y1="79" x2="205" y2="91" />
+        </g>
+        {/* arrow: move the cable from right to left */}
+        <path d="M150 45 H96" className="fill-none stroke-base-content" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M104 38 L94 45 L104 52" className="fill-none stroke-base-content" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {/* cable being plugged into the left (highlighted) */}
+        <line x1="49" y1="70" x2="49" y2="90" className="stroke-primary" strokeWidth="3" strokeLinecap="round" />
+        <rect x="43" y="88" width="12" height="9" rx="1.5" className="fill-primary" />
+      </svg>
+      <div className="flex justify-between max-w-[16rem] mx-auto mt-2 text-sm text-base-content/70 px-1">
+        <span>左に挿す</span>
+        <span>右から抜く</span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Asset A6 (design 09 §3.4, optional): restrained completion illustration.
+ * Both halves + a few sparkles — deliberately not another big check (the screen
+ * already shows a check icon and 🎉). Inline SVG, theme-adaptive.
+ */
+function DoneIllustration() {
+  return (
+    <div className="my-2 flex justify-center">
+      <svg viewBox="0 0 200 80" className="w-44 h-auto" aria-hidden>
+        <rect x="20" y="24" width="72" height="40" rx="8" className="fill-base-100 stroke-base-300" strokeWidth="2" />
+        <rect x="108" y="24" width="72" height="40" rx="8" className="fill-base-100 stroke-base-300" strokeWidth="2" />
+        <g className="fill-success">
+          <path d="M100 6 l3.2 7.6 l7.6 3.2 l-7.6 3.2 l-3.2 7.6 l-3.2 -7.6 l-7.6 -3.2 l7.6 -3.2 z" />
+          <circle cx="150" cy="14" r="2.5" />
+          <circle cx="52" cy="16" r="2" />
+        </g>
+      </svg>
     </div>
   );
 }
@@ -269,6 +330,7 @@ export function FirmwareUpdateModal({ open, onClose }: FirmwareUpdateModalProps)
               右半分の更新が終わりました
             </p>
             <p className="mb-3">次は左半分です。USB ケーブルを左半分に差し替えてください。</p>
+            <CableSwapDiagram />
             <div className="flex justify-end">
               <PrimaryButton onPress={() => dispatch({ type: "SWAP_DONE" })}>
                 差し替えました
@@ -303,6 +365,7 @@ export function FirmwareUpdateModal({ open, onClose }: FirmwareUpdateModalProps)
               <CheckCircle2 className="w-5 h-5" />
               更新が完了しました 🎉
             </p>
+            <DoneIllustration />
             {fw.version && <p className="text-sm text-base-content/60 mb-3">バージョン {fw.version}</p>}
             <div className="flex justify-end">
               <PrimaryButton onPress={handleClose}>完了</PrimaryButton>
