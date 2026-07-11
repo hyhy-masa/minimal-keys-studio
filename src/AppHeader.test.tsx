@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 // jsdom does not implement <dialog> methods used by useModalRef
@@ -24,8 +24,18 @@ vi.mock("./rpc/useConnectedDeviceData", () => ({
 vi.mock("./firmware-update/FirmwareUpdateModal", () => ({
   FirmwareUpdateModal: () => null,
 }));
+// The "ファーム更新" button is gated on isFirmwareUpdateEnabled(), which is false
+// outside Tauri. Mock it so the F-6 wiring can be exercised in jsdom.
+vi.mock("./firmware-update/isTauri", () => ({
+  isFirmwareUpdateEnabled: vi.fn(() => false),
+}));
 
 import { AppHeader } from "./AppHeader";
+import { isFirmwareUpdateEnabled } from "./firmware-update/isTauri";
+
+beforeEach(() => {
+  vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(false);
+});
 
 describe("AppHeader", () => {
   it("shows a help button that starts the tour", () => {
@@ -41,5 +51,27 @@ describe("AppHeader", () => {
   it("renders no help button without onStartTour", () => {
     render(<AppHeader />);
     expect(screen.queryByLabelText("使い方を見る")).toBeNull();
+  });
+});
+
+describe("AppHeader firmware-update button (F-6)", () => {
+  it("shows the firmware-update button when the feature flag is on", () => {
+    vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(true);
+    render(<AppHeader onFwUpdateOpenChange={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /ファーム更新/ })).toBeTruthy();
+  });
+
+  it("calls onFwUpdateOpenChange(true) when the button is pressed", () => {
+    vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(true);
+    const onFwUpdateOpenChange = vi.fn();
+    render(<AppHeader onFwUpdateOpenChange={onFwUpdateOpenChange} />);
+    screen.getByRole("button", { name: /ファーム更新/ }).click();
+    expect(onFwUpdateOpenChange).toHaveBeenCalledWith(true);
+  });
+
+  it("hides the firmware-update button when the feature flag is off", () => {
+    vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(false);
+    render(<AppHeader />);
+    expect(screen.queryByRole("button", { name: /ファーム更新/ })).toBeNull();
   });
 });

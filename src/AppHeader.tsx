@@ -30,6 +30,11 @@ export interface AppHeaderProps {
   onStartTour?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
+  // Firmware-update wizard open state is owned by App (lifted for F-6) so that
+  // ConnectModal can defer to it. Optional so bare AppHeader renders/tests keep
+  // working; the button is a no-op until App wires onFwUpdateOpenChange.
+  fwUpdateOpen?: boolean;
+  onFwUpdateOpenChange?: (open: boolean) => void;
 }
 
 export const AppHeader = ({
@@ -43,9 +48,10 @@ export const AppHeader = ({
   onDisconnect,
   onResetSettings,
   onStartTour,
+  fwUpdateOpen = false,
+  onFwUpdateOpenChange,
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
-  const [showFirmwareUpdate, setShowFirmwareUpdate] = useState(false);
   const fwUpdateEnabled = isFirmwareUpdateEnabled();
   const { osMode, setOsMode } = useOsMode();
 
@@ -105,8 +111,8 @@ export const AppHeader = ({
       </GenericModal>
       {fwUpdateEnabled && (
         <FirmwareUpdateModal
-          open={showFirmwareUpdate}
-          onClose={() => setShowFirmwareUpdate(false)}
+          open={fwUpdateOpen}
+          onClose={() => onFwUpdateOpenChange?.(false)}
         />
       )}
       <MenuTrigger>
@@ -206,7 +212,7 @@ export const AppHeader = ({
         {fwUpdateEnabled && (
           <Button
             className="flex items-center gap-1 px-2 py-1.5 rounded text-sm enabled:hover:bg-base-300"
-            onPress={() => setShowFirmwareUpdate(true)}
+            onPress={() => onFwUpdateOpenChange?.(true)}
           >
             <Download className="inline-block w-4" />
             ファーム更新

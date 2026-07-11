@@ -8,7 +8,9 @@
 //  - A tool older than the manifest's min_tool_version is blocked with guidance.
 //  - Any dead-end funnels to recovery, never to a stuck state.
 
-export const TOOL_VERSION = "0.1.0";
+import { stripV } from "./versions";
+
+export const TOOL_VERSION = "0.4.0";
 
 export interface Manifest {
   schema: number;
@@ -150,7 +152,11 @@ export function reduce(state: WizardState, event: WizardEvent): WizardState {
     case "fetching_manifest":
       if (event.type === "FETCH_OK") {
         const min = event.manifest.min_tool_version;
-        if (min && !semverGe(TOOL_VERSION, min)) {
+        // Strip a leading "v" on BOTH sides: manifests carry "v1.4.0"-style tags
+        // (see versions.ts / manifest.rs), and without this the semver-lite parse
+        // hits the non-numeric "v" segment, yields [], and silently treats the
+        // gate as "no constraint" — letting an out-of-date tool proceed. (M-2)
+        if (min && !semverGe(stripV(TOOL_VERSION), stripV(min))) {
           return { step: "blocked", reason: "tool_too_old" };
         }
         return { step: "show_release", manifest: event.manifest };

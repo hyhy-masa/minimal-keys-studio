@@ -56,6 +56,10 @@ export function formatError(e: unknown): string {
       return "書き込みモードのキーボードにアクセスできませんでした。システム設定のプライバシーで許可が必要な場合があります。";
     case "DownloadFailed":
       return "ダウンロードに失敗しました。インターネット接続を確認して、もう一度お試しください。";
+    case "ManifestInvalid":
+      return "更新情報を正しく読み取れませんでした。アプリが古い可能性があります。最新のアプリをご確認ください（LINE / Discord に案内があります）。";
+    case "Io":
+      return "パソコン側のファイル操作に失敗しました。アプリを再起動してもう一度お試しください（直らない場合はサポートへ）。";
     case "Cancelled":
       return "操作をキャンセルしました。";
     default:

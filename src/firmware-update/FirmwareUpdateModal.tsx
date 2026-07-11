@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Button } from "react-aria-components";
 import { AlertTriangle, CheckCircle2, Loader2, X } from "lucide-react";
 import { GenericModal } from "../GenericModal";
@@ -155,11 +155,11 @@ export function FirmwareUpdateModal({ open, onClose }: FirmwareUpdateModalProps)
   const { state, progress, start, cancel, dispatch, recovery } = useFirmwareUpdate();
   const fw = useFirmwareVersion();
 
-  const flashing =
-    state.step === "r_flashing" ||
-    state.step === "l_flashing" ||
-    state.step === "recovery_flashing";
-  const ref = useModalRef(open, false, !flashing);
+  // We drive Escape suppression ourselves (see the `cancel` listener below), so
+  // we intentionally do NOT pass useModalRef's allowCancel/reopen path: that
+  // reopen() fires the dialog's `close` event, which reaches GenericModal.onClose
+  // and desyncs the parent's open flag. (F-5)
+  const ref = useModalRef(open);
 
   // Fresh start every time the modal opens.
   useEffect(() => {
@@ -180,6 +180,24 @@ export function FirmwareUpdateModal({ open, onClose }: FirmwareUpdateModalProps)
     state.step === "recovery" ||
     state.step === "recovery_waiting" ||
     state.step === "recovery_done";
+
+  // Native <dialog> lets Escape close the modal even when we hide the X and
+  // disable the "中止" button. On any non-dismissable step (canClose=false:
+  // downloading / *_confirm / *_bootloader_guide / *_flashing / swap_to_l /
+  // verify_checklist / recovery_flashing) that would tear the wizard away
+  // mid-flow — worst case during a write. Prevent the dialog's `cancel` event so
+  // Escape is a no-op exactly when the on-screen close affordances are hidden. (F-5)
+  const canCloseRef = useRef(canClose);
+  canCloseRef.current = canClose;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onCancel = (e: Event) => {
+      if (!canCloseRef.current) e.preventDefault();
+    };
+    el.addEventListener("cancel", onCancel);
+    return () => el.removeEventListener("cancel", onCancel);
+  }, [ref]);
 
   const currentVersion = fw.version ?? "不明";
 
@@ -417,7 +435,7 @@ export function FirmwareUpdateModal({ open, onClose }: FirmwareUpdateModalProps)
   })();
 
   return (
-    <GenericModal ref={ref} className="w-[min(560px,92vw)] max-h-[85vh] overflow-y-auto" onClose={onClose}>
+    <GenericModal ref={ref} className="w-[min(560px,92vw)] max-h-[85vh] overflow-y-auto" onClose={handleClose}>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-lg font-semibold">{stepTitle[state.step]}</h2>
         {canClose && (

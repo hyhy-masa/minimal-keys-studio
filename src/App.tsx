@@ -221,6 +221,10 @@ function AppInner() {
   const [doIt, undo, redo, canUndo, canRedo, reset] = useUndoRedo();
   const [showAbout, setShowAbout] = useState(false);
   const [showLicenseNotice, setShowLicenseNotice] = useState(false);
+  // Lifted from AppHeader so ConnectModal can defer to it: while the firmware
+  // wizard is open we must NOT stack ConnectModal on top of it, even if the RPC
+  // link drops mid-update (bootloader reboot makes conn null). (F-6)
+  const [fwUpdateOpen, setFwUpdateOpen] = useState(false);
   const [connectionAbort, setConnectionAbort] = useState(new AbortController());
   const [activeTab, setActiveTab] = useState<ActiveTab>("keymap");
   const [mountedTabs, setMountedTabs] = useState<Set<ActiveTab>>(new Set(["keymap"]));
@@ -396,7 +400,7 @@ function AppInner() {
             onDecline={declinePrompt}
           />
           <ConnectModal
-            open={!conn.conn}
+            open={!conn.conn && !fwUpdateOpen}
             transports={TRANSPORTS}
             onTransportCreated={onConnect}
           />
@@ -417,6 +421,8 @@ function AppInner() {
               onDisconnect={disconnect}
               onResetSettings={resetSettings}
               onStartTour={startTour}
+              fwUpdateOpen={fwUpdateOpen}
+              onFwUpdateOpenChange={setFwUpdateOpen}
             />
             {conn.conn && (
               <nav className="flex items-center gap-1 border-b border-gray-200 bg-gray-50 px-3 py-1">

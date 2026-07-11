@@ -5,7 +5,7 @@
 //! wizard from it.
 
 use crate::error::FlashError;
-use crate::uf2::Uf2Limits;
+use crate::uf2::{Uf2Limits, DEFAULT_TARGET_ADDR_MAX, DEFAULT_TARGET_ADDR_MIN};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -27,16 +27,21 @@ pub struct FwAsset {
 
 impl FwAsset {
     /// UF2 validation limits derived from this asset (sha + address window).
+    ///
+    /// The manifest may only *narrow* the default address window, never widen
+    /// it (F-3): the default window (below the MBR/SoftDevice/bootloader) is a
+    /// hard ceiling clamped in via `max`/`min`, so a tampered manifest can never
+    /// steer a write into the bootloader region and brick the board.
     pub fn uf2_limits(&self) -> Uf2Limits {
         let mut l = Uf2Limits {
             expected_sha256: Some(self.sha256.clone()),
             ..Uf2Limits::default()
         };
         if let Some(min) = self.target_addr_min.as_deref().and_then(parse_hex_u32) {
-            l.target_addr_min = min;
+            l.target_addr_min = min.max(DEFAULT_TARGET_ADDR_MIN);
         }
         if let Some(max) = self.target_addr_max.as_deref().and_then(parse_hex_u32) {
-            l.target_addr_max = max;
+            l.target_addr_max = max.min(DEFAULT_TARGET_ADDR_MAX);
         }
         l
     }
@@ -165,6 +170,44 @@ mod tests {
         assert_eq!(l.target_addr_min, 0x27000);
         assert_eq!(l.target_addr_max, 0xF4000);
         assert_eq!(l.expected_sha256.as_deref(), Some("aa"));
+    }
+
+    #[test]
+    fn asset_limits_clamp_widening_window() {
+        // A hostile/broken manifest that tries to WIDEN the window (min below the
+        // default, max above it into the bootloader region) must be clamped back
+        // to the default window — never widened. (F-3)
+        let asset = FwAsset {
+            role: "central".into(),
+            build_target: None,
+            name: "R.uf2".into(),
+            url: "https://x/R.uf2".into(),
+            sha256: "aa".into(),
+            size: 0,
+            target_addr_min: Some("0x1000".into()),   // below default min
+            target_addr_max: Some("0xFF000".into()),  // above default max (bootloader)
+        };
+        let l = asset.uf2_limits();
+        assert_eq!(l.target_addr_min, DEFAULT_TARGET_ADDR_MIN);
+        assert_eq!(l.target_addr_max, DEFAULT_TARGET_ADDR_MAX);
+    }
+
+    #[test]
+    fn asset_limits_allow_narrowing_window() {
+        // Narrowing (min raised, max lowered) is legitimate and must be honored.
+        let asset = FwAsset {
+            role: "central".into(),
+            build_target: None,
+            name: "R.uf2".into(),
+            url: "https://x/R.uf2".into(),
+            sha256: "aa".into(),
+            size: 0,
+            target_addr_min: Some("0x30000".into()),
+            target_addr_max: Some("0xE0000".into()),
+        };
+        let l = asset.uf2_limits();
+        assert_eq!(l.target_addr_min, 0x30000);
+        assert_eq!(l.target_addr_max, 0xE0000);
     }
 
     #[test]

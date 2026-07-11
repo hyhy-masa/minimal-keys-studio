@@ -59,6 +59,22 @@ describe("wizard reducer", () => {
     expect(s.step).toBe("show_release");
   });
 
+  // M-2: a "v"-prefixed min_tool_version must NOT silently disable the gate. The
+  // semver-lite parse breaks on the "v" segment and would otherwise return []
+  // (treated as "no constraint"), letting an out-of-date tool through.
+  it('a "v"-prefixed min_tool_version still blocks an out-of-date tool (M-2)', () => {
+    const withV: Manifest = { ...plain, min_tool_version: "v9.0.0" };
+    const s = run([{ type: "START" }, { type: "FETCH_OK", manifest: withV }]);
+    expect(s.step).toBe("blocked");
+    expect(s.step === "blocked" && s.reason).toBe("tool_too_old");
+  });
+
+  it('a satisfied "v"-prefixed min_tool_version proceeds to show_release (M-2)', () => {
+    const okV: Manifest = { ...plain, min_tool_version: "v0.0.1" };
+    const s = run([{ type: "START" }, { type: "FETCH_OK", manifest: okV }]);
+    expect(s.step).toBe("show_release");
+  });
+
   it("cannot reach L before R is flashed (ordering is structural)", () => {
     const s = run([
       { type: "START" },
