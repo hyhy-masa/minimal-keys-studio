@@ -35,6 +35,11 @@ export interface Progress {
   detail?: { written?: number; total?: number; attempt?: number };
 }
 
+export interface AcquiredVolume {
+  volume: VolumeInfo;
+  origin: "existing" | "new";
+}
+
 /**
  * Drives the wizard: pure transitions come from the reducer, side effects
  * (manifest fetch, download, bootloader wait, write) are fired by an effect
@@ -141,20 +146,24 @@ export function useFirmwareUpdate(): {
       }
     };
 
-    const waitBootloader = async (onDetected: WizardEvent) => {
+    const waitBootloader = async (side: "R" | "L") => {
       try {
-        const vols = await invoke<VolumeInfo[]>("flash_scan_volumes");
-        const baseline = vols.map((v) => v.path);
-        const vol = await invoke<VolumeInfo>("flash_wait_for_bootloader", {
-          baseline,
+        const acquired = await invoke<AcquiredVolume>("flash_wait_for_bootloader", {
+          baseline: [],
+          adoptPresent: true,
           timeoutSecs: 60,
         });
-        volumeRef.current = vol.path;
-        recordVolume(vol);
-        if (!cancelled) dispatch(onDetected);
+        if (cancelled) return;
+        volumeRef.current = acquired.volume.path;
+        recordVolume(acquired.volume);
+        dispatch(
+          side === "R"
+            ? { type: "VOLUME_DETECTED_R", origin: acquired.origin }
+            : { type: "VOLUME_DETECTED_L", origin: acquired.origin }
+        );
       } catch (e) {
         recordError(e);
-        if (!cancelled) dispatch({ type: "ENTER_RECOVERY" });
+        if (!cancelled) dispatch({ type: "ENTER_RECOVERY", message: formatError(e) });
       }
     };
 
@@ -190,13 +199,19 @@ export function useFirmwareUpdate(): {
         void download();
         break;
       case "r_bootloader_guide":
-        void waitBootloader({ type: "BOOTLOADER_R" });
+        void waitBootloader("R");
+        break;
+      case "r_flash_confirm":
+        // Confirmation is user-driven only; do not invoke any command here.
         break;
       case "r_flashing":
         void flash("central", { type: "FLASH_R_OK" }, "FLASH_R_ERR");
         break;
       case "l_bootloader_guide":
-        void waitBootloader({ type: "BOOTLOADER_L" });
+        void waitBootloader("L");
+        break;
+      case "l_flash_confirm":
+        // Confirmation is user-driven only; do not invoke any command here.
         break;
       case "l_flashing":
         void flash("peripheral", { type: "FLASH_L_OK" }, "FLASH_L_ERR");

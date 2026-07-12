@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatError } from "./ja";
+import { errorRecoveryButtonLabel, formatError, stepTitle } from "./ja";
 
 // The canonical FlashError variants (crates/mk-flash-core/src/error.rs, tagged
 // `kind`). Every one must map to a real, non-technical Japanese sentence — never
@@ -20,6 +20,7 @@ const FLASH_ERROR_KINDS = [
   "Cancelled",
   "PermissionDenied",
   "Io",
+  "ConnectionLost",
 ] as const;
 
 const FALLBACK = "予期しないエラーが発生しました。もう一度お試しください。";
@@ -41,6 +42,17 @@ describe("formatError (FlashError coverage)", () => {
     const msg = formatError({ kind: "Io", detail: { reason: "eio" } });
     expect(msg).not.toBe(FALLBACK);
     expect(msg).toContain("ファイル操作");
+  });
+
+  it("ConnectionLost tells the customer to reconnect the cable", () => {
+    expect(formatError({ kind: "ConnectionLost" })).toBe(
+      "キーボードとの接続が切れたようです。ケーブルを挿し直して、もう一度お試しください。"
+    );
+  });
+
+  it("errorRecoveryButtonLabel is non-empty and distinct from the recovery title", () => {
+    expect(errorRecoveryButtonLabel).not.toBe("");
+    expect(errorRecoveryButtonLabel).not.toBe(stepTitle.recovery);
   });
 
   it("falls back gracefully for unknown / malformed shapes", () => {

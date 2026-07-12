@@ -24,8 +24,23 @@ const toRFlashed = (m: Manifest): WizardEvent[] => [
   { type: "PROCEED" },
   { type: "DOWNLOAD_OK" },
   { type: "CONFIRM_R" },
-  { type: "BOOTLOADER_R" },
+  { type: "VOLUME_DETECTED_R", origin: "new" },
+  { type: "CONFIRM_WRITE_R" },
   { type: "FLASH_R_OK" },
+];
+
+const toRBootloaderGuide = (m: Manifest): WizardEvent[] => [
+  { type: "START" },
+  { type: "FETCH_OK", manifest: m },
+  { type: "PROCEED" },
+  { type: "DOWNLOAD_OK" },
+  { type: "CONFIRM_R" },
+];
+
+const toLBootloaderGuide = (m: Manifest): WizardEvent[] => [
+  ...toRFlashed(m),
+  { type: "SWAP_DONE" },
+  { type: "CONFIRM_L" },
 ];
 
 describe("wizard reducer", () => {
@@ -34,7 +49,8 @@ describe("wizard reducer", () => {
       ...toRFlashed(plain),
       { type: "SWAP_DONE" },
       { type: "CONFIRM_L" },
-      { type: "BOOTLOADER_L" },
+      { type: "VOLUME_DETECTED_L", origin: "new" },
+      { type: "CONFIRM_WRITE_L" },
       { type: "FLASH_L_OK" },
       { type: "CHECKLIST_OK" },
     ]);
@@ -82,7 +98,8 @@ describe("wizard reducer", () => {
       { type: "PROCEED" },
       { type: "DOWNLOAD_OK" }, // at r_confirm
       { type: "CONFIRM_L" }, // wrong-half events: ignored
-      { type: "BOOTLOADER_L" },
+      { type: "VOLUME_DETECTED_L", origin: "new" },
+      { type: "CONFIRM_WRITE_L" },
       { type: "FLASH_L_OK" },
     ]);
     expect(s.step).toBe("r_confirm");
@@ -99,7 +116,8 @@ describe("wizard reducer", () => {
       ...toRFlashed(plain),
       { type: "SWAP_DONE" },
       { type: "CONFIRM_L" },
-      { type: "BOOTLOADER_L" },
+      { type: "VOLUME_DETECTED_L", origin: "new" },
+      { type: "CONFIRM_WRITE_L" },
       { type: "FLASH_L_OK" },
       { type: "CHECKLIST_FAIL" },
     ]);
@@ -122,6 +140,90 @@ describe("wizard reducer", () => {
     const s1 = reduce(s0, { type: "FLASH_R_OK" });
     expect(s1).toEqual(s0);
   });
+
+  it("T-1: guide -> VOLUME_DETECTED keeps the manifest and origin in an R/L confirmation state", () => {
+    const r = run([...toRBootloaderGuide(plain), { type: "VOLUME_DETECTED_R", origin: "existing" }]);
+    expect(r).toEqual({ step: "r_flash_confirm", manifest: plain, origin: "existing" });
+
+    const l = run([...toLBootloaderGuide(plain), { type: "VOLUME_DETECTED_L", origin: "new" }]);
+    expect(l).toEqual({ step: "l_flash_confirm", manifest: plain, origin: "new" });
+  });
+
+  it("T-2: confirmation is the only transition from each flash-confirm state to flashing", () => {
+    const rConfirm = run([
+      ...toRBootloaderGuide(plain),
+      { type: "VOLUME_DETECTED_R", origin: "new" },
+    ]);
+    expect(reduce(rConfirm, { type: "CONFIRM_WRITE_R" }).step).toBe("r_flashing");
+
+    const lConfirm = run([
+      ...toLBootloaderGuide(plain),
+      { type: "VOLUME_DETECTED_L", origin: "new" },
+    ]);
+    expect(reduce(lConfirm, { type: "CONFIRM_WRITE_L" }).step).toBe("l_flashing");
+  });
+
+  it("T-3: unrelated and duplicate detection events are no-ops while awaiting R confirmation", () => {
+    const confirm = run([
+      ...toRBootloaderGuide(plain),
+      { type: "VOLUME_DETECTED_R", origin: "new" },
+    ]);
+    expect(reduce(confirm, { type: "FLASH_R_OK" })).toEqual(confirm);
+    expect(reduce(confirm, { type: "VOLUME_DETECTED_R", origin: "existing" })).toEqual(confirm);
+  });
+
+  it("T-4: CONFIRM_WRITE_R is a no-op in the guide, so guide cannot transition directly to flashing", () => {
+    const guide = run(toRBootloaderGuide(plain));
+    expect(guide.step).toBe("r_bootloader_guide");
+    expect(reduce(guide, { type: "CONFIRM_WRITE_R" })).toEqual(guide);
+  });
+
+  it("T-5: flash-confirm RESET returns idle and ENTER_RECOVERY has no retry origin", () => {
+    const confirm = run([
+      ...toRBootloaderGuide(plain),
+      { type: "VOLUME_DETECTED_R", origin: "new" },
+    ]);
+    expect(reduce(confirm, { type: "RESET" })).toEqual(initialState);
+    expect(reduce(confirm, { type: "ENTER_RECOVERY" })).toEqual({ step: "recovery", from: null });
+  });
+
+  it("T-6: ENTER_RECOVERY carries an optional message into recovery", () => {
+    const withMessage = reduce(initialState, { type: "ENTER_RECOVERY", message: "接続が切れました" });
+    expect(withMessage).toEqual({ step: "recovery", from: null, message: "接続が切れました" });
+
+    const withoutMessage = reduce(initialState, { type: "ENTER_RECOVERY" });
+    expect(withoutMessage).toEqual({ step: "recovery", from: null });
+  });
+
+  it("T-7: the full happy path passes through both confirmation gates before done", () => {
+    const s = run([
+      ...toRBootloaderGuide(plain),
+      { type: "VOLUME_DETECTED_R", origin: "new" },
+      { type: "CONFIRM_WRITE_R" },
+      { type: "FLASH_R_OK" },
+      { type: "SWAP_DONE" },
+      { type: "CONFIRM_L" },
+      { type: "VOLUME_DETECTED_L", origin: "existing" },
+      { type: "CONFIRM_WRITE_L" },
+      { type: "FLASH_L_OK" },
+      { type: "CHECKLIST_OK" },
+    ]);
+    expect(s.step).toBe("done");
+  });
+
+  it("T-8: recovery_flashing RECOVERY_FLASH_ERR returns to recovery and preserves from", () => {
+    const from = run(toRBootloaderGuide(plain));
+    const flashing = {
+      step: "recovery_flashing" as const,
+      side: "R" as const,
+      from,
+    };
+    expect(reduce(flashing, { type: "RECOVERY_FLASH_ERR", message: "書き込み失敗" })).toEqual({
+      step: "recovery",
+      from,
+      message: "書き込み失敗",
+    });
+  });
 });
 
 describe("recovery sub-flow (S1.12b)", () => {
@@ -129,7 +231,8 @@ describe("recovery sub-flow (S1.12b)", () => {
     ...toRFlashed(plain),
     { type: "SWAP_DONE" },
     { type: "CONFIRM_L" },
-    { type: "BOOTLOADER_L" },
+    { type: "VOLUME_DETECTED_L", origin: "new" },
+    { type: "CONFIRM_WRITE_L" },
     { type: "FLASH_L_OK" },
     { type: "CHECKLIST_FAIL" },
   ];

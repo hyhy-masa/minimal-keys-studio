@@ -13,7 +13,7 @@ import { useCallback } from "react";
 import { invoke, Channel } from "@tauri-apps/api/core";
 import { formatError } from "./ja";
 import type { WizardEvent, Side } from "./machine";
-import type { Progress, Asset, FullManifest } from "./useFirmwareUpdate";
+import type { Progress, Asset, FullManifest, AcquiredVolume } from "./useFirmwareUpdate";
 import { exportSupportLog, type SupportLogAccumulator, type VolumeInfo } from "./supportLog";
 
 const ROLE_BY_SIDE: Record<Side, "central" | "peripheral"> = { R: "central", L: "peripheral" };
@@ -61,17 +61,18 @@ export function useRecoveryActions(ctx: RecoveryContext): RecoveryActions {
         // matching single volume (design 09 §6.4②, flasher volume.rs:64-95): the
         // impatient-customer trap (reset the half before the guide screen) is
         // handled without needing a "new" volume to appear.
-        const vol = await invoke<VolumeInfo>("flash_wait_for_bootloader", {
+        const acquired = await invoke<AcquiredVolume>("flash_wait_for_bootloader", {
           baseline: [],
+          adoptPresent: true,
           timeoutSecs: 60,
         });
-        recordVolume(vol);
+        recordVolume(acquired.volume);
         dispatch({ type: "RECOVERY_VOLUME_OK" });
 
         const ch = new Channel<Progress>();
         ch.onmessage = (msg) => setProgress(msg);
         await invoke<unknown>("flash_write_uf2", {
-          volume: vol.path,
+          volume: acquired.volume.path,
           filename: FILE_BY_SIDE[side],
           uf2Path,
           sha256: asset?.sha256 ?? "",

@@ -8,10 +8,12 @@ export const stepTitle: Record<WizardState["step"], string> = {
   downloading: "ファームウェアをダウンロード中…",
   r_confirm: "右側（R）を更新します",
   r_bootloader_guide: "右側を書き込みモードにしてください",
+  r_flash_confirm: "右側に書き込む準備ができました",
   r_flashing: "右側に書き込み中…",
   swap_to_l: "ケーブルを左側（L）に差し替えてください",
   l_confirm: "左側（L）を更新します",
   l_bootloader_guide: "左側を書き込みモードにしてください",
+  l_flash_confirm: "左側に書き込む準備ができました",
   l_flashing: "左側に書き込み中…",
   verify_checklist: "動作を確認してください",
   done: "更新が完了しました",
@@ -22,6 +24,8 @@ export const stepTitle: Record<WizardState["step"], string> = {
   recovery_flashing: "片側を書き直しています…",
   recovery_done: "書き直しが完了しました",
 };
+
+export const errorRecoveryButtonLabel = "対処方法を見る";
 
 export const blockReasonText: Record<BlockReason, string> = {
   settings_reset_unsupported:
@@ -60,6 +64,8 @@ export function formatError(e: unknown): string {
       return "更新情報を正しく読み取れませんでした。アプリが古い可能性があります。最新のアプリをご確認ください（LINE / Discord に案内があります）。";
     case "Io":
       return "パソコン側のファイル操作に失敗しました。アプリを再起動してもう一度お試しください（直らない場合はサポートへ）。";
+    case "ConnectionLost":
+      return "キーボードとの接続が切れたようです。ケーブルを挿し直して、もう一度お試しください。";
     case "Cancelled":
       return "操作をキャンセルしました。";
     default:

@@ -42,6 +42,7 @@ export function semverGe(have: string, need: string): boolean {
 
 /** Which half of the split a recovery re-flash targets. R = central, L = peripheral. */
 export type Side = "R" | "L";
+export type VolumeOrigin = "existing" | "new";
 
 export type WizardState =
   | { step: "idle" }
@@ -50,10 +51,12 @@ export type WizardState =
   | { step: "downloading"; manifest: Manifest }
   | { step: "r_confirm"; manifest: Manifest }
   | { step: "r_bootloader_guide"; manifest: Manifest }
+  | { step: "r_flash_confirm"; manifest: Manifest; origin: VolumeOrigin }
   | { step: "r_flashing"; manifest: Manifest }
   | { step: "swap_to_l"; manifest: Manifest }
   | { step: "l_confirm"; manifest: Manifest }
   | { step: "l_bootloader_guide"; manifest: Manifest }
+  | { step: "l_flash_confirm"; manifest: Manifest; origin: VolumeOrigin }
   | { step: "l_flashing"; manifest: Manifest }
   | { step: "verify_checklist"; manifest: Manifest }
   | { step: "done"; manifest: Manifest }
@@ -79,17 +82,19 @@ export type WizardEvent =
   | { type: "DOWNLOAD_OK" }
   | { type: "DOWNLOAD_ERR"; message: string }
   | { type: "CONFIRM_R" }
-  | { type: "BOOTLOADER_R" }
+  | { type: "VOLUME_DETECTED_R"; origin: VolumeOrigin }
+  | { type: "CONFIRM_WRITE_R" }
   | { type: "FLASH_R_OK" }
   | { type: "FLASH_R_ERR"; message: string }
   | { type: "SWAP_DONE" }
   | { type: "CONFIRM_L" }
-  | { type: "BOOTLOADER_L" }
+  | { type: "VOLUME_DETECTED_L"; origin: VolumeOrigin }
+  | { type: "CONFIRM_WRITE_L" }
   | { type: "FLASH_L_OK" }
   | { type: "FLASH_L_ERR"; message: string }
   | { type: "CHECKLIST_OK" }
   | { type: "CHECKLIST_FAIL" }
-  | { type: "ENTER_RECOVERY" }
+  | { type: "ENTER_RECOVERY"; message?: string }
   | { type: "RETRY_CURRENT_STEP" }
   | { type: "RECOVERY_FLASH_SIDE"; side: Side }
   | { type: "RECOVERY_VOLUME_OK" }
@@ -126,23 +131,27 @@ function redrivableOrigin(state: WizardState): WizardState | null {
 }
 
 /** Enter recovery, preserving the retry-origin when already inside the sub-flow. */
-function enterRecovery(state: WizardState): WizardState {
+function recoveryState(from: WizardState | null, message?: string): WizardState {
+  return message === undefined ? { step: "recovery", from } : { step: "recovery", from, message };
+}
+
+function enterRecovery(state: WizardState, message?: string): WizardState {
   switch (state.step) {
     case "recovery":
-      return state;
+      return message === undefined ? state : { ...state, message };
     case "recovery_waiting":
     case "recovery_flashing":
-      return { step: "recovery", from: state.from };
+      return recoveryState(state.from, message);
     case "recovery_done":
-      return { step: "recovery", from: null };
+      return recoveryState(null, message);
     default:
-      return { step: "recovery", from: redrivableOrigin(state) };
+      return recoveryState(redrivableOrigin(state), message);
   }
 }
 
 export function reduce(state: WizardState, event: WizardEvent): WizardState {
   if (event.type === "RESET") return initialState;
-  if (event.type === "ENTER_RECOVERY") return enterRecovery(state);
+  if (event.type === "ENTER_RECOVERY") return enterRecovery(state, event.message);
 
   switch (state.step) {
     case "idle":
@@ -183,7 +192,12 @@ export function reduce(state: WizardState, event: WizardEvent): WizardState {
       return state;
 
     case "r_bootloader_guide":
-      if (event.type === "BOOTLOADER_R") return { step: "r_flashing", manifest: state.manifest };
+      if (event.type === "VOLUME_DETECTED_R")
+        return { step: "r_flash_confirm", manifest: state.manifest, origin: event.origin };
+      return state;
+
+    case "r_flash_confirm":
+      if (event.type === "CONFIRM_WRITE_R") return { step: "r_flashing", manifest: state.manifest };
       return state;
 
     case "r_flashing":
@@ -200,7 +214,12 @@ export function reduce(state: WizardState, event: WizardEvent): WizardState {
       return state;
 
     case "l_bootloader_guide":
-      if (event.type === "BOOTLOADER_L") return { step: "l_flashing", manifest: state.manifest };
+      if (event.type === "VOLUME_DETECTED_L")
+        return { step: "l_flash_confirm", manifest: state.manifest, origin: event.origin };
+      return state;
+
+    case "l_flash_confirm":
+      if (event.type === "CONFIRM_WRITE_L") return { step: "l_flashing", manifest: state.manifest };
       return state;
 
     case "l_flashing":
@@ -243,4 +262,18 @@ export function reduce(state: WizardState, event: WizardEvent): WizardState {
 /** Apply a sequence of events; convenience for tests and drivers. */
 export function run(events: WizardEvent[], from: WizardState = initialState): WizardState {
   return events.reduce(reduce, from);
+}
+
+/** Whether the modal may be dismissed from a given wizard step. */
+export function canCloseStep(step: WizardState["step"]): boolean {
+  return (
+    step === "idle" ||
+    step === "show_release" ||
+    step === "done" ||
+    step === "blocked" ||
+    step === "error" ||
+    step === "recovery" ||
+    step === "recovery_waiting" ||
+    step === "recovery_done"
+  );
 }
