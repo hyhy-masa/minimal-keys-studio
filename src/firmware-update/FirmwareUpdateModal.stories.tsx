@@ -118,10 +118,15 @@ const stories: Record<string, Story> = {
   }),
   ...pair("BootloaderGuideR", { state: { step: "r_bootloader_guide", manifest } }),
   ...pair("BootloaderGuideL", { state: { step: "l_bootloader_guide", manifest } }),
+  ...pair("FlashConfirmRNew", { state: { step: "r_flash_confirm", manifest, origin: "new" } }),
+  ...pair("FlashConfirmRExisting", { state: { step: "r_flash_confirm", manifest, origin: "existing" } }),
+  ...pair("FlashConfirmLNew", { state: { step: "l_flash_confirm", manifest, origin: "new" } }),
+  ...pair("FlashConfirmLExisting", { state: { step: "l_flash_confirm", manifest, origin: "existing" } }),
   ...pair("Flashing", { state: { step: "r_flashing", manifest }, progress: flashingProgress }),
   ...pair("SwapToL", { state: { step: "swap_to_l", manifest } }),
   ...pair("VerifyChecklist", { state: { step: "verify_checklist", manifest } }),
   ...pair("Done", { state: { step: "done", manifest }, fwVersion: "1.5.0", fwSupported: false }),
+  ...pair("DoneDisconnected", { state: { step: "done", manifest }, fwVersion: null, fwSupported: false }),
   ...pair("Blocked", { state: { step: "blocked", reason: "settings_reset_unsupported" } }),
   ...pair("Error", {
     state: {
@@ -143,6 +148,14 @@ export const BootloaderGuideR = stories.BootloaderGuideR;
 export const BootloaderGuideRDark = stories.BootloaderGuideRDark;
 export const BootloaderGuideL = stories.BootloaderGuideL;
 export const BootloaderGuideLDark = stories.BootloaderGuideLDark;
+export const FlashConfirmRNew = stories.FlashConfirmRNew;
+export const FlashConfirmRNewDark = stories.FlashConfirmRNewDark;
+export const FlashConfirmRExisting = stories.FlashConfirmRExisting;
+export const FlashConfirmRExistingDark = stories.FlashConfirmRExistingDark;
+export const FlashConfirmLNew = stories.FlashConfirmLNew;
+export const FlashConfirmLNewDark = stories.FlashConfirmLNewDark;
+export const FlashConfirmLExisting = stories.FlashConfirmLExisting;
+export const FlashConfirmLExistingDark = stories.FlashConfirmLExistingDark;
 export const Flashing = stories.Flashing;
 export const FlashingDark = stories.FlashingDark;
 export const SwapToL = stories.SwapToL;
@@ -151,6 +164,8 @@ export const VerifyChecklist = stories.VerifyChecklist;
 export const VerifyChecklistDark = stories.VerifyChecklistDark;
 export const Done = stories.Done;
 export const DoneDark = stories.DoneDark;
+export const DoneDisconnected = stories.DoneDisconnected;
+export const DoneDisconnectedDark = stories.DoneDisconnectedDark;
 export const Blocked = stories.Blocked;
 export const BlockedDark = stories.BlockedDark;
 export const Error_ = stories.Error;

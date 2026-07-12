@@ -176,7 +176,7 @@ export function RecoveryPanel({
       return (
         <div>
           <p className="mb-1">
-            {state.side === "R" ? "右" : "左"}側のリセットボタンを「カチカチッ」と素早く2回押してください。
+            ① USB ケーブルがつながっているか確認 → ② {state.side === "R" ? "右" : "左"}側のリセットボタンを「カチカチッ」と素早く2回押してください。
           </p>
           <p className="flex items-center gap-2 text-sm text-base-content/70 my-3">
             <Loader2 className="w-4 h-4 animate-spin" />

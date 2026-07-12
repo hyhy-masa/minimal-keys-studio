@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { Button } from "react-aria-components";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import type { WizardEvent, WizardState } from "./machine";
-import { blockReasonText } from "./ja";
+import { blockReasonText, errorRecoveryButtonLabel } from "./ja";
 import { isUpdateAvailable } from "./versions";
 import { ProgressBar } from "./ProgressBar";
 import { RecoveryPanel } from "./RecoveryPanel";
@@ -157,8 +157,6 @@ export interface WizardBodyProps {
 }
 
 export function WizardBody({ state, progress, fw, dispatch, cancel, onClose, start, recovery }: WizardBodyProps) {
-  const currentVersion = fw.version ?? "不明";
-
   switch (state.step) {
     case "idle":
       return (
@@ -185,7 +183,8 @@ export function WizardBody({ state, progress, fw, dispatch, cancel, onClose, sta
 
     case "show_release": {
       const latest = state.manifest.version;
-      const available = isUpdateAvailable(currentVersion === "不明" ? "" : currentVersion, latest);
+      const available = isUpdateAvailable(fw.version ?? "", latest);
+      const currentVersionDisplay = fw.version ?? "確認できません（更新には支障ありません）";
       const upToDate = fw.supported && fw.version !== null && !available;
       return (
         <div>
@@ -202,7 +201,7 @@ export function WizardBody({ state, progress, fw, dispatch, cancel, onClose, sta
           )}
           <div className="text-sm grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 my-3">
             <span className="text-base-content/60">お使いのバージョン</span>
-            <span>{currentVersion}</span>
+            <span>{currentVersionDisplay}</span>
             <span className="text-base-content/60">最新のバージョン</span>
             <span>{latest}</span>
           </div>
@@ -270,10 +269,33 @@ export function WizardBody({ state, progress, fw, dispatch, cancel, onClose, sta
           <GuideDiagram side={side} />
           <p className="flex items-center gap-2 text-sm text-base-content/70">
             <Loader2 className="w-4 h-4 animate-spin" />
-            待機中… ボタンを押すと自動で次に進みます。
+            待機中… ボタンを押すと確認画面に進みます。
           </p>
           <div className="flex justify-end mt-4">
             <GhostButton onPress={cancel}>中止</GhostButton>
+          </div>
+        </div>
+      );
+    }
+
+    case "r_flash_confirm":
+    case "l_flash_confirm": {
+      const side = state.step === "r_flash_confirm" ? "右" : "左";
+      const existingCopy = `この${side}半分はすでに書き込みモードになっています。写真と同じ側（${side}半分）だけがつながっていることを確認してください。反対側がつながったままの場合は、ケーブルを差し替えて「中止」からやり直してください。`;
+      const confirm =
+        state.step === "r_flash_confirm"
+          ? ({ type: "CONFIRM_WRITE_R" } as const)
+          : ({ type: "CONFIRM_WRITE_L" } as const);
+      return (
+        <div>
+          {state.origin === "existing" ? (
+            <p className="mb-3">{existingCopy}</p>
+          ) : (
+            <p className="mb-3">{side}側を書き込みモードで検出しました。</p>
+          )}
+          <div className="flex justify-end gap-3">
+            <GhostButton onPress={cancel}>中止</GhostButton>
+            <PrimaryButton onPress={() => dispatch(confirm)}>このまま進める</PrimaryButton>
           </div>
         </div>
       );
@@ -341,7 +363,7 @@ export function WizardBody({ state, progress, fw, dispatch, cancel, onClose, sta
             更新が完了しました 🎉
           </p>
           <DoneIllustration />
-          {fw.version && <p className="text-sm text-base-content/60 mb-3">バージョン {fw.version}</p>}
+          <p className="text-sm text-base-content/60 mb-3">バージョン {state.manifest.version} を書き込みました</p>
           <div className="flex justify-end">
             <PrimaryButton onPress={onClose}>完了</PrimaryButton>
           </div>
@@ -368,7 +390,7 @@ export function WizardBody({ state, progress, fw, dispatch, cancel, onClose, sta
           <div className="flex justify-end gap-3">
             <GhostButton onPress={() => dispatch({ type: "RESET" })}>最初に戻る</GhostButton>
             <PrimaryButton onPress={() => dispatch({ type: "ENTER_RECOVERY" })}>
-              うまくいかないとき
+              {errorRecoveryButtonLabel}
             </PrimaryButton>
           </div>
         </div>
