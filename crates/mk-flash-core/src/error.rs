@@ -21,6 +21,11 @@ pub enum FlashError {
     #[error("not a UF2 bootloader volume: {path}")]
     NotUf2Volume { path: String },
 
+    /// The volume vanished while (or just before) we were about to write —
+    /// classified after the preflight retry loop confirmed INFO_UF2.TXT is gone.
+    #[error("connection to the bootloader volume was lost: {path}")]
+    ConnectionLost { path: String },
+
     /// The UF2 file failed structural validation.
     #[error("invalid UF2: {reason}")]
     InvalidUf2 { reason: String },

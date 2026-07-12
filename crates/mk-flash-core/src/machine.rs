@@ -39,6 +39,8 @@ impl CancelFlag {
 #[derive(Debug, Clone)]
 pub struct Timings {
     pub stabilize: Duration,
+    pub preflight_retry_wait: Duration,
+    pub preflight_retries: u32,
     pub eacces_retry_wait: Duration,
     pub eacces_max_retries: u32,
     pub unmount_poll: Duration,
@@ -55,6 +57,8 @@ impl Default for Timings {
     fn default() -> Self {
         Self {
             stabilize: Duration::from_secs(2),
+            preflight_retry_wait: Duration::from_millis(250),
+            preflight_retries: 3,
             eacces_retry_wait: Duration::from_secs(2),
             eacces_max_retries: 10,
             unmount_poll: Duration::from_millis(500),
@@ -170,7 +174,7 @@ pub fn flash_uf2(
 
     // Preflight: Board-ID gate (guards against foreign UF2 volumes).
     if let Some(prefix) = &config.board_id_prefix {
-        preflight_board_id(env, volume, prefix)?;
+        preflight_board_id(env, volume, prefix, &config.timings)?;
     }
 
     let threshold = success_threshold(total, &config.timings);
@@ -250,22 +254,33 @@ pub fn flash_uf2(
     }
 }
 
-fn preflight_board_id(env: &dyn FlashEnv, volume: &Path, prefix: &str) -> Result<(), FlashError> {
-    let not_uf2 = || FlashError::NotUf2Volume {
-        path: volume.to_string_lossy().to_string(),
-    };
-    match env.read_info_uf2(volume) {
-        Some(info) => {
-            let ok = parse_board_id(&info)
-                .map(|b| b.starts_with(prefix))
-                .unwrap_or(false);
-            if ok {
-                Ok(())
-            } else {
-                Err(not_uf2())
+fn preflight_board_id(
+    env: &dyn FlashEnv,
+    volume: &Path,
+    prefix: &str,
+    timings: &Timings,
+) -> Result<(), FlashError> {
+    let path = || volume.to_string_lossy().to_string();
+    for attempt in 0..=timings.preflight_retries {
+        match env.read_info_uf2(volume) {
+            Some(info) => {
+                return match parse_board_id(&info) {
+                    Some(board_id) if board_id.starts_with(prefix) => Ok(()),
+                    _ => Err(FlashError::NotUf2Volume { path: path() }),
+                };
             }
+            None if attempt < timings.preflight_retries => {
+                env.sleep(timings.preflight_retry_wait);
+            }
+            None => {}
         }
-        None => Err(not_uf2()),
+    }
+    if env.volume_present(volume) {
+        Err(FlashError::Io {
+            reason: "INFO_UF2.TXT unreadable while volume still mounted (preflight)".into(),
+        })
+    } else {
+        Err(FlashError::ConnectionLost { path: path() })
     }
 }
 
@@ -381,18 +396,32 @@ mod tests {
     struct MockEnv {
         writes: RefCell<Vec<WriteAttempt>>,
         present: RefCell<Vec<bool>>,
-        info: Option<String>,
+        present_read_count: RefCell<u32>,
+        info: RefCell<Vec<Option<String>>>,
+        info_read_count: RefCell<u32>,
+        sleep_count: RefCell<u32>,
     }
     impl MockEnv {
         fn new(writes: Vec<WriteAttempt>, present: Vec<bool>) -> Self {
             MockEnv {
                 writes: RefCell::new(writes),
                 present: RefCell::new(present),
-                info: None,
+                present_read_count: RefCell::new(0),
+                info: RefCell::new(vec![]),
+                info_read_count: RefCell::new(0),
+                sleep_count: RefCell::new(0),
             }
         }
         fn with_info(mut self, info: &str) -> Self {
-            self.info = Some(info.to_string());
+            self.info = RefCell::new(vec![Some(info.to_string())]);
+            self
+        }
+        fn with_info_sequence(mut self, info: Vec<Option<&str>>) -> Self {
+            self.info = RefCell::new(
+                info.into_iter()
+                    .map(|entry| entry.map(str::to_string))
+                    .collect(),
+            );
             self
         }
     }
@@ -401,6 +430,7 @@ mod tests {
             vec![]
         }
         fn volume_present(&self, _p: &Path) -> bool {
+            *self.present_read_count.borrow_mut() += 1;
             let mut seq = self.present.borrow_mut();
             if seq.is_empty() {
                 false
@@ -409,7 +439,13 @@ mod tests {
             }
         }
         fn read_info_uf2(&self, _p: &Path) -> Option<String> {
-            self.info.clone()
+            *self.info_read_count.borrow_mut() += 1;
+            let mut seq = self.info.borrow_mut();
+            if seq.is_empty() {
+                None
+            } else {
+                seq.remove(0)
+            }
         }
         fn write_attempt(
             &self,
@@ -431,12 +467,16 @@ mod tests {
             progress(att.written);
             att
         }
-        fn sleep(&self, _d: Duration) {}
+        fn sleep(&self, _d: Duration) {
+            *self.sleep_count.borrow_mut() += 1;
+        }
     }
 
     fn fast_timings() -> Timings {
         Timings {
             stabilize: Duration::ZERO,
+            preflight_retry_wait: Duration::ZERO,
+            preflight_retries: 3,
             eacces_retry_wait: Duration::ZERO,
             eacces_max_retries: 10,
             unmount_poll: Duration::from_millis(1),
@@ -457,6 +497,103 @@ mod tests {
     }
     fn flash(env: &MockEnv, data: &[u8], c: &FlashConfig) -> Result<FlashOutcome, FlashError> {
         flash_uf2(env, &vol(), "fw.uf2", data, c, &mut |_p| {}, &CancelFlag::new())
+    }
+
+    #[test]
+    fn preflight_retries_until_matching_info_is_read() {
+        let env = MockEnv::new(vec![], vec![]).with_info_sequence(vec![
+            None,
+            None,
+            Some("Board-ID: Seeed_XIAO_nRF52840_Sense\r\n"),
+        ]);
+        let timings = fast_timings();
+
+        assert_eq!(
+            preflight_board_id(&env, &vol(), MINIMAL_KEYS_BOARD_ID_PREFIX, &timings),
+            Ok(())
+        );
+        assert_eq!(*env.info_read_count.borrow(), 3);
+        assert_eq!(*env.sleep_count.borrow(), 2);
+        assert_eq!(*env.present_read_count.borrow(), 0);
+    }
+
+    #[test]
+    fn preflight_classifies_unreadable_missing_volume_as_connection_lost() {
+        let env = MockEnv::new(vec![], vec![false])
+            .with_info_sequence(vec![None, None, None, None]);
+        let timings = fast_timings();
+
+        assert_eq!(
+            preflight_board_id(&env, &vol(), MINIMAL_KEYS_BOARD_ID_PREFIX, &timings),
+            Err(FlashError::ConnectionLost {
+                path: vol().to_string_lossy().to_string(),
+            })
+        );
+        assert_eq!(*env.info_read_count.borrow(), 4);
+        assert_eq!(*env.sleep_count.borrow(), 3);
+        assert_eq!(*env.present_read_count.borrow(), 1);
+    }
+
+    #[test]
+    fn preflight_classifies_unreadable_present_volume_as_io() {
+        let env = MockEnv::new(vec![], vec![true])
+            .with_info_sequence(vec![None, None, None, None]);
+        let timings = fast_timings();
+
+        assert_eq!(
+            preflight_board_id(&env, &vol(), MINIMAL_KEYS_BOARD_ID_PREFIX, &timings),
+            Err(FlashError::Io {
+                reason: "INFO_UF2.TXT unreadable while volume still mounted (preflight)"
+                    .to_string(),
+            })
+        );
+        assert_eq!(*env.info_read_count.borrow(), 4);
+        assert_eq!(*env.sleep_count.borrow(), 3);
+        assert_eq!(*env.present_read_count.borrow(), 1);
+    }
+
+    #[test]
+    fn preflight_rejects_missing_board_id_without_retry() {
+        let env = MockEnv::new(vec![], vec![]).with_info("Model: UF2 Bootloader\r\n");
+        let timings = fast_timings();
+
+        assert!(matches!(
+            preflight_board_id(&env, &vol(), MINIMAL_KEYS_BOARD_ID_PREFIX, &timings),
+            Err(FlashError::NotUf2Volume { .. })
+        ));
+        assert_eq!(*env.info_read_count.borrow(), 1);
+        assert_eq!(*env.sleep_count.borrow(), 0);
+        assert_eq!(*env.present_read_count.borrow(), 0);
+    }
+
+    #[test]
+    fn preflight_rejects_foreign_board_id_without_retry() {
+        let env = MockEnv::new(vec![], vec![]).with_info("Board-ID: RPI-RP2\r\n");
+        let timings = fast_timings();
+
+        assert!(matches!(
+            preflight_board_id(&env, &vol(), MINIMAL_KEYS_BOARD_ID_PREFIX, &timings),
+            Err(FlashError::NotUf2Volume { .. })
+        ));
+        assert_eq!(*env.info_read_count.borrow(), 1);
+        assert_eq!(*env.sleep_count.borrow(), 0);
+        assert_eq!(*env.present_read_count.borrow(), 0);
+    }
+
+    #[test]
+    fn preflight_retry_count_is_bounded() {
+        let env = MockEnv::new(vec![], vec![false])
+            .with_info_sequence(vec![None, None, None, None, None]);
+        let timings = fast_timings();
+
+        assert!(matches!(
+            preflight_board_id(&env, &vol(), MINIMAL_KEYS_BOARD_ID_PREFIX, &timings),
+            Err(FlashError::ConnectionLost { .. })
+        ));
+        assert_eq!(*env.info_read_count.borrow(), 4);
+        assert_eq!(*env.sleep_count.borrow(), 3);
+        assert_eq!(*env.present_read_count.borrow(), 1);
+        assert_eq!(env.info.borrow().len(), 1);
     }
 
     #[test]
