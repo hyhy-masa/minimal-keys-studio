@@ -28,4 +28,6 @@ pub use uf2::{
     sha256_hex, validate_uf2, Uf2Info, Uf2Limits, DEFAULT_TARGET_ADDR_MAX, DEFAULT_TARGET_ADDR_MIN,
     FAMILY_ID_NRF52840,
 };
-pub use volume::{acquire_bootloader, scan_bootloader_volumes, wait_for_new_volume};
+pub use volume::{
+    acquire_bootloader, scan_bootloader_volumes, wait_for_new_volume, AcquiredVolume, VolumeOrigin,
+};
