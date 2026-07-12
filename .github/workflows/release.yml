@@ -54,6 +54,11 @@ jobs:
 
       - run: npm ci
 
+      - run: npm run build
+      - run: cargo test --manifest-path crates/mk-flash-core/Cargo.toml
+      - run: cargo test --manifest-path crates/mk-flash-cli/Cargo.toml
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
