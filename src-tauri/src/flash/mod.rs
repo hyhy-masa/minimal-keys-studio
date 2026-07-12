@@ -96,8 +96,9 @@ pub async fn flash_scan_volumes() -> Result<Vec<VolumeEntry>, FlashError> {
 pub async fn flash_wait_for_bootloader(
     state: tauri::State<'_, FlashState>,
     baseline: Vec<String>,
+    adopt_present: bool,
     timeout_secs: u64,
-) -> Result<VolumeEntry, FlashError> {
+) -> Result<mk_flash_core::AcquiredVolume, FlashError> {
     let _guard = BusyGuard::acquire(&state.busy)?;
     let cancel = state.cancel.clone();
     cancel.reset();
@@ -107,6 +108,7 @@ pub async fn flash_wait_for_bootloader(
             &env,
             &baseline,
             Some(MINIMAL_KEYS_BOARD_ID_PREFIX),
+            adopt_present,
             Duration::from_secs(timeout_secs),
             Duration::from_millis(500),
             &cancel,

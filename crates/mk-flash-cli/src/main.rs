@@ -122,17 +122,18 @@ fn cmd_write(args: &[String]) -> Result<(), String> {
         .collect();
     println!("Put the keyboard into bootloader mode (double-tap reset)...");
     let cancel = CancelFlag::new();
-    let vol = acquire_bootloader(
+    let acq = acquire_bootloader(
         &env,
         &baseline,
         Some(BOARD_ID_PREFIX),
+        true,
         Duration::from_secs(60),
         Duration::from_millis(500),
         &cancel,
     )
     .map_err(|e| e.to_string())?;
-    println!("detected {}", vol.path);
-    flash_one(&env, &PathBuf::from(&vol.path), path, &bytes)
+    println!("detected {}", acq.volume.path);
+    flash_one(&env, &PathBuf::from(&acq.volume.path), path, &bytes)
 }
 
 fn cmd_flow(args: &[String]) -> Result<(), String> {
@@ -186,17 +187,23 @@ fn guided_flash(env: &dyn FlashEnv, uf2_path: &Path, limits: &Uf2Limits) -> Resu
     let baseline: Vec<String> = scan_bootloader_volumes(env).into_iter().map(|v| v.path).collect();
     println!("  double-tap reset to enter bootloader mode...");
     let cancel = CancelFlag::new();
-    let vol = acquire_bootloader(
+    let acq = acquire_bootloader(
         env,
         &baseline,
         Some(BOARD_ID_PREFIX),
+        true,
         Duration::from_secs(60),
         Duration::from_millis(500),
         &cancel,
     )
     .map_err(|e| e.to_string())?;
-    println!("  detected {}", vol.path);
-    flash_one(env, &PathBuf::from(&vol.path), uf2_path.to_str().unwrap_or("uf2"), &bytes)
+    println!("  detected {}", acq.volume.path);
+    flash_one(
+        env,
+        &PathBuf::from(&acq.volume.path),
+        uf2_path.to_str().unwrap_or("uf2"),
+        &bytes,
+    )
 }
 
 fn flash_one(env: &dyn FlashEnv, volume: &Path, name_hint: &str, bytes: &[u8]) -> Result<(), String> {
