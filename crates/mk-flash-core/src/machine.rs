@@ -393,6 +393,12 @@ mod tests {
     use std::cell::RefCell;
     use std::path::PathBuf;
 
+    #[cfg(windows)]
+    const ERRNO_PERM: i32 = 5;
+    #[cfg(not(windows))]
+    const ERRNO_PERM: i32 = 13;
+    const ERRNO_REBOOT_LIKE: i32 = 2;
+
     struct MockEnv {
         writes: RefCell<Vec<WriteAttempt>>,
         present: RefCell<Vec<bool>>,
@@ -600,7 +606,7 @@ mod tests {
     fn eacces_then_success() {
         let env = MockEnv::new(
             vec![
-                WriteAttempt { written: 0, errno: Some(13) },
+                WriteAttempt { written: 0, errno: Some(ERRNO_PERM) },
                 WriteAttempt { written: 1000, errno: None },
             ],
             vec![true, false],
@@ -613,7 +619,13 @@ mod tests {
     #[test]
     fn reboot_like_near_end_is_success() {
         // total 1000, slack=min(100, 250)=100, threshold=900. 980>=900.
-        let env = MockEnv::new(vec![WriteAttempt { written: 980, errno: Some(5) }], vec![false]);
+        let env = MockEnv::new(
+            vec![WriteAttempt {
+                written: 980,
+                errno: Some(ERRNO_REBOOT_LIKE),
+            }],
+            vec![false],
+        );
         let mut c = cfg();
         c.timings.unmount_timeout = Duration::from_millis(10);
         assert_eq!(flash(&env, &vec![0u8; 1000], &c), Ok(FlashOutcome::ProvisionalSuccess));
@@ -621,7 +633,13 @@ mod tests {
 
     #[test]
     fn reboot_like_early_and_gone_is_premature() {
-        let env = MockEnv::new(vec![WriteAttempt { written: 400, errno: Some(5) }], vec![false]);
+        let env = MockEnv::new(
+            vec![WriteAttempt {
+                written: 400,
+                errno: Some(ERRNO_REBOOT_LIKE),
+            }],
+            vec![false],
+        );
         assert_eq!(
             flash(&env, &vec![0u8; 1000], &cfg()),
             Err(FlashError::PrematureReboot { written: 400, total: 1000 })
@@ -634,8 +652,8 @@ mod tests {
         // partial and volume gone -> PrematureReboot (never a false success).
         let env = MockEnv::new(
             vec![
-                WriteAttempt { written: 400, errno: Some(5) },
-                WriteAttempt { written: 420, errno: Some(5) },
+                WriteAttempt { written: 400, errno: Some(ERRNO_REBOOT_LIKE) },
+                WriteAttempt { written: 420, errno: Some(ERRNO_REBOOT_LIKE) },
             ],
             vec![true /*present after 1st*/, false /*gone after rewrite*/],
         );
@@ -649,7 +667,13 @@ mod tests {
     fn small_uf2_zero_written_is_not_false_success() {
         // M2 regression: total 100, slack=min(100,25)=25, threshold=75.
         // written 0 (<75) + volume gone -> PrematureReboot (was false success before).
-        let env = MockEnv::new(vec![WriteAttempt { written: 0, errno: Some(5) }], vec![false]);
+        let env = MockEnv::new(
+            vec![WriteAttempt {
+                written: 0,
+                errno: Some(ERRNO_REBOOT_LIKE),
+            }],
+            vec![false],
+        );
         assert_eq!(
             flash(&env, &vec![0u8; 100], &cfg()),
             Err(FlashError::PrematureReboot { written: 0, total: 100 })
@@ -671,9 +695,9 @@ mod tests {
     fn permission_denied_exhausts_retries() {
         let env = MockEnv::new(
             vec![
-                WriteAttempt { written: 0, errno: Some(13) },
-                WriteAttempt { written: 0, errno: Some(13) },
-                WriteAttempt { written: 0, errno: Some(13) },
+                WriteAttempt { written: 0, errno: Some(ERRNO_PERM) },
+                WriteAttempt { written: 0, errno: Some(ERRNO_PERM) },
+                WriteAttempt { written: 0, errno: Some(ERRNO_PERM) },
             ],
             vec![true, true, true, true],
         );
@@ -687,7 +711,13 @@ mod tests {
 
     #[test]
     fn eacces_then_volume_gone_is_no_bootloader() {
-        let env = MockEnv::new(vec![WriteAttempt { written: 0, errno: Some(13) }], vec![false]);
+        let env = MockEnv::new(
+            vec![WriteAttempt {
+                written: 0,
+                errno: Some(ERRNO_PERM),
+            }],
+            vec![false],
+        );
         assert_eq!(flash(&env, &vec![0u8; 1000], &cfg()), Err(FlashError::NoBootloaderVolume));
     }
 
