@@ -280,7 +280,8 @@ export function WizardBody({ state, progress, fw, dispatch, cancel, onClose, sta
 
     case "r_flash_confirm":
     case "l_flash_confirm": {
-      const side = state.step === "r_flash_confirm" ? "右" : "左";
+      const sideRL = state.step === "r_flash_confirm" ? "R" : "L";
+      const side = sideRL === "R" ? "右" : "左";
       const existingCopy = `この${side}半分はすでに書き込みモードになっています。写真と同じ側（${side}半分）だけがつながっていることを確認してください。反対側がつながったままの場合は、ケーブルを差し替えて「中止」からやり直してください。`;
       const confirm =
         state.step === "r_flash_confirm"
@@ -293,6 +294,7 @@ export function WizardBody({ state, progress, fw, dispatch, cancel, onClose, sta
           ) : (
             <p className="mb-3">{side}側を書き込みモードで検出しました。</p>
           )}
+          <GuideDiagram side={sideRL} />
           <div className="flex justify-end gap-3">
             <GhostButton onPress={cancel}>中止</GhostButton>
             <PrimaryButton onPress={() => dispatch(confirm)}>このまま進める</PrimaryButton>

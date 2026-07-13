@@ -82,6 +82,15 @@ describe("WizardBody", () => {
     expect(dispatch).toHaveBeenCalledWith(event);
   });
 
+  it.each(["existing", "new"] as const)(
+    "C-4a: renders the right-side guide photo for %s confirmation",
+    (origin) => {
+      renderBody({ step: "r_flash_confirm", manifest, origin });
+
+      expect(screen.getByRole("img", { name: /右半分のリセットボタンの位置/ })).toBeTruthy();
+    }
+  );
+
   it("C-5: uses the distinct error recovery button label", () => {
     renderBody({ step: "error", message: "書き込みに失敗しました", from: "r_flashing" });
 
