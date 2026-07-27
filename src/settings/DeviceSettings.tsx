@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Button } from "react-aria-components";
 import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
+import { Switch } from "../misc/Switch";
 import {
   useCustomSubsystem,
   useCustomNotification,
@@ -228,20 +229,12 @@ export function DeviceSettings() {
           <h3 className="text-sm font-medium text-base-content/70">
             利用データの送信
           </h3>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isOptedIn}
-              onChange={(e) => setOptedIn(e.target.checked)}
-              className="toggle toggle-sm"
-            />
-            <span className="text-sm">
-              {isOptedIn ? "送信する" : "送信しない"}
-            </span>
-          </label>
-          <p className="text-sm text-base-content/50">
-            匿名の操作ログ・エラー情報・キーマップ設定を開発者に送信します
-          </p>
+          <Switch
+            isSelected={isOptedIn}
+            onChange={setOptedIn}
+            label={isOptedIn ? "送信する" : "送信しない"}
+            description="匿名の操作ログ・エラー情報・キーマップ設定を開発者に送信します"
+          />
         </section>
       )}
     </div>
