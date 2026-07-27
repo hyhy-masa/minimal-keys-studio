@@ -8,8 +8,6 @@ import {
 import { useToast } from "../misc/Toast";
 import * as RIP from "../proto/rip";
 import { ConfirmDialog } from "../ConfirmDialog";
-import { useLayers } from "../rpc/useLayers";
-import { AutoMouseLayerSection } from "./AutoMouseLayerSection";
 
 export function TrackballSettings() {
   const subsystem = useCustomSubsystem(RIP.SUBSYSTEM_ID);
@@ -25,8 +23,6 @@ export function TrackballSettings() {
   const [multiplier, setMultiplier] = useState(1);
   const [divisor, setDivisor] = useState(1);
   const [rotation, setRotation] = useState(0);
-  const [tempLayerEnabled, setTempLayerEnabled] = useState(false);
-  const [tempLayerLayer, setTempLayerLayer] = useState(6);
 
   // Derived speed value for slider (in 0.1 steps)
   const speedValue = divisor > 0 ? multiplier / divisor : 1;
@@ -42,8 +38,6 @@ export function TrackballSettings() {
   const [axisSnapMode, setAxisSnapMode] = useState<RIP.AxisSnapMode>(0);
   const [axisSnapThreshold, setAxisSnapThreshold] = useState(0);
   const [axisSnapTimeout, setAxisSnapTimeout] = useState(0);
-  const layers = useLayers();
-  const autoMouseLayers = layers.filter((layer) => layer.id !== 0);
 
   // Discover processors via listInputProcessors (data arrives via notifications)
   useEffect(() => {
@@ -102,8 +96,6 @@ export function TrackballSettings() {
     setMultiplier(info.scaleMultiplier);
     setDivisor(info.scaleDivisor);
     setRotation(info.rotationDegrees);
-    setTempLayerEnabled(info.tempLayerEnabled);
-    setTempLayerLayer(info.tempLayerLayer);
     setXInvert(info.xInvert);
     setYInvert(info.yInvert);
     setXySwap(info.xySwapEnabled);
@@ -144,12 +136,6 @@ export function TrackballSettings() {
       if (rotation !== selectedProcessor.rotationDegrees) {
         await callWithTimeout("setRotation", RIP.encodeSetRotation(id, rotation));
       }
-      if (tempLayerEnabled !== selectedProcessor.tempLayerEnabled) {
-        await callWithTimeout("setTempLayerEnabled", RIP.encodeSetTempLayerEnabled(id, tempLayerEnabled));
-      }
-      if (tempLayerLayer !== selectedProcessor.tempLayerLayer) {
-        await callWithTimeout("setTempLayerLayer", RIP.encodeSetTempLayerLayer(id, tempLayerLayer));
-      }
       if (xInvert !== selectedProcessor.xInvert) {
         await callWithTimeout("setXInvert", RIP.encodeSetXInvert(id, xInvert));
       }
@@ -186,8 +172,6 @@ export function TrackballSettings() {
     multiplier,
     divisor,
     rotation,
-    tempLayerEnabled,
-    tempLayerLayer,
     xInvert,
     yInvert,
     xySwap,
@@ -387,15 +371,6 @@ export function TrackballSettings() {
           </div>
         )}
       </section>
-
-      <AutoMouseLayerSection
-        enabled={tempLayerEnabled}
-        onEnabledChange={setTempLayerEnabled}
-        layerId={tempLayerLayer}
-        onLayerChange={setTempLayerLayer}
-        layers={autoMouseLayers}
-        disabled={!selectedProcessor || saving}
-      />
 
       {/* Buttons */}
       <div className="flex gap-2 pt-2">

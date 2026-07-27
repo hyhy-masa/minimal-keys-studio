@@ -51,6 +51,7 @@ import {
   openFilePicker,
 } from "./keymap-io";
 import { calculateImportChanges } from "./import-diff";
+import { AutoMouseLayerControl } from "../trackball/AutoMouseLayerControl";
 
 // Keeps loading state visible for at least minMs so users always see feedback.
 function useMinLoadingTime(isLoading: boolean, minMs = 500): boolean {
@@ -807,6 +808,8 @@ export default function Keyboard() {
             </button>
           </div>
         )}
+
+        <AutoMouseLayerControl />
 
         <ModifierPanel
           modifierFlags={modifierFlags}
