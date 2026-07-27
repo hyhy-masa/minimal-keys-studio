@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>コンボキー設定 UIモック</title>
+  <style>
+    :root {
+      /* Exact light-mode values of the named tokens in tailwind.config.js. */
+      --primary: oklch(62% 0.22 250);
+      --primary-content: #FFFFFF;
+      --base-content: #374151;
+      --base-100: #FFFFFF;
+      --base-200: #F8F9FA;
+      --base-300: #E5E7EB;
+      --error: oklch(58% 0.22 27);
+    }
+    * { box-sizing: border-box; }
+    html { color-scheme: light; background: var(--base-200); }
+    body {
+      margin: 0;
+      color: var(--base-content);
+      background: var(--base-200);
+      font: 14px/1.55 Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    button, input, select { font: inherit; color: inherit; }
+    button, summary, input, select { outline: none; }
+    button:focus-visible, summary:focus-visible, input:focus-visible, select:focus-visible {
+      box-shadow: 0 0 0 2px var(--base-100), 0 0 0 4px var(--primary);
+    }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .48; }
+    .page { max-width: 1260px; margin: 0 auto; padding: 28px; }
+    .page-title { margin: 0 0 4px; font-size: 24px; }
+    .page-note { margin: 0 0 24px; color: color-mix(in oklch, var(--base-content) 58%, transparent); }
+    .state-label {
+      display: inline-flex; margin: 28px 0 10px; padding: 4px 10px; border-radius: 999px;
+      background: var(--base-300); font-size: 12px; font-weight: 700;
+    }
+    .app {
+      min-height: 680px; display: grid; grid-template-columns: 184px minmax(0, 1fr);
+      overflow: hidden; border: 1px solid var(--base-300); border-radius: 14px; background: var(--base-100);
+      box-shadow: 0 12px 30px color-mix(in oklch, var(--base-content) 10%, transparent);
+    }
+    .sidebar { padding: 16px 12px; border-right: 1px solid var(--base-300); background: var(--base-200); }
+    .brand { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 10px 15px; font-weight: 750; }
+    .brand-mark { width: 26px; height: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+    .brand-mark i { display: block; border-radius: 2px; background: var(--primary); }
+    .nav { display: grid; gap: 4px; }
+    .nav-item { min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 11px; border-radius: 8px; color: color-mix(in oklch, var(--base-content) 65%, transparent); }
+    .nav-item.active { color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, var(--base-100)); font-weight: 700; }
+    .nav svg, .icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .content { min-width: 0; padding: 22px 24px 32px; background: var(--base-100); }
+    .header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+    h2 { margin: 0 0 5px; font-size: 19px; }
+    .lead { margin: 0; color: color-mix(in oklch, var(--base-content) 62%, transparent); }
+    .example { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; padding: 7px 10px; border-radius: 8px; background: var(--base-200); font-size: 13px; }
+    .count-actions { display: flex; align-items: center; gap: 12px; flex: none; }
+    .count { white-space: nowrap; color: color-mix(in oklch, var(--base-content) 58%, transparent); font-variant-numeric: tabular-nums; }
+    .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 15px; border: 1px solid transparent; border-radius: 8px; font-weight: 700; background: var(--base-100); }
+    .btn-primary { color: var(--primary-content); background: var(--primary); }
+    .btn-secondary { border-color: var(--base-300); background: var(--base-100); }
+    .btn-ghost { color: color-mix(in oklch, var(--base-content) 72%, transparent); background: transparent; }
+    .btn-danger { color: var(--error); border-color: color-mix(in oklch, var(--error) 25%, var(--base-100)); }
+    .stack { display: grid; gap: 10px; }
+    .combo-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; min-height: 86px; padding: 15px 16px; border: 1px solid var(--base-300); border-radius: 10px; background: var(--base-100); }
+    .combo-main { min-width: 0; }
+    .equation { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 16px; font-weight: 750; }
+    .key-chip { min-width: 42px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; padding: 0 10px; border: 1px solid var(--base-300); border-bottom-width: 3px; border-radius: 7px; background: var(--base-200); }
+    .arrow { color: color-mix(in oklch, var(--base-content) 42%, transparent); padding: 0 3px; }
+    .result { color: var(--primary); }
+    .meta { display: flex; flex-wrap: wrap; gap: 7px 15px; margin-top: 7px; color: color-mix(in oklch, var(--base-content) 52%, transparent); font-size: 12px; }
+    .card-actions { display: flex; gap: 6px; }
+    .icon-btn { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 8px; background: transparent; }
+    .icon-btn:hover { background: var(--base-200); }
+    .icon-btn.delete { color: var(--error); }
+    .empty { min-height: 450px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 36px; border: 1px dashed var(--base-300); border-radius: 12px; text-align: center; background: color-mix(in oklch, var(--base-200) 55%, var(--base-100)); }
+    .empty-keys { display: flex; align-items: center; gap: 7px; margin-bottom: 18px; color: var(--primary); }
+    .empty-keys .key-chip { min-width: 52px; min-height: 46px; border-color: color-mix(in oklch, var(--primary) 35%, var(--base-300)); background: color-mix(in oklch, var(--primary) 8%, var(--base-100)); }
+    .empty h3 { margin: 0 0 7px; font-size: 18px; }
+    .empty p { max-width: 460px; margin: 0 0 18px; color: color-mix(in oklch, var(--base-content) 58%, transparent); }
+    .back { min-height: 44px; display: inline-flex; align-items: center; gap: 7px; margin: -4px 0 7px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--primary); font-weight: 700; }
+    .step-card { margin-top: 12px; padding: 17px; border: 1px solid color-mix(in oklch, var(--base-300) 70%, transparent); border-radius: 11px; background: color-mix(in oklch, var(--base-200) 38%, var(--base-100)); }
+    .step-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .step-title { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 750; }
+    .step-num { width: 25px; height: 25px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: var(--primary-content); background: var(--primary); font-size: 12px; }
+    .selected-count { color: color-mix(in oklch, var(--base-content) 55%, transparent); font-variant-numeric: tabular-nums; }
+    .keyboard-wrap { overflow-x: auto; padding: 14px; border: 1px solid var(--base-300); border-radius: 10px; background: var(--base-200); }
+    .keyboard { min-width: 720px; display: grid; grid-template-columns: 1fr 52px 1fr; gap: 16px; align-items: end; }
+    .half { display: grid; grid-template-columns: repeat(6, minmax(44px, 1fr)); gap: 5px; }
+    .half.right { direction: rtl; }
+    .key { min-width: 44px; height: 44px; border: 1px solid var(--base-300); border-bottom-width: 3px; border-radius: 7px; background: var(--base-100); font-size: 12px; font-weight: 650; }
+    .key.selected { color: var(--primary-content); border-color: var(--primary); background: var(--primary); }
+    .spacer { visibility: hidden; }
+    .thumbs { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 5px; padding-top: 2px; }
+    .right .thumbs { justify-content: flex-start; }
+    .chosen { min-height: 44px; display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .chosen-label { color: color-mix(in oklch, var(--base-content) 55%, transparent); }
+    .selected-chip { min-height: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 9px; border-radius: 7px; color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, var(--base-100)); font-weight: 700; }
+    .action-choice { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 8px 10px 8px 15px; border: 1px solid var(--base-300); border-radius: 9px; background: var(--base-100); }
+    .action-choice strong { display: block; font-size: 16px; color: var(--primary); }
+    .action-choice span { color: color-mix(in oklch, var(--base-content) 52%, transparent); font-size: 12px; }
+    details { margin-top: 12px; border: 1px solid var(--base-300); border-radius: 10px; background: var(--base-100); }
+    summary { min-height: 48px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-radius: 9px; cursor: pointer; font-weight: 750; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    .details-body { display: grid; gap: 10px; padding: 0 12px 12px; }
+    .setting { padding: 12px; border: 1px solid color-mix(in oklch, var(--base-300) 45%, transparent); border-radius: 8px; background: color-mix(in oklch, var(--base-200) 40%, var(--base-100)); }
+    .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .setting h4 { margin: 0 0 2px; font-size: 14px; }
+    .setting p { margin: 0; color: color-mix(in oklch, var(--base-content) 52%, transparent); font-size: 12px; }
+    .range { display: flex; align-items: center; gap: 10px; min-width: 280px; }
+    input[type="range"] { width: 190px; accent-color: var(--primary); }
+    .layer-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .pill { min-height: 44px; padding: 0 12px; border: 1px solid var(--base-300); border-radius: 8px; background: var(--base-100); }
+    .pill.on { color: var(--primary); border-color: color-mix(in oklch, var(--primary) 42%, var(--base-300)); background: color-mix(in oklch, var(--primary) 8%, var(--base-100)); font-weight: 700; }
+    .switch { width: 44px; height: 24px; flex: none; padding: 2px; border: 0; border-radius: 999px; background: var(--base-300); }
+    .switch i { display: block; width: 20px; height: 20px; border-radius: 50%; background: var(--base-100); }
+    .form-footer { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 16px; padding-top: 15px; border-top: 1px solid var(--base-300); }
+    @media (max-width: 760px) {
+      .page { padding: 14px; }
+      .app { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .content { padding: 18px 14px 24px; }
+      .header { flex-direction: column; }
+      .count-actions { width: 100%; justify-content: space-between; }
+      .combo-card { grid-template-columns: 1fr; }
+      .card-actions { justify-content: flex-end; }
+      .setting-row { align-items: flex-start; flex-direction: column; }
+      .range { min-width: 0; width: 100%; }
+      input[type="range"] { flex: 1; min-width: 120px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1 class="page-title">コンボキー設定 UIモック</h1>
+    <p class="page-note">同じタブの3状態を並べた静的モックです。アイコンは lucide-react と同じ線画をインライン表示しています。</p>
+
+    <div class="state-label">状態1：登録済み一覧</div>
+    <section class="app" aria-label="登録済みコンボ一覧のモック">
+      <aside class="sidebar">
+        <div class="brand"><span class="brand-mark"><i></i><i></i><i></i></span>minimal-keys</div>
+        <nav class="nav">
+          <div class="nav-item">⌨ キーマップ</div><div class="nav-item">◉ トラックボール</div><div class="nav-item active">⌘ コンボ</div><div class="nav-item">↕ 長押し設定</div><div class="nav-item">⚙ 設定</div>
+        </nav>
+      </aside>
+      <div class="content">
+        <header class="header">
+          <div><h2>コンボキー設定</h2><p class="lead">2〜4個のキーを一緒に押すと、別の動作を実行できます。</p><div class="example"><span class="key-chip">J</span> ＋ <span class="key-chip">K</span> <span class="arrow">→</span> Esc</div></div>
+          <div class="count-actions"><span class="count">3 / 16件</span><button class="btn btn-primary"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>コンボを追加</button></div>
+        </header>
+        <div class="stack">
+          <article class="combo-card"><div class="combo-main"><div class="equation"><span class="key-chip">J</span><span>＋</span><span class="key-chip">K</span><span class="arrow">→</span><span class="result">Esc</span></div><div class="meta"><span>同時押し 50ms</span><span>すべてのレイヤー</span></div></div><div class="card-actions"><button class="btn btn-secondary">編集</button><button class="icon-btn delete" aria-label="JとKのコンボを削除"><svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg></button></div></article>
+          <article class="combo-card"><div class="combo-main"><div class="equation"><span class="key-chip">D</span><span>＋</span><span class="key-chip">F</span><span class="arrow">→</span><span class="result">Tab</span></div><div class="meta"><span>同時押し 60ms</span><span>ベース</span></div></div><div class="card-actions"><button class="btn btn-secondary">編集</button><button class="icon-btn delete" aria-label="DとFのコンボを削除"><svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg></button></div></article>
+          <article class="combo-card"><div class="combo-main"><div class="equation"><span class="key-chip">S</span><span>＋</span><span class="key-chip">L</span><span class="arrow">→</span><span class="result">レイヤー1へ移動</span></div><div class="meta"><span>同時押し 50ms</span><span>ベース・数字</span><span>すべて離したとき終了</span></div></div><div class="card-actions"><button class="btn btn-secondary">編集</button><button class="icon-btn delete" aria-label="SとLのコンボを削除"><svg class="icon" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5"/></svg></button></div></article>
+        </div>
+      </div>
+    </section>
+
+    <div class="state-label">状態2：空の状態</div>
+    <section class="app" aria-label="コンボがない状態のモック">
+      <aside class="sidebar"><div class="brand"><span class="brand-mark"><i></i><i></i><i></i></span>minimal-keys</div><nav class="nav"><div class="nav-item">⌨ キーマップ</div><div class="nav-item">◉ トラックボール</div><div class="nav-item active">⌘ コンボ</div><div class="nav-item">↕ 長押し設定</div><div class="nav-item">⚙ 設定</div></nav></aside>
+      <div class="content">
+        <header class="header"><div><h2>コンボキー設定</h2><p class="lead">2〜4個のキーを一緒に押すと、別の動作を実行できます。</p></div><div class="count-actions"><span class="count">0 / 16件</span><button class="btn btn-primary"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>コンボを追加</button></div></header>
+        <div class="empty"><div class="empty-keys"><span class="key-chip">J</span><b>＋</b><span class="key-chip">K</span><b>→</b><span class="key-chip">Esc</span></div><h3>まだコンボがありません</h3><p>JとKを一緒に押してEscにする、などの便利な操作を追加できます。まずは2つのキーを選んでみましょう。</p><button class="btn btn-primary"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>最初のコンボを作る</button></div>
+      </div>
+    </section>
+
+    <div class="state-label">状態3：1つを編集</div>
+    <section class="app" aria-label="コンボ編集状態のモック">
+      <aside class="sidebar"><div class="brand"><span class="brand-mark"><i></i><i></i><i></i></span>minimal-keys</div><nav class="nav"><div class="nav-item">⌨ キーマップ</div><div class="nav-item">◉ トラックボール</div><div class="nav-item active">⌘ コンボ</div><div class="nav-item">↕ 長押し設定</div><div class="nav-item">⚙ 設定</div></nav></aside>
+      <div class="content">
+        <button class="back"><svg class="icon" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>コンボ一覧へ戻る</button>
+        <header class="header"><div><h2>コンボを編集</h2><p class="lead">一緒に押すキーと、そのときの動作を設定します。</p></div></header>
+        <section class="step-card">
+          <div class="step-head"><div class="step-title"><span class="step-num">1</span>同時に押すキー</div><span class="selected-count">選択中 2 / 4</span></div>
+          <div class="keyboard-wrap"><div class="keyboard">
+            <div class="half"><button class="key">Q</button><button class="key">W</button><button class="key">E</button><button class="key">R</button><button class="key">T</button><button class="key">-</button><button class="key">A</button><button class="key">S</button><button class="key">D</button><button class="key">F</button><button class="key">G</button><button class="key">⌫</button><button class="key">Z</button><button class="key">X</button><button class="key">C</button><button class="key">V</button><button class="key">B</button><button class="key">⌘</button><div class="thumbs"><button class="key">⌃</button><button class="key">⌥</button><button class="key">Space</button></div></div>
+            <div></div>
+            <div class="half right"><button class="key">P</button><button class="key">O</button><button class="key">I</button><button class="key">U</button><button class="key">Y</button><button class="key">=</button><button class="key">Enter</button><button class="key">L</button><button class="key selected">K</button><button class="key selected">J</button><button class="key">H</button><button class="key">⌦</button><button class="key">⇧</button><button class="key">.</button><button class="key">,</button><button class="key">M</button><button class="key">N</button><button class="key">/</button><div class="thumbs"><button class="key">Space</button><button class="key">⌘</button><button class="key">⌥</button></div></div>
+          </div></div>
+          <div class="chosen"><span class="chosen-label">選択中:</span><span class="selected-chip">J ×</span><span class="selected-chip">K ×</span></div>
+        </section>
+        <section class="step-card"><div class="step-head"><div class="step-title"><span class="step-num">2</span>実行する動作</div></div><div class="action-choice"><div><strong>Esc</strong><span>エスケープキーを入力</span></div><button class="btn btn-secondary">変更する</button></div></section>
+        <details open><summary><svg class="icon" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>詳細設定</summary><div class="details-body">
+          <div class="setting"><div class="setting-row"><div><h4>同時押しの受付時間</h4><p>最初のキーを押してから、残りのキーを押すまでの時間</p></div><div class="range"><span>短い</span><input type="range" min="10" max="500" value="50"><b>50ms</b></div></div></div>
+          <div class="setting"><div class="setting-row"><div><h4>有効にするレイヤー</h4><p>このコンボを使えるレイヤーを選びます</p></div><div class="layer-pills"><button class="pill on">✓ すべて</button><button class="pill">ベース</button><button class="pill">数字</button></div></div></div>
+          <div class="setting"><div class="setting-row"><div><h4>すべてのキーを離したときに動作を終了</h4><p>オフでは、どれか1つを離した時点で終了します</p></div><button class="switch" aria-label="すべてのキーを離したときに動作を終了"><i></i></button></div></div>
+        </div></details>
+        <footer class="form-footer"><button class="btn btn-secondary">キャンセル</button><button class="btn btn-primary">変更を保存</button></footer>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
