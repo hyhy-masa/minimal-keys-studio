@@ -8,6 +8,7 @@ import {
 } from "@zmkfirmware/zmk-studio-ts-client";
 import {
   call_rpc,
+  RPC_WRITE_TIMEOUT_MS,
   registerForceDisconnect,
   RpcTimeoutError,
 } from "./logging";
@@ -62,6 +63,20 @@ function createConnection(): {
   };
 }
 
+function createConnectionWithHangingWrite(): RpcConnection {
+  return {
+    label: "hanging-write",
+    request_response_readable: new ReadableStream<RequestResponse>(),
+    request_writable: new WritableStream<Request>({
+      write() {
+        return new Promise<void>(() => {});
+      },
+    }),
+    notification_readable: new ReadableStream(),
+    current_request: 0,
+  };
+}
+
 async function waitForWrites(writes: Request[], count: number): Promise<void> {
   for (let i = 0; i < 20 && writes.length < count; i += 1) {
     await Promise.resolve();
@@ -84,6 +99,37 @@ describe("call_rpc", () => {
     respond(response);
 
     await expect(pending).resolves.toBe(response);
+  });
+
+  it("rejects with RpcTimeoutError when the write never settles", async () => {
+    vi.useFakeTimers();
+    const conn = createConnectionWithHangingWrite();
+
+    const pending = call_rpc(conn, req);
+    const assertion = expect(pending).rejects.toBeInstanceOf(RpcTimeoutError);
+    await vi.advanceTimersByTimeAsync(RPC_WRITE_TIMEOUT_MS);
+
+    await assertion;
+  });
+
+  it("rejects calls immediately after a write timeout poisons the session", async () => {
+    vi.useFakeTimers();
+    const conn = createConnectionWithHangingWrite();
+
+    const first = call_rpc(conn, req);
+    const firstAssertion = expect(first).rejects.toBeInstanceOf(RpcTimeoutError);
+    await vi.advanceTimersByTimeAsync(RPC_WRITE_TIMEOUT_MS);
+    await firstAssertion;
+
+    let settled = false;
+    const second = call_rpc(conn, req).finally(() => {
+      settled = true;
+    });
+    const secondAssertion = expect(second).rejects.toBeInstanceOf(RpcTimeoutError);
+    await Promise.resolve();
+
+    expect(settled).toBe(true);
+    await secondAssertion;
   });
 
   it("sends and resolves request B after request A times out", async () => {

@@ -7,6 +7,9 @@ import {
 } from "@zmkfirmware/zmk-studio-ts-client";
 
 export const RPC_TIMEOUT_MS = 8000;
+// A serial port can accept a connection but never settle its stream write.
+// Bound that phase so callers can discard the unusable connection.
+export const RPC_WRITE_TIMEOUT_MS = 3000;
 
 export class RpcTimeoutError extends Error {
   constructor() {
@@ -34,6 +37,7 @@ class RpcSession {
   private readonly reader: ReadableStreamDefaultReader<RequestResponse>;
   private sendQueue: Promise<unknown> = Promise.resolve();
   private disposed = false;
+  private poisonedError: unknown | null = null;
 
   constructor(private readonly conn: RpcConnection) {
     this.reader = conn.request_response_readable.getReader();
@@ -44,6 +48,7 @@ class RpcSession {
     req: Omit<Request, "requestId">,
     timeoutMs: number
   ): Promise<RequestResponse> {
+    if (this.poisonedError) return Promise.reject(this.poisonedError);
     const run = this.sendQueue.then(() => this.send(req, timeoutMs));
     this.sendQueue = run.catch(() => {});
     return run;
@@ -61,6 +66,7 @@ class RpcSession {
     timeoutMs: number
   ): Promise<RequestResponse> {
     if (this.disposed) throw new Error("RPC session disposed");
+    if (this.poisonedError) throw this.poisonedError;
 
     const requestId = this.conn.current_request++;
     const request = { ...req, requestId } as Request;
@@ -71,13 +77,36 @@ class RpcSession {
     });
 
     const writer = this.conn.request_writable.getWriter();
+    const writeTimeoutError = new RpcTimeoutError();
+    let writeTimer: ReturnType<typeof setTimeout> | undefined;
     try {
-      await writer.write(request);
+      await Promise.race([
+        writer.write(request),
+        new Promise<never>((_, reject) => {
+          writeTimer = setTimeout(
+            () => reject(writeTimeoutError),
+            RPC_WRITE_TIMEOUT_MS
+          );
+        }),
+      ]);
     } catch (error) {
-      this.pending.delete(requestId);
-      pending.reject(error);
+      if (error === writeTimeoutError) {
+        this.poison(error);
+      } else if (this.pending.delete(requestId)) {
+        pending.reject(error);
+      }
     } finally {
-      writer.releaseLock();
+      clearTimeout(writeTimer);
+      if (this.poisonedError) {
+        try {
+          writer.releaseLock();
+        } catch {
+          // The timed-out write may still own the writer. This poisoned
+          // session never acquires another writer, so releasing is best-effort.
+        }
+      } else {
+        writer.releaseLock();
+      }
     }
 
     // Start transfer timing only after this request has actually been written.
@@ -131,6 +160,12 @@ class RpcSession {
       pending.reject(error);
     }
     this.pending.clear();
+  }
+
+  private poison(error: unknown): void {
+    if (this.poisonedError) return;
+    this.poisonedError = error;
+    this.rejectAll(error);
   }
 }
 

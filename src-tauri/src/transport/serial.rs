@@ -18,7 +18,8 @@ pub async fn serial_connect(
     app_handle: AppHandle,
     state: State<'_, super::commands::ActiveConnection>,
 ) -> Result<super::commands::ConnectionHandle, String> {
-    match tokio_serial::new(id, 9600).open_native_async() {
+    eprintln!("[USB] Opening port: {id}");
+    match tokio_serial::new(id.clone(), 9600).open_native_async() {
         Ok(mut port) => {
             #[cfg(unix)]
             port.set_exclusive(false)
@@ -31,17 +32,25 @@ pub async fn serial_connect(
             let read_app_handle = app_handle.clone();
             let read_process = tauri::async_runtime::spawn(async move {
                 let mut buffer = vec![0; READ_BUF_SIZE];
-                while let Ok(size) = reader.read(&mut buffer).await {
-                    if size > 0 {
-                        let _ = read_app_handle.emit(
-                            "connection_data",
-                            ConnectionData {
-                                generation,
-                                data: buffer[..size].to_vec(),
-                            },
-                        );
-                    } else {
-                        break;
+                loop {
+                    match reader.read(&mut buffer).await {
+                        Ok(0) => {
+                            eprintln!("[USB] Read task ended: EOF");
+                            break;
+                        }
+                        Ok(size) => {
+                            let _ = read_app_handle.emit(
+                                "connection_data",
+                                ConnectionData {
+                                    generation,
+                                    data: buffer[..size].to_vec(),
+                                },
+                            );
+                        }
+                        Err(error) => {
+                            eprintln!("[USB] Read task ended with error: {error}");
+                            break;
+                        }
                     }
                 }
 
@@ -54,7 +63,8 @@ pub async fn serial_connect(
             let write_app_handle = app_handle.clone();
             let write_process = tauri::async_runtime::spawn(async move {
                 while let Some(data) = recv.next().await {
-                    if writer.write_all(&data).await.is_err() {
+                    if let Err(error) = writer.write_all(&data).await {
+                        eprintln!("[USB] Write failed: {error}");
                         break;
                     }
                 }
@@ -73,9 +83,13 @@ pub async fn serial_connect(
                 )
                 .await;
 
+            eprintln!("[USB] Connection established (generation {generation})");
             Ok(super::commands::ConnectionHandle { generation })
         }
-        Err(e) => Err(format!("Failed to open the serial port: {}", e.description)),
+        Err(e) => {
+            eprintln!("[USB] Failed to open port {id}: {}", e.description);
+            Err(format!("Failed to open the serial port: {}", e.description))
+        }
     }
 }
 
@@ -108,6 +122,11 @@ pub async fn serial_list_devices(
                 })
             }
         }
+    }
+
+    eprintln!("[USB] Found {} port(s)", candidates.len());
+    for candidate in &candidates {
+        eprintln!("[USB] Port: id={}, label={}", candidate.id, candidate.label);
     }
 
     Ok(candidates)
