@@ -237,7 +237,7 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
         <p>現在のバージョン: {CURRENT_APP_VERSION}</p>
         <div className="mt-2 flex items-center gap-3">
           <button
-            className="btn btn-primary btn-sm"
+            className="inline-flex min-h-11 items-center justify-center rounded border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-content transition-colors hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-base-content disabled:cursor-not-allowed disabled:opacity-50"
             disabled={updateState === "checking"}
             onClick={checkUpdate}
           >
@@ -247,7 +247,10 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
           {updateState === "available" && availableRelease && (
             <div className="flex items-center gap-2">
               <span>新しいバージョン {availableRelease.tagName} が公開されています</span>
-              <button className="btn btn-outline btn-sm" onClick={openReleasePage}>
+              <button
+                className="inline-flex min-h-11 items-center justify-center rounded border border-primary bg-base-100 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-base-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                onClick={openReleasePage}
+              >
                 ダウンロードページを開く
               </button>
             </div>
