@@ -54,6 +54,15 @@ import { TelemetryProvider, useTelemetry } from "./telemetry/TelemetryProvider";
 import { OptInDialog } from "./telemetry/OptInDialog";
 import { useTour } from "./tour/useTour";
 import { TourPromptDialog } from "./tour/TourPromptDialog";
+import { UpdateBanner } from "./update/UpdateBanner";
+import {
+  checkForUpdate,
+  CURRENT_APP_VERSION,
+  getNotifiedVersion,
+  rememberNotifiedVersion,
+  shouldNotifyForRelease,
+  type ReleaseInfo,
+} from "./update/versionCheck";
 
 declare global {
   interface Window {
@@ -229,6 +238,7 @@ function AppInner() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("keymap");
   const [mountedTabs, setMountedTabs] = useState<Set<ActiveTab>>(new Set(["keymap"]));
   const [keymapVersion, setKeymapVersion] = useState(0);
+  const [availableUpdate, setAvailableUpdate] = useState<ReleaseInfo | null>(null);
 
   const [lockState, setLockState] = useState<LockState>(
     LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED
@@ -248,6 +258,16 @@ function AppInner() {
   useEffect(() => {
     trackEvent("app_launched");
   }, [trackEvent]);
+
+  useEffect(() => {
+    checkForUpdate().then((release) => {
+      if (!release || !shouldNotifyForRelease(release, CURRENT_APP_VERSION, getNotifiedVersion())) {
+        return;
+      }
+      rememberNotifiedVersion(release.tagName);
+      setAvailableUpdate(release);
+    });
+  }, []);
 
   const prevConnRef = useRef(conn.conn);
   useEffect(() => {
@@ -411,7 +431,7 @@ function AppInner() {
             open={showLicenseNotice}
             onClose={() => setShowLicenseNotice(false)}
           />
-          <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_auto_1fr_auto] overflow-hidden">
+          <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_auto_auto_1fr_auto] overflow-hidden">
             <AppHeader
               connectedDeviceLabel={connectedDeviceName}
               canUndo={canUndo}
@@ -426,6 +446,12 @@ function AppInner() {
               fwUpdateOpen={fwUpdateOpen}
               onFwUpdateOpenChange={setFwUpdateOpen}
             />
+            {availableUpdate && (
+              <UpdateBanner
+                release={availableUpdate}
+                onDismiss={() => setAvailableUpdate(null)}
+              />
+            )}
             {conn.conn && (
               <nav className="flex items-center gap-1 border-b border-gray-200 bg-gray-50 px-3 py-1">
                 {TAB_GROUPS.map((group, gi) => (

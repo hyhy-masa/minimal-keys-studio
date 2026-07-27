@@ -17,11 +17,13 @@
     "core:tray:default",
     "cli:default",
     "http:default",
+    "opener:default",
     {
       "identifier": "http:default",
       "allow": [
         { "url": "https://script.google.com/**" },
-        { "url": "https://script.googleusercontent.com/**" }
+        { "url": "https://script.googleusercontent.com/**" },
+        { "url": "https://api.github.com/**" }
       ]
     },
     "dialog:default",

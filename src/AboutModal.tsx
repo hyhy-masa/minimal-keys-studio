@@ -42,6 +42,12 @@ import splitkb from "./assets/splitkb.png";
 import splitkbDarkMode from "./assets/splitkb-dark-mode.png";
 import { GenericModal } from "./GenericModal";
 import { ExternalLink } from "./misc/ExternalLink";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import {
+  checkForUpdate,
+  CURRENT_APP_VERSION,
+  type ReleaseInfo,
+} from "./update/versionCheck";
 
 export interface AboutModalProps {
   open: boolean;
@@ -177,6 +183,27 @@ const sponsors = [
 
 export const AboutModal = ({ open, onClose }: AboutModalProps) => {
   const ref = useModalRef(open, true);
+  const [updateState, setUpdateState] = React.useState<
+    "idle" | "checking" | "latest" | "available"
+  >("idle");
+  const [availableRelease, setAvailableRelease] =
+    React.useState<ReleaseInfo | null>(null);
+
+  const checkUpdate = async () => {
+    setUpdateState("checking");
+    const release = await checkForUpdate();
+    if (release) {
+      setAvailableRelease(release);
+      setUpdateState("available");
+    } else {
+      setAvailableRelease(null);
+      setUpdateState("latest");
+    }
+  };
+
+  const openReleasePage = () => {
+    if (availableRelease) openUrl(availableRelease.htmlUrl).catch(() => undefined);
+  };
 
   return (
     <GenericModal ref={ref} className="min-w-min w-[70vw]" onClose={onClose}>
@@ -206,6 +233,27 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
           following vendors:
         </p>
       </div>
+      <section className="my-4 rounded-md border border-base-300 p-3">
+        <p>現在のバージョン: {CURRENT_APP_VERSION}</p>
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            className="btn btn-primary btn-sm"
+            disabled={updateState === "checking"}
+            onClick={checkUpdate}
+          >
+            {updateState === "checking" ? "確認中…" : "更新を確認"}
+          </button>
+          {updateState === "latest" && <span>最新版です</span>}
+          {updateState === "available" && availableRelease && (
+            <div className="flex items-center gap-2">
+              <span>新しいバージョン {availableRelease.tagName} が公開されています</span>
+              <button className="btn btn-outline btn-sm" onClick={openReleasePage}>
+                ダウンロードページを開く
+              </button>
+            </div>
+          )}
+        </div>
+      </section>
       <div className="grid gap-2 auto-rows-auto grid-cols-[auto_minmax(min-content,1fr)] justify-items-center items-center">
         {sponsors.map((s) => {
           const heightVariants = {
