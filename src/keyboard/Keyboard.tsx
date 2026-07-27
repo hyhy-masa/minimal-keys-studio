@@ -50,6 +50,7 @@ import {
   downloadJson,
   openFilePicker,
 } from "./keymap-io";
+import { calculateImportChanges } from "./import-diff";
 
 // Keeps loading state visible for at least minMs so users always see feedback.
 function useMinLoadingTime(isLoading: boolean, minMs = 500): boolean {
@@ -619,6 +620,10 @@ export default function Keyboard() {
   }, [keymap, selectedLayerIndex]);
 
   const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState<{
+    completed: number;
+    total: number;
+  } | null>(null);
 
   const handleExport = useCallback(async () => {
     if (!keymap) return;
@@ -662,33 +667,37 @@ export default function Keyboard() {
       return;
     }
 
-    if (!confirm(`${result.layers.length} レイヤー、${keyCount} キー/レイヤーをインポートします。\n現在のキーマップを上書きします。続けますか？`)) {
+    const changes = calculateImportChanges(keymap, result.layers);
+    const writeCount = changes.layerProps.length + changes.bindings.length;
+    if (!confirm(`${result.layers.length} レイヤー、${keyCount} キー/レイヤーをインポートします。\n変更のある ${writeCount} か所を書き込みます。\n現在のキーマップを上書きします。続けますか？`)) {
       return;
     }
 
     setImporting(true);
+    setImportProgress({ completed: 0, total: writeCount });
     try {
-      for (let li = 0; li < result.layers.length; li++) {
-        const importedLayer = result.layers[li];
-        if (li < keymap.layers.length) {
-          const layerId = keymap.layers[li].id;
-          if (importedLayer.name !== keymap.layers[li].name) {
-            await call_rpc(conn.conn, {
-              keymap: { setLayerProps: { layerId, name: importedLayer.name } },
-            });
-          }
-          for (let ki = 0; ki < importedLayer.bindings.length; ki++) {
-            await call_rpc(conn.conn, {
-              keymap: {
-                setLayerBinding: {
-                  layerId,
-                  keyPosition: ki,
-                  binding: importedLayer.bindings[ki],
-                },
-              },
-            });
-          }
-        }
+      if (writeCount === 0) {
+        toast("変更はありませんでした", "success");
+        return;
+      }
+
+      let completed = 0;
+      const advanceProgress = () => {
+        completed += 1;
+        setImportProgress({ completed, total: writeCount });
+      };
+
+      for (const { layerId, name } of changes.layerProps) {
+        await call_rpc(conn.conn, {
+          keymap: { setLayerProps: { layerId, name } },
+        });
+        advanceProgress();
+      }
+      for (const { layerId, keyPosition, binding } of changes.bindings) {
+        await call_rpc(conn.conn, {
+          keymap: { setLayerBinding: { layerId, keyPosition, binding } },
+        });
+        advanceProgress();
       }
 
       const resp = await call_rpc(
@@ -707,6 +716,7 @@ export default function Keyboard() {
       toast("インポート中にエラーが発生しました", "error");
     } finally {
       setImporting(false);
+      setImportProgress(null);
     }
   }, [keymap, conn, behaviors, layouts, selectedPhysicalLayoutIndex, toast, setKeymap]);
 
@@ -781,8 +791,19 @@ export default function Keyboard() {
               disabled={importing}
               title="キーマップをインポート"
             >
-              <Upload className="w-4 h-4" />
-              {importing ? "読込中..." : "読込"}
+              {importing ? (
+                <>
+                  <span className="w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                  {importProgress
+                    ? `送信中 ${importProgress.completed} / ${importProgress.total}`
+                    : "準備中..."}
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  読込
+                </>
+              )}
             </button>
           </div>
         )}
