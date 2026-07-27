@@ -3,8 +3,6 @@
 
 use std::env;
 
-use futures::lock::Mutex;
-
 mod flash;
 mod transport;
 use transport::commands::{transport_close, transport_send_data, ActiveConnection};
@@ -18,9 +16,7 @@ fn main() {
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .manage(ActiveConnection {
-            conn: Mutex::new(None),
-        })
+        .manage(ActiveConnection::new())
         .manage(flash::FlashState::new())
         .invoke_handler(tauri::generate_handler![
             transport_send_data,
