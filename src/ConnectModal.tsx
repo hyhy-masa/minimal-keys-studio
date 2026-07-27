@@ -1,10 +1,19 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Bluetooth, ChevronRight, Loader2, Usb } from "lucide-react";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { UserCancelledError } from "@zmkfirmware/zmk-studio-ts-client/transport/errors";
 import { useModalRef } from "./misc/useModalRef";
 import { GenericModal } from "./GenericModal";
 import type { AvailableDevice } from "./tauri";
+import {
+  AutoConnectError,
+  autoConnectUsb,
+} from "./connect/autoConnectUsb";
+import {
+  getAutoConnectFailureText,
+  usbAutoConnectSearchingText,
+} from "./connect/ja";
 
 export type TransportFactory = {
   label: string;
@@ -181,7 +190,7 @@ function DeviceList({
                 }}
               >
                 <span className="text-xs opacity-60">
-                  {transport.isWireless ? "BLE" : "USB"}
+                  {transport.isWireless ? "ワイヤレス" : "USB"}
                 </span>
                 <span>{device.label}</span>
               </button>
@@ -197,6 +206,97 @@ function DeviceList({
       >
         {connecting ? "接続中..." : "接続"}
       </button>
+    </div>
+  );
+}
+
+export type ConnectionMethodView =
+  | "choose"
+  | "usb-searching"
+  | "usb-failed"
+  | "manual-usb"
+  | "wireless";
+
+export interface ConnectionMethodPanelProps {
+  view: ConnectionMethodView;
+  failureText?: string;
+  onUsbConnect: () => void;
+  onWirelessConnect: () => void;
+  onShowManualUsb: () => void;
+  children?: React.ReactNode;
+}
+
+export function ConnectionMethodPanel({
+  view,
+  failureText,
+  onUsbConnect,
+  onWirelessConnect,
+  onShowManualUsb,
+  children,
+}: ConnectionMethodPanelProps) {
+  const isSearching = view === "usb-searching";
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <button
+          className="group flex min-h-32 flex-col items-start rounded-lg border border-primary/40 bg-base-200/30 p-4 text-left transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-100 disabled:cursor-wait disabled:opacity-70"
+          type="button"
+          onClick={onUsbConnect}
+          disabled={isSearching}
+        >
+          <span className="flex w-full items-center justify-between gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-base-100">
+              <Usb className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <ChevronRight className="h-5 w-5 text-base-content/50 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+          </span>
+          <span className="mt-3 text-base font-semibold">USBでつなぐ</span>
+          <span className="mt-1 text-sm text-base-content/60">安定して使える、おすすめの方法です</span>
+        </button>
+        <button
+          className="group flex min-h-32 flex-col items-start rounded-lg border border-base-300 bg-base-200/30 p-4 text-left transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-100"
+          type="button"
+          onClick={onWirelessConnect}
+        >
+          <span className="flex w-full items-center justify-between gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-base-300 text-base-content">
+              <Bluetooth className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <ChevronRight className="h-5 w-5 text-base-content/50 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+          </span>
+          <span className="mt-3 text-base font-semibold">ワイヤレスでつなぐ</span>
+          <span className="mt-1 text-sm text-base-content/60">ケーブルを使わずに接続します</span>
+        </button>
+      </div>
+
+      {isSearching && (
+        <div className="flex min-h-16 items-center gap-3 rounded-lg border border-primary/30 bg-base-200/30 px-4 text-sm" role="status">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" aria-hidden="true" />
+          <span>{usbAutoConnectSearchingText}</span>
+        </div>
+      )}
+
+      {view === "usb-failed" && failureText && (
+        <div className="rounded-lg border border-warning/50 bg-base-200/30 p-4">
+          <p className="text-sm leading-6">{failureText}</p>
+          <button
+            className="mt-3 min-h-11 rounded-md bg-base-300 px-3 text-sm font-medium transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-100"
+            type="button"
+            onClick={onShowManualUsb}
+          >
+            手動で選ぶ
+          </button>
+        </div>
+      )}
+
+      {view === "wireless" && (
+        <p className="text-sm text-base-content/60">近くのキーボードを選択してください</p>
+      )}
+      {view === "manual-usb" && (
+        <p className="text-sm text-base-content/60">接続するキーボードを手動で選択してください</p>
+      )}
+      {children}
     </div>
   );
 }
@@ -249,8 +349,56 @@ export const ConnectModal = ({
   onTransportCreated,
 }: ConnectModalProps) => {
   const dialog = useModalRef(open || false, false, false);
+  const [view, setView] = useState<ConnectionMethodView>("choose");
+  const [usbFailureText, setUsbFailureText] = useState<string>();
+  const wasOpen = useRef(open);
+
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      setView("choose");
+      setUsbFailureText(undefined);
+    }
+    wasOpen.current = open;
+  }, [open]);
 
   const haveTransports = useMemo(() => transports.length > 0, [transports]);
+
+  const wirelessTransports = useMemo(
+    () => transports.filter((transport) => transport.isWireless),
+    [transports]
+  );
+  const usbTransports = useMemo(
+    () => transports.filter((transport) => !transport.isWireless),
+    [transports]
+  );
+
+  const handleUsbConnect = useCallback(async () => {
+    setUsbFailureText(undefined);
+    setView("usb-searching");
+    try {
+      const { transport } = await autoConnectUsb();
+      onTransportCreated(transport);
+    } catch (error) {
+      const reason = error instanceof AutoConnectError ? error.reason : "no-response";
+      setUsbFailureText(getAutoConnectFailureText(reason));
+      setView("usb-failed");
+    }
+  }, [onTransportCreated]);
+
+  const deviceList =
+    view === "wireless" ? (
+      <ConnectOptions
+        transports={wirelessTransports}
+        onTransportCreated={onTransportCreated}
+        open={open}
+      />
+    ) : view === "manual-usb" ? (
+      <ConnectOptions
+        transports={usbTransports}
+        onTransportCreated={onTransportCreated}
+        open={open}
+      />
+    ) : undefined;
 
   return (
     <GenericModal ref={dialog} className="max-w-xl">
@@ -262,11 +410,15 @@ export const ConnectModal = ({
         </p>
       </div>
       {haveTransports ? (
-        <ConnectOptions
-          transports={transports}
-          onTransportCreated={onTransportCreated}
-          open={open}
-        />
+        <ConnectionMethodPanel
+          view={view}
+          failureText={usbFailureText}
+          onUsbConnect={handleUsbConnect}
+          onWirelessConnect={() => setView("wireless")}
+          onShowManualUsb={() => setView("manual-usb")}
+        >
+          {deviceList}
+        </ConnectionMethodPanel>
       ) : (
         <NoTransportsPrompt />
       )}
