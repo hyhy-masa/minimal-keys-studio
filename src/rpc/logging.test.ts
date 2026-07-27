@@ -1,108 +1,177 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { call_rpc as inner_call_rpc } from "@zmkfirmware/zmk-studio-ts-client";
-import type { RpcConnection } from "@zmkfirmware/zmk-studio-ts-client";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  MetaError,
+  NoResponseError,
+  type Request,
+  type RequestResponse,
+  type RpcConnection,
+} from "@zmkfirmware/zmk-studio-ts-client";
 import {
   call_rpc,
   registerForceDisconnect,
   RpcTimeoutError,
-  RPC_TIMEOUT_MS,
 } from "./logging";
 
 vi.mock("@zmkfirmware/zmk-studio-ts-client", () => ({
-  call_rpc: vi.fn(),
+  MetaError: class MetaError extends Error {
+    constructor(readonly condition: number) {
+      super(`Meta error: ${condition}`);
+    }
+  },
+  NoResponseError: class NoResponseError extends Error {
+    constructor() {
+      super("No RPC response received");
+    }
+  },
+  call_rpc: vi.fn(() => new Promise(() => {})),
 }));
 
-const conn = {} as RpcConnection;
 const req = { core: { getLockState: true } };
 
-describe("call_rpc timeout", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.mocked(inner_call_rpc).mockReset();
+function createConnection(): {
+  conn: RpcConnection;
+  writes: Request[];
+  respond: (response: RequestResponse) => void;
+  close: () => void;
+} {
+  const writes: Request[] = [];
+  let responseController!: ReadableStreamDefaultController<RequestResponse>;
+
+  const request_response_readable = new ReadableStream<RequestResponse>({
+    start(controller) {
+      responseController = controller;
+    },
+  });
+  const request_writable = new WritableStream<Request>({
+    write(request) {
+      writes.push(request);
+    },
   });
 
+  return {
+    conn: {
+      label: "test",
+      request_response_readable,
+      request_writable,
+      notification_readable: new ReadableStream(),
+      current_request: 0,
+    },
+    writes,
+    respond: (response) => responseController.enqueue(response),
+    close: () => responseController.close(),
+  };
+}
+
+async function waitForWrites(writes: Request[], count: number): Promise<void> {
+  for (let i = 0; i < 20 && writes.length < count; i += 1) {
+    await Promise.resolve();
+  }
+  expect(writes).toHaveLength(count);
+}
+
+describe("call_rpc", () => {
   afterEach(() => {
     registerForceDisconnect(null);
     vi.useRealTimers();
   });
 
-  it("passes a normal response through without disconnecting", async () => {
-    const response = { requestId: 1 };
-    vi.mocked(inner_call_rpc).mockResolvedValue(response as never);
-    const forceDisconnect = vi.fn();
-    registerForceDisconnect(forceDisconnect);
-
-    await expect(call_rpc(conn, req)).resolves.toBe(response);
-
-    vi.advanceTimersByTime(RPC_TIMEOUT_MS * 2);
-    expect(forceDisconnect).not.toHaveBeenCalled();
-  });
-
-  it("passes an inner rejection through", async () => {
-    vi.mocked(inner_call_rpc).mockRejectedValue(new Error("device error"));
-
-    await expect(call_rpc(conn, req)).rejects.toThrow("device error");
-  });
-
-  it("rejects with RpcTimeoutError and forces a disconnect when the device never responds", async () => {
-    vi.mocked(inner_call_rpc).mockReturnValue(new Promise(() => {}) as never);
-    const forceDisconnect = vi.fn();
-    registerForceDisconnect(forceDisconnect);
+  it("resolves a normal response with the matching requestId", async () => {
+    const { conn, writes, respond } = createConnection();
 
     const pending = call_rpc(conn, req);
-    const assertion = expect(pending).rejects.toBeInstanceOf(RpcTimeoutError);
+    await waitForWrites(writes, 1);
+    const response = { requestId: writes[0].requestId } as RequestResponse;
+    respond(response);
 
-    await vi.advanceTimersByTimeAsync(RPC_TIMEOUT_MS);
-
-    await assertion;
-    expect(forceDisconnect).toHaveBeenCalledTimes(1);
+    await expect(pending).resolves.toBe(response);
   });
 
-  it("respects a custom timeout", async () => {
-    vi.mocked(inner_call_rpc).mockReturnValue(new Promise(() => {}) as never);
+  it("sends and resolves request B after request A times out", async () => {
+    vi.useFakeTimers();
+    const { conn, writes, respond } = createConnection();
+
+    const requestA = call_rpc(conn, req, 100);
+    const assertionA = expect(requestA).rejects.toBeInstanceOf(RpcTimeoutError);
+    await waitForWrites(writes, 1);
+    await vi.advanceTimersByTimeAsync(100);
+    await assertionA;
+
+    const requestB = call_rpc(conn, req, 100);
+    await waitForWrites(writes, 2);
+    respond({ requestId: writes[1].requestId } as RequestResponse);
+
+    await expect(requestB).resolves.toEqual({ requestId: writes[1].requestId });
+  });
+
+  it("discards a late response for A and returns B's response to B", async () => {
+    vi.useFakeTimers();
+    const { conn, writes, respond } = createConnection();
+
+    const requestA = call_rpc(conn, req, 100);
+    const assertionA = expect(requestA).rejects.toBeInstanceOf(RpcTimeoutError);
+    await waitForWrites(writes, 1);
+    const requestAId = writes[0].requestId;
+    await vi.advanceTimersByTimeAsync(100);
+    await assertionA;
+
+    const requestB = call_rpc(conn, req, 100);
+    await waitForWrites(writes, 2);
+    const requestBId = writes[1].requestId;
+    respond({ requestId: requestAId } as RequestResponse);
+    respond({ requestId: requestBId } as RequestResponse);
+
+    await expect(requestB).resolves.toEqual({ requestId: requestBId });
+  });
+
+  it("rejects with RpcTimeoutError when no response arrives", async () => {
+    vi.useFakeTimers();
+    const { conn, writes } = createConnection();
+
+    const pending = call_rpc(conn, req, 25);
+    const assertion = expect(pending).rejects.toBeInstanceOf(RpcTimeoutError);
+    await waitForWrites(writes, 1);
+    await vi.advanceTimersByTimeAsync(25);
+
+    await assertion;
+  });
+
+  it("rejects every pending request when the response stream closes", async () => {
+    const { conn, writes, close } = createConnection();
+
+    const first = call_rpc(conn, req);
+    const second = call_rpc(conn, req);
+    await waitForWrites(writes, 1);
+    close();
+
+    await expect(first).rejects.toThrow("RPC response stream closed");
+    await expect(second).rejects.toThrow("RPC session disposed");
+  });
+
+  it.each([
+    ["noResponse", { noResponse: true }, NoResponseError],
+    ["simpleError", { simpleError: 0 }, MetaError],
+  ])("maps meta.%s to the client error class", async (_name, meta, ErrorClass) => {
+    const { conn, writes, respond } = createConnection();
+
+    const pending = call_rpc(conn, req);
+    await waitForWrites(writes, 1);
+    respond({ requestId: writes[0].requestId, meta } as RequestResponse);
+
+    await expect(pending).rejects.toBeInstanceOf(ErrorClass);
+  });
+
+  it("does not call forceDisconnect after a timeout", async () => {
+    vi.useFakeTimers();
+    const { conn, writes } = createConnection();
     const forceDisconnect = vi.fn();
     registerForceDisconnect(forceDisconnect);
 
-    const pending = call_rpc(conn, req, 1000);
+    const pending = call_rpc(conn, req, 25);
     const assertion = expect(pending).rejects.toBeInstanceOf(RpcTimeoutError);
+    await waitForWrites(writes, 1);
+    await vi.advanceTimersByTimeAsync(25);
 
-    await vi.advanceTimersByTimeAsync(999);
-    expect(forceDisconnect).not.toHaveBeenCalled();
-
-    await vi.advanceTimersByTimeAsync(1);
     await assertion;
-    expect(forceDisconnect).toHaveBeenCalledTimes(1);
-  });
-
-  // Core of the "combo tab disconnect" fix: a request queued behind a slow one
-  // must not start its timer (nor be dispatched) until the previous request
-  // settles, so its wait in the queue can never trigger a force-disconnect.
-  it("does not dispatch or time out a queued request while the previous one is in flight", async () => {
-    const forceDisconnect = vi.fn();
-    registerForceDisconnect(forceDisconnect);
-
-    let resolveFirst!: (v: never) => void;
-    const first = new Promise<never>((res) => {
-      resolveFirst = res as (v: never) => void;
-    });
-    vi.mocked(inner_call_rpc)
-      .mockReturnValueOnce(first as never)
-      .mockResolvedValueOnce({ requestId: 2 } as never);
-
-    const p1 = call_rpc(conn, req);
-    const p2 = call_rpc(conn, req);
-
-    // First is dispatched; second stays queued. Even after more than a full
-    // timeout of wall-clock, the queued second has not started its own timer.
-    await vi.advanceTimersByTimeAsync(7000);
-    expect(inner_call_rpc).toHaveBeenCalledTimes(1);
-    expect(forceDisconnect).not.toHaveBeenCalled();
-
-    // Once the first settles, the second is dispatched and resolves in order.
-    resolveFirst({ requestId: 1 } as never);
-    await expect(p1).resolves.toEqual({ requestId: 1 });
-    await expect(p2).resolves.toEqual({ requestId: 2 });
-    expect(inner_call_rpc).toHaveBeenCalledTimes(2);
     expect(forceDisconnect).not.toHaveBeenCalled();
   });
 });
