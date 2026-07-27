@@ -4,7 +4,9 @@
 use std::env;
 
 mod flash;
+mod frontend_log;
 mod transport;
+use frontend_log::log_from_frontend;
 use transport::commands::{transport_close, transport_send_data, ActiveConnection};
 
 use transport::gatt::{gatt_connect, gatt_list_devices};
@@ -25,6 +27,7 @@ fn main() {
             gatt_connect,
             serial_list_devices,
             serial_connect,
+            log_from_frontend,
             flash::fw_fetch_manifest,
             flash::fw_download_asset,
             flash::flash_scan_volumes,

@@ -3,7 +3,10 @@ import ReactDOM from "react-dom/client";
 import App from "./App.tsx";
 import { ErrorBoundary } from "./ErrorBoundary.tsx";
 import { enqueueEvent } from "./telemetry/telemetry-client.ts";
+import { installFrontendLogForwarding } from "./misc/frontendLogging.ts";
 import "./index.css";
+
+installFrontendLogForwarding();
 
 function trackGlobalError(message: string, stack?: string): void {
   try {

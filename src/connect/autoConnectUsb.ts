@@ -2,6 +2,7 @@ import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 
 import { call_rpc } from "../rpc/logging";
+import { logFrontend } from "../misc/frontendLogging";
 import { connect, list_devices } from "../tauri/serial";
 
 // A short probe keeps non-RPC USB ports from delaying connection unnecessarily.
@@ -31,7 +32,9 @@ export interface AutoConnectResult {
 
 export async function autoConnectUsb(): Promise<AutoConnectResult> {
   const devices = await list_devices();
+  logFrontend("info", `[USB] Discovery completed: ${devices.length} candidate(s)`);
   if (devices.length === 0) {
+    logFrontend("warn", "[USB] No connection candidates found");
     throw new AutoConnectError("no-candidates");
   }
 
@@ -45,6 +48,7 @@ export async function autoConnectUsb(): Promise<AutoConnectResult> {
 
   for (const device of candidates) {
     const abortController = new AbortController();
+    logFrontend("info", `[USB] Probe starting: id=${device.id}, label=${device.label}`);
 
     try {
       const probeTransport = await connect(device);
@@ -59,22 +63,29 @@ export async function autoConnectUsb(): Promise<AutoConnectResult> {
         throw new Error("Device did not return device information");
       }
 
+      logFrontend("info", `[USB] Probe succeeded; closing probe connection: id=${device.id}`);
       abortController.abort();
       // Aborting closes the RPC streams asynchronously; give Tauri time to release the
       // serial port before opening the same device for the real connection.
       await new Promise((resolve) => setTimeout(resolve, USB_REOPEN_DELAY_MS));
+      logFrontend("info", `[USB] Opening production connection: id=${device.id}`);
       const transport = await connect(device);
 
       localStorage.setItem(LAST_SUCCESSFUL_USB_DEVICE_ID_KEY, device.id);
+      logFrontend("info", `[USB] Connection established: id=${device.id}, label=${device.label}`);
       return {
         transport,
         deviceId: device.id,
         deviceLabel: device.label,
       };
-    } catch {
+    } catch (error) {
+      const name = error instanceof Error ? error.name : typeof error;
+      const message = error instanceof Error ? error.message : String(error);
+      logFrontend("warn", `[USB] Candidate failed: id=${device.id}, type=${name}, message=${message}`, error);
       abortController.abort();
     }
   }
 
+  logFrontend("warn", "[USB] All candidates failed to respond");
   throw new AutoConnectError("no-response");
 }

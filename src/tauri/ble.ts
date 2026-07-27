@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { AvailableDevice } from ".";
+import { logFrontend } from "../misc/frontendLogging";
 import { createTauriTransport } from "./transportShared";
 import type { ConnectionHandle } from "./transportTypes";
 
@@ -9,7 +10,16 @@ import type { ConnectionHandle } from "./transportTypes";
 let allDevices: Array<AvailableDevice> = [];
 
 export async function list_devices(): Promise<Array<AvailableDevice>> {
-  allDevices = await invoke("gatt_list_devices");
+  logFrontend("info", "[BLE] Native discovery starting");
+  try {
+    allDevices = await invoke("gatt_list_devices");
+    logFrontend("info", `[BLE] Native discovery returned ${allDevices.length} candidate(s)`);
+  } catch (error) {
+    const name = error instanceof Error ? error.name : typeof error;
+    const message = error instanceof Error ? error.message : String(error);
+    logFrontend("warn", `[BLE] Native discovery failed: type=${name}, message=${message}`, error);
+    throw error;
+  }
   // Group by label to detect duplicate names (multiple profiles or multiple keyboards)
   const byLabel = new Map<string, Array<AvailableDevice>>();
   for (const d of allDevices) {
@@ -36,9 +46,15 @@ export async function list_devices(): Promise<Array<AvailableDevice>> {
 async function tryConnect(
   dev: AvailableDevice
 ): Promise<ConnectionHandle | undefined> {
+  logFrontend("info", `[BLE] Native connection attempt: id=${dev.id}, label=${dev.label}`);
   try {
-    return await invoke<ConnectionHandle>("gatt_connect", dev);
-  } catch {
+    const connection = await invoke<ConnectionHandle>("gatt_connect", dev);
+    logFrontend("info", `[BLE] Native connection established: id=${dev.id}, generation=${connection.generation}`);
+    return connection;
+  } catch (error) {
+    const name = error instanceof Error ? error.name : typeof error;
+    const message = error instanceof Error ? error.message : String(error);
+    logFrontend("warn", `[BLE] Native connection failed: id=${dev.id}, type=${name}, message=${message}`, error);
     return undefined;
   }
 }
@@ -53,6 +69,7 @@ export async function connect(dev: AvailableDevice): Promise<RpcTransport> {
     // Then other profiles with the same base name
     ...allDevices.filter((d) => d.id !== dev.id && d.label === originalLabel),
   ];
+  logFrontend("info", `[BLE] Connecting with ${candidates.length} candidate(s): requested=${dev.id}`);
   let connection: ConnectionHandle | undefined;
 
   for (const candidate of candidates) {
@@ -61,8 +78,10 @@ export async function connect(dev: AvailableDevice): Promise<RpcTransport> {
   }
 
   if (!connection) {
+    logFrontend("warn", `[BLE] All candidates failed: requested=${dev.id}`);
     throw new Error("Failed to connect to any BLE profile");
   }
 
+  logFrontend("info", `[BLE] Connection selected: requested=${dev.id}, generation=${connection.generation}`);
   return createTauriTransport(dev.label, connection.generation);
 }
