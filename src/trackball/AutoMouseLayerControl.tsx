@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Switch } from "../misc/Switch";
 import { useToast } from "../misc/Toast";
 import { useCustomNotification, useCustomSubsystem } from "../rpc/useCustomSubsystem";
@@ -10,20 +10,40 @@ export interface AutoMouseLayerControlViewProps {
   enabled: boolean;
   layerId: number;
   layers: LayerDisplay[];
+  activationDelayMs: number;
+  deactivationDelayMs: number;
   onEnabledChange: (enabled: boolean) => void;
   onLayerChange: (layerId: number) => void;
+  onActivationDelayChange: (delayMs: number) => void;
+  onDeactivationDelayChange: (delayMs: number) => void;
+  onActivationDelayCommit: () => void;
+  onDeactivationDelayCommit: () => void;
   disabled?: boolean;
+  detailsOpen?: boolean;
 }
 
 export function AutoMouseLayerControlView({
   enabled,
   layerId,
   layers,
+  activationDelayMs,
+  deactivationDelayMs,
   onEnabledChange,
   onLayerChange,
+  onActivationDelayChange,
+  onDeactivationDelayChange,
+  onActivationDelayCommit,
+  onDeactivationDelayCommit,
   disabled = false,
+  detailsOpen = false,
 }: AutoMouseLayerControlViewProps) {
   const layerSelectionDisabled = disabled || !enabled || layers.length === 0;
+  const delayControlsDisabled = disabled || !enabled;
+  const [isDetailsOpen, setIsDetailsOpen] = useState(detailsOpen);
+
+  useEffect(() => {
+    setIsDetailsOpen(detailsOpen);
+  }, [detailsOpen]);
 
   return (
     <section className="flex flex-col gap-1 rounded border border-base-300 bg-base-100 p-2">
@@ -56,6 +76,59 @@ export function AutoMouseLayerControlView({
           </select>
         )}
       </label>
+      <details
+        className="px-2"
+        open={isDetailsOpen}
+        onToggle={(event) => setIsDetailsOpen(event.currentTarget.open)}
+      >
+        <summary className="cursor-pointer rounded py-2 text-sm text-base-content/70 outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-100">
+          切り替えの速さ
+        </summary>
+        <div className="flex flex-col gap-3 pb-1">
+          <label className="flex flex-col gap-1 text-sm text-base-content/70">
+            <span className="flex items-center justify-between gap-2">
+              <span>切り替わるまで</span>
+              <output className="shrink-0 font-medium text-base-content">
+                {activationDelayMs} ms
+              </output>
+            </span>
+            <input
+              aria-label="切り替わるまでの時間"
+              type="range"
+              min={0}
+              max={500}
+              step={10}
+              value={activationDelayMs}
+              disabled={delayControlsDisabled}
+              onChange={(event) => onActivationDelayChange(Number(event.target.value))}
+              onPointerUp={onActivationDelayCommit}
+              onBlur={onActivationDelayCommit}
+              className="w-full cursor-pointer accent-primary outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-100 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-base-content/70">
+            <span className="flex items-center justify-between gap-2">
+              <span>もとに戻るまで</span>
+              <output className="shrink-0 font-medium text-base-content">
+                {deactivationDelayMs} ms
+              </output>
+            </span>
+            <input
+              aria-label="もとに戻るまでの時間"
+              type="range"
+              min={0}
+              max={2000}
+              step={50}
+              value={deactivationDelayMs}
+              disabled={delayControlsDisabled}
+              onChange={(event) => onDeactivationDelayChange(Number(event.target.value))}
+              onPointerUp={onDeactivationDelayCommit}
+              onBlur={onDeactivationDelayCommit}
+              className="w-full cursor-pointer accent-primary outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-100 disabled:cursor-not-allowed disabled:opacity-50"
+            />
+          </label>
+        </div>
+      </details>
     </section>
   );
 }
@@ -66,6 +139,10 @@ export function AutoMouseLayerControl() {
   const layers = useLayers().filter((layer) => layer.id !== 0);
   const [processor, setProcessor] = useState<RIP.InputProcessorInfo | null>(null);
   const [sending, setSending] = useState(false);
+  const [activationDelayMs, setActivationDelayMs] = useState(100);
+  const [deactivationDelayMs, setDeactivationDelayMs] = useState(500);
+  const pendingDelayTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingDelay = useRef<{ type: "activation" | "deactivation"; value: number } | null>(null);
 
   useEffect(() => {
     if (!subsystem) {
@@ -96,6 +173,16 @@ export function AutoMouseLayerControl() {
         : current
     );
   });
+
+  useEffect(() => {
+    if (!processor) return;
+    setActivationDelayMs(processor.tempLayerActivationDelayMs);
+    setDeactivationDelayMs(processor.tempLayerDeactivationDelayMs);
+  }, [processor]);
+
+  useEffect(() => () => {
+    if (pendingDelayTimer.current) clearTimeout(pendingDelayTimer.current);
+  }, []);
 
   const updateSetting = useCallback(
     async (
@@ -142,6 +229,52 @@ export function AutoMouseLayerControl() {
     [processor, updateSetting]
   );
 
+  const sendDelay = useCallback(
+    (type: "activation" | "deactivation", delayMs: number) => {
+      if (!processor) return;
+      const isActivation = type === "activation";
+      const currentDelay = isActivation
+        ? processor.tempLayerActivationDelayMs
+        : processor.tempLayerDeactivationDelayMs;
+      if (currentDelay === delayMs) return;
+
+      void updateSetting(
+        isActivation
+          ? { ...processor, tempLayerActivationDelayMs: delayMs }
+          : { ...processor, tempLayerDeactivationDelayMs: delayMs },
+        isActivation
+          ? RIP.encodeSetTempLayerActivationDelay(processor.id, delayMs)
+          : RIP.encodeSetTempLayerDeactivationDelay(processor.id, delayMs)
+      );
+    },
+    [processor, updateSetting]
+  );
+
+  const commitPendingDelay = useCallback(() => {
+    if (pendingDelayTimer.current) {
+      clearTimeout(pendingDelayTimer.current);
+      pendingDelayTimer.current = null;
+    }
+    const pending = pendingDelay.current;
+    pendingDelay.current = null;
+    if (pending) sendDelay(pending.type, pending.value);
+  }, [sendDelay]);
+
+  const queueDelayUpdate = useCallback(
+    (type: "activation" | "deactivation", delayMs: number) => {
+      if (type === "activation") setActivationDelayMs(delayMs);
+      else setDeactivationDelayMs(delayMs);
+
+      if (pendingDelayTimer.current) clearTimeout(pendingDelayTimer.current);
+      pendingDelay.current = { type, value: delayMs };
+      pendingDelayTimer.current = setTimeout(() => {
+        pendingDelayTimer.current = null;
+        commitPendingDelay();
+      }, 300);
+    },
+    [commitPendingDelay]
+  );
+
   if (!subsystem || !processor) return null;
 
   return (
@@ -149,8 +282,14 @@ export function AutoMouseLayerControl() {
       enabled={processor.tempLayerEnabled}
       layerId={processor.tempLayerLayer}
       layers={layers}
+      activationDelayMs={activationDelayMs}
+      deactivationDelayMs={deactivationDelayMs}
       onEnabledChange={handleEnabledChange}
       onLayerChange={handleLayerChange}
+      onActivationDelayChange={(delayMs) => queueDelayUpdate("activation", delayMs)}
+      onDeactivationDelayChange={(delayMs) => queueDelayUpdate("deactivation", delayMs)}
+      onActivationDelayCommit={commitPendingDelay}
+      onDeactivationDelayCommit={commitPendingDelay}
       disabled={sending}
     />
   );

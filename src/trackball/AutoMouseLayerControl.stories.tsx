@@ -14,18 +14,26 @@ const meta = {
   args: {
     layerId: 6,
     layers,
+    activationDelayMs: 100,
+    deactivationDelayMs: 500,
     onEnabledChange: () => {},
     onLayerChange: () => {},
+    onActivationDelayChange: () => {},
+    onDeactivationDelayChange: () => {},
+    onActivationDelayCommit: () => {},
+    onDeactivationDelayCommit: () => {},
   },
 } satisfies Meta<typeof AutoMouseLayerControlView>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Off: Story = { args: { enabled: false } };
+export const Closed: Story = { args: { enabled: true } };
 
-export const On: Story = { args: { enabled: true } };
+export const Open: Story = { args: { enabled: true, detailsOpen: true } };
 
-export const Sending: Story = { args: { enabled: true, disabled: true } };
+export const Off: Story = { args: { enabled: false, detailsOpen: true } };
+
+export const Sending: Story = { args: { enabled: true, disabled: true, detailsOpen: true } };
 
 export const LoadingLayers: Story = { args: { enabled: false, layers: [] } };
