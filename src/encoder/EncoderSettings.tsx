@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "react-aria-components";
 import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
 import {
@@ -6,62 +6,10 @@ import {
 } from "../rpc/useCustomSubsystem";
 import { useToast } from "../misc/Toast";
 import * as RSR from "../proto/rsr";
-import { ConnectionContext } from "../rpc/ConnectionContext";
-import { LockStateContext } from "../rpc/LockStateContext";
-import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
-import { call_rpc } from "../rpc/logging";
+import { useLayers } from "../rpc/useLayers";
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import { useBehaviorList } from "../behaviors/BehaviorsContext";
-
-interface LayerDisplay {
-  id: number;
-  index: number;
-  name: string;
-}
-
-function useLayers(): LayerDisplay[] {
-  const connection = useContext(ConnectionContext);
-  const lockState = useContext(LockStateContext);
-  const [layers, setLayers] = useState<LayerDisplay[]>([]);
-
-  useEffect(() => {
-    if (
-      !connection.conn ||
-      lockState !== LockState.ZMK_STUDIO_CORE_LOCK_STATE_UNLOCKED
-    ) {
-      setLayers([]);
-      return;
-    }
-
-    let ignore = false;
-
-    async function load() {
-      if (!connection.conn) return;
-      const resp = await call_rpc(connection.conn, {
-        keymap: { getKeymap: true },
-      });
-      if (ignore) return;
-
-      const km = resp?.keymap?.getKeymap;
-      if (km?.layers) {
-        setLayers(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          km.layers.map((l: any, i: number) => ({
-            id: l.id ?? i,
-            index: i,
-            name: l.name || `Layer ${i}`,
-          }))
-        );
-      }
-    }
-
-    load();
-    return () => { ignore = true; };
-  }, [connection, lockState]);
-
-  return layers;
-}
 
 export function EncoderSettings() {
   const subsystem = useCustomSubsystem(RSR.SUBSYSTEM_ID);
