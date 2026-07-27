@@ -103,6 +103,12 @@ pub async fn serial_list_devices(
         .into_iter()
         .filter_map(|pi| {
             if let SerialPortType::UsbPort(u) = pi.port_type {
+                // macOS exposes each serial device as both callout (cu.*) and dial-in
+                // (tty.*) nodes. Dial-in nodes may block waiting for carrier detect.
+                if pi.port_name.starts_with("/dev/tty.") {
+                    return None;
+                }
+
                 Some(super::commands::AvailableDevice {
                     id: pi.port_name,
                     label: u.product.unwrap_or("Unnamed device".to_string()),

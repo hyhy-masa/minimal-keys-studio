@@ -368,7 +368,9 @@ function AppInner() {
     (t: RpcTransport, isWireless?: boolean) => {
       const ac = new AbortController();
       setConnectionAbort(ac);
-      connect(t, setConn, setConnectedDeviceName, ac, (msg) => toast(msg, "error"), isWireless);
+      connect(t, setConn, setConnectedDeviceName, ac, (msg) => toast(msg, "error"), isWireless).catch(
+        () => toast("デバイスへの接続に失敗しました", "error")
+      );
     },
     [setConn, setConnectedDeviceName, toast]
   );

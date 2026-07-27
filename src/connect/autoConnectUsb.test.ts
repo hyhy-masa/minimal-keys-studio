@@ -47,21 +47,33 @@ describe("autoConnectUsb", () => {
       writable: true,
       configurable: true,
     });
-    vi.clearAllMocks();
+    mocks.listDevices.mockReset();
+    mocks.connect.mockReset();
+    mocks.createRpcConnection.mockReset();
+    mocks.callRpc.mockReset();
+    mockLocalStorage.getItem.mockClear();
+    mockLocalStorage.setItem.mockClear();
+    mockLocalStorage.removeItem.mockClear();
+    mockLocalStorage.clear.mockClear();
+    mockLocalStorage.key.mockClear();
   });
 
   it("skips an unresponsive first port and adopts the second responding port", async () => {
     const firstTransport = {};
-    const secondTransport = {};
+    const secondProbeTransport = {};
+    const secondFreshTransport = {};
     mocks.listDevices.mockResolvedValue([firstDevice, secondDevice]);
-    mocks.connect.mockResolvedValueOnce(firstTransport).mockResolvedValueOnce(secondTransport);
+    mocks.connect
+      .mockResolvedValueOnce(firstTransport)
+      .mockResolvedValueOnce(secondProbeTransport)
+      .mockResolvedValueOnce(secondFreshTransport);
     mocks.createRpcConnection.mockReturnValueOnce({ id: 1 }).mockReturnValueOnce({ id: 2 });
     mocks.callRpc
       .mockRejectedValueOnce(new Error("no response"))
       .mockResolvedValueOnce({ core: { getDeviceInfo: { name: "minimal-keys" } } });
 
     await expect(autoConnectUsb()).resolves.toEqual({
-      transport: secondTransport,
+      transport: secondFreshTransport,
       deviceId: secondDevice.id,
       deviceLabel: secondDevice.label,
     });
@@ -74,10 +86,69 @@ describe("autoConnectUsb", () => {
     expect(localStorage.getItem(lastSuccessfulUsbDeviceIdKey)).toBe(secondDevice.id);
   });
 
+  it("returns a fresh transport instead of the transport consumed by the probe", async () => {
+    const probeTransport = { id: "probe" };
+    const freshTransport = { id: "fresh" };
+    mocks.listDevices.mockResolvedValue([firstDevice]);
+    mocks.connect.mockResolvedValueOnce(probeTransport).mockResolvedValueOnce(freshTransport);
+    mocks.createRpcConnection.mockReturnValue({});
+    mocks.callRpc.mockResolvedValue({ core: { getDeviceInfo: { name: "minimal-keys" } } });
+
+    await expect(autoConnectUsb()).resolves.toMatchObject({
+      transport: freshTransport,
+      deviceId: firstDevice.id,
+    });
+    expect(mocks.createRpcConnection).toHaveBeenCalledWith(
+      probeTransport,
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+    expect(mocks.connect).toHaveBeenNthCalledWith(2, firstDevice);
+  });
+
+  it("aborts the successful probe before reopening the selected port", async () => {
+    let probeSignal: AbortSignal | undefined;
+    mocks.listDevices.mockResolvedValue([firstDevice]);
+    mocks.connect.mockResolvedValueOnce({ id: "probe" }).mockResolvedValueOnce({ id: "fresh" });
+    mocks.createRpcConnection.mockImplementation(
+      (_transport: unknown, { signal }: { signal: AbortSignal }) => {
+        probeSignal = signal;
+        return {};
+      }
+    );
+    mocks.callRpc.mockResolvedValue({ core: { getDeviceInfo: { name: "minimal-keys" } } });
+
+    await autoConnectUsb();
+
+    expect(probeSignal?.aborted).toBe(true);
+  });
+
+  it("continues to the next candidate when reopening a responding port fails", async () => {
+    const secondFreshTransport = { id: "second-fresh" };
+    mocks.listDevices.mockResolvedValue([firstDevice, secondDevice]);
+    mocks.connect
+      .mockResolvedValueOnce({ id: "first-probe" })
+      .mockRejectedValueOnce(new Error("reopen failed"))
+      .mockResolvedValueOnce({ id: "second-probe" })
+      .mockResolvedValueOnce(secondFreshTransport);
+    mocks.createRpcConnection.mockReturnValue({});
+    mocks.callRpc.mockResolvedValue({ core: { getDeviceInfo: { name: "minimal-keys" } } });
+
+    await expect(autoConnectUsb()).resolves.toEqual({
+      transport: secondFreshTransport,
+      deviceId: secondDevice.id,
+      deviceLabel: secondDevice.label,
+    });
+    expect(mocks.connect).toHaveBeenNthCalledWith(3, secondDevice);
+    expect(mocks.connect).toHaveBeenNthCalledWith(4, secondDevice);
+  });
+
   it("aborts the failed candidate before trying the next port", async () => {
     const signals: AbortSignal[] = [];
     mocks.listDevices.mockResolvedValue([firstDevice, secondDevice]);
-    mocks.connect.mockResolvedValue({});
+    mocks.connect
+      .mockResolvedValueOnce({ id: "first-probe" })
+      .mockResolvedValueOnce({ id: "second-probe" })
+      .mockResolvedValueOnce({ id: "second-fresh" });
     mocks.createRpcConnection.mockImplementation((_transport: unknown, { signal }: { signal: AbortSignal }) => {
       signals.push(signal);
       return {};
@@ -89,7 +160,7 @@ describe("autoConnectUsb", () => {
     await autoConnectUsb();
 
     expect(signals[0]?.aborted).toBe(true);
-    expect(signals[1]?.aborted).toBe(false);
+    expect(signals[1]?.aborted).toBe(true);
   });
 
   it("reports no-response after every candidate fails", async () => {
@@ -125,6 +196,6 @@ describe("autoConnectUsb", () => {
 
     await autoConnectUsb();
 
-    expect(attemptedIds).toEqual([secondDevice.id]);
+    expect(attemptedIds).toEqual([secondDevice.id, secondDevice.id]);
   });
 });
