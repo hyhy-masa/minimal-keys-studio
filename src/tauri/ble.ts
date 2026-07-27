@@ -1,8 +1,9 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 
 import type { RpcTransport } from "@zmkfirmware/zmk-studio-ts-client/transport/index";
 import { AvailableDevice } from ".";
+import { createTauriTransport } from "./transportShared";
+import type { ConnectionHandle } from "./transportTypes";
 
 // Keep all profiles per device for fallback connection attempts
 let allDevices: Array<AvailableDevice> = [];
@@ -32,11 +33,13 @@ export async function list_devices(): Promise<Array<AvailableDevice>> {
   return result;
 }
 
-async function tryConnect(dev: AvailableDevice): Promise<boolean> {
+async function tryConnect(
+  dev: AvailableDevice
+): Promise<ConnectionHandle | undefined> {
   try {
-    return await invoke("gatt_connect", dev);
+    return await invoke<ConnectionHandle>("gatt_connect", dev);
   } catch {
-    return false;
+    return undefined;
   }
 }
 
@@ -50,67 +53,16 @@ export async function connect(dev: AvailableDevice): Promise<RpcTransport> {
     // Then other profiles with the same base name
     ...allDevices.filter((d) => d.id !== dev.id && d.label === originalLabel),
   ];
-  let connected = false;
+  let connection: ConnectionHandle | undefined;
 
   for (const candidate of candidates) {
-    connected = await tryConnect(candidate);
-    if (connected) break;
+    connection = await tryConnect(candidate);
+    if (connection) break;
   }
 
-  if (!connected) {
+  if (!connection) {
     throw new Error("Failed to connect to any BLE profile");
   }
 
-  const abortController = new AbortController();
-
-  const writable = new WritableStream({
-    async write(chunk) {
-      await invoke("transport_send_data", new Uint8Array(chunk));
-    },
-  });
-
-  const { writable: response_writable, readable } = new TransformStream();
-  const response_writer = response_writable.getWriter();
-
-  const unlisten_data = await listen(
-    "connection_data",
-    async (event: { payload: Array<number> }) => {
-      try {
-        await response_writer.write(new Uint8Array(event.payload));
-      } catch (e) {
-        console.error("[BLE] Failed to write response data:", e);
-      }
-    }
-  );
-
-  const unlisten_disconnected = await listen(
-    "connection_disconnected",
-    async () => {
-      unlisten_data();
-      unlisten_disconnected();
-      try {
-        await response_writer.close();
-      } catch {
-        // Already closed
-      }
-    }
-  );
-
-  const signal = abortController.signal;
-
-  const abort_cb = async () => {
-    unlisten_data();
-    unlisten_disconnected();
-    try {
-      await response_writer.close();
-    } catch {
-      // Already closed
-    }
-    await invoke("transport_close");
-    signal.removeEventListener("abort", abort_cb);
-  };
-
-  signal.addEventListener("abort", abort_cb);
-
-  return { label: dev.label, abortController, readable, writable };
+  return createTauriTransport(dev.label, connection.generation);
 }
