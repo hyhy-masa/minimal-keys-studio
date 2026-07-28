@@ -34,6 +34,13 @@ export const blockReasonText: Record<BlockReason, string> = {
     "このアップデーターは古いため、この更新には対応していません。最新のアプリに更新してください（LINE / Discord に案内があります）。",
 };
 
+function manifestInvalidReason(e: unknown): string | null {
+  if (!e || typeof e !== "object" || !("detail" in e)) return null;
+  const detail = (e as { detail: unknown }).detail;
+  if (!detail || typeof detail !== "object" || !("reason" in detail)) return null;
+  return String((detail as { reason: unknown }).reason);
+}
+
 /**
  * Turn a Tauri-rejected `FlashError` (a tagged JSON object) into a
  * non-technical Japanese sentence with the customer's next action. Falls back
@@ -61,7 +68,10 @@ export function formatError(e: unknown): string {
     case "DownloadFailed":
       return "ダウンロードに失敗しました。インターネット接続を確認して、もう一度お試しください。";
     case "ManifestInvalid":
-      return "更新情報を正しく読み取れませんでした。アプリが古い可能性があります。最新のアプリをご確認ください（LINE / Discord に案内があります）。";
+      console.error("[Firmware update] ManifestInvalid:", e);
+      return manifestInvalidReason(e)?.startsWith("unsupported manifest schema")
+        ? "配布されている更新情報は、このアプリが対応していない形式です。最新のアプリを確認して、もう一度お試しください。"
+        : "配布されている更新情報を読み取れませんでした。時間をおいてもう一度お試しください。解決しない場合はサポートへご連絡ください。";
     case "Io":
       return "パソコン側のファイル操作に失敗しました。アプリを再起動してもう一度お試しください（直らない場合はサポートへ）。";
     case "ConnectionLost":

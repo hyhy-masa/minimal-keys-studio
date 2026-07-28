@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { errorRecoveryButtonLabel, formatError, stepTitle } from "./ja";
 
 // The canonical FlashError variants (crates/mk-flash-core/src/error.rs, tagged
@@ -32,10 +32,34 @@ describe("formatError (FlashError coverage)", () => {
     expect(msg).not.toBe(FALLBACK);
   });
 
-  it("ManifestInvalid guides the user to update the app (F-4)", () => {
-    const msg = formatError({ kind: "ManifestInvalid", detail: { reason: "schema mismatch" } });
-    expect(msg).not.toBe(FALLBACK);
-    expect(msg).toContain("アプリ");
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("ManifestInvalid with an unsupported schema tells the customer to update the app", () => {
+    const error = {
+      kind: "ManifestInvalid",
+      detail: { reason: "unsupported manifest schema 3 (expected 2)" },
+    };
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    expect(formatError(error)).toBe(
+      "配布されている更新情報は、このアプリが対応していない形式です。最新のアプリを確認して、もう一度お試しください。"
+    );
+    expect(log).toHaveBeenCalledWith("[Firmware update] ManifestInvalid:", error);
+  });
+
+  it("ManifestInvalid other than an unsupported schema does not blame the app", () => {
+    const error = { kind: "ManifestInvalid", detail: { reason: "missing sha256 for flash target" } };
+    const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const msg = formatError(error);
+
+    expect(msg).toBe(
+      "配布されている更新情報を読み取れませんでした。時間をおいてもう一度お試しください。解決しない場合はサポートへご連絡ください。"
+    );
+    expect(msg).not.toContain("アプリが古い");
+    expect(log).toHaveBeenCalledWith("[Firmware update] ManifestInvalid:", error);
   });
 
   it("Io returns an actionable file-operation message (F-4)", () => {

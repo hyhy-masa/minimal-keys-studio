@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import packageInfo from "../../package.json";
 import {
   reduce,
   run,
@@ -44,6 +45,10 @@ const toLBootloaderGuide = (m: Manifest): WizardEvent[] => [
 ];
 
 describe("wizard reducer", () => {
+  it("uses the package version for the firmware-update compatibility gate", () => {
+    expect(TOOL_VERSION).toBe(packageInfo.version);
+  });
+
   it("happy path (no settings_reset) reaches done", () => {
     const s = run([
       ...toRFlashed(plain),

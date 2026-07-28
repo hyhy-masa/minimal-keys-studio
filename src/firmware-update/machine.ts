@@ -9,8 +9,9 @@
 //  - Any dead-end funnels to recovery, never to a stuck state.
 
 import { stripV } from "./versions";
+import packageInfo from "../../package.json";
 
-export const TOOL_VERSION = "0.4.0";
+export const TOOL_VERSION = packageInfo.version;
 
 export interface Manifest {
   schema: number;
