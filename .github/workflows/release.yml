@@ -71,7 +71,6 @@ jobs:
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           args: ${{ matrix.args }}
-        continue-on-error: true
 
       - name: Upload build artifacts
         if: always()
