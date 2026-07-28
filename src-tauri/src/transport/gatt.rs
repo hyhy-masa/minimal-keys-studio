@@ -26,20 +26,23 @@ pub async fn gatt_connect(
     state: State<'_, super::commands::ActiveConnection>,
 ) -> Result<super::commands::ConnectionHandle, String> {
     let adapter = Adapter::default().await.ok_or_else(|| {
-        eprintln!("[BLE connect] Failed to access the BT adapter");
+        crate::frontend_log::diagnostic("[BLE connect] Failed to access the BT adapter");
         "Failed to access the BT adapter".to_string()
     })?;
     adapter.wait_available().await.map_err(|e| {
-        eprintln!(
+        crate::frontend_log::diagnostic(format!(
             "[BLE connect] Failed to wait for BT adapter availability: {}",
             e.message()
-        );
+        ));
         format!("Failed to wait for the BT adapter access: {}", e.message())
     })?;
 
     let device_id: DeviceId = serde_json::from_str(&id).unwrap();
     let device = adapter.open_device(&device_id).await.map_err(|e| {
-        eprintln!("[BLE connect] Failed to open device: {}", e.message());
+        crate::frontend_log::diagnostic(format!(
+            "[BLE connect] Failed to open device: {}",
+            e.message()
+        ));
         format!("Failed to open the device: {}", e.message())
     })?;
 
@@ -47,7 +50,10 @@ pub async fn gatt_connect(
         false
     } else {
         adapter.connect_device(&device).await.map_err(|e| {
-            eprintln!("[BLE connect] Failed to connect to device: {}", e.message());
+            crate::frontend_log::diagnostic(format!(
+                "[BLE connect] Failed to connect to device: {}",
+                e.message()
+            ));
             format!("Failed to connect to the device: {}", e.message())
         })?;
         true
@@ -56,10 +62,10 @@ pub async fn gatt_connect(
     let service = match device.discover_services_with_uuid(SVC_UUID).await {
         Ok(services) => services.into_iter().next(),
         Err(e) => {
-            eprintln!(
+            crate::frontend_log::diagnostic(format!(
                 "[BLE connect] Failed to discover required GATT service: {}",
                 e.message()
-            );
+            ));
             disconnect_if_owned(&adapter, &device, connected_by_this_attempt).await;
             return Err(format!(
                 "Failed to find the device services: {}",
@@ -70,7 +76,9 @@ pub async fn gatt_connect(
     let service = match service {
         Some(service) => service,
         None => {
-            eprintln!("[BLE connect] Required studio GATT service was not found");
+            crate::frontend_log::diagnostic(
+                "[BLE connect] Required studio GATT service was not found",
+            );
             disconnect_if_owned(&adapter, &device, connected_by_this_attempt).await;
             return Err(
                 "Failed to connect: Unable to locate the required studio GATT service".to_string(),
@@ -84,10 +92,10 @@ pub async fn gatt_connect(
     {
         Ok(characteristics) => characteristics.into_iter().next(),
         Err(e) => {
-            eprintln!(
+            crate::frontend_log::diagnostic(format!(
                 "[BLE connect] Failed to discover required studio GATT characteristic: {}",
                 e.message()
-            );
+            ));
             disconnect_if_owned(&adapter, &device, connected_by_this_attempt).await;
             return Err(format!(
                 "Failed to find the studio service characteristics: {}",
@@ -98,7 +106,9 @@ pub async fn gatt_connect(
     let characteristic = match characteristic {
         Some(characteristic) => characteristic,
         None => {
-            eprintln!("[BLE connect] Required studio GATT characteristic was not found");
+            crate::frontend_log::diagnostic(
+                "[BLE connect] Required studio GATT characteristic was not found",
+            );
             disconnect_if_owned(&adapter, &device, connected_by_this_attempt).await;
             return Err(
                 "Failed to connect: Unable to locate the required studio GATT characteristic"
@@ -154,9 +164,9 @@ pub async fn gatt_connect(
 
         match reason {
             DisconnectReason::AppRequested => {
-                eprintln!("[BLE] Disconnecting device...");
+                crate::frontend_log::diagnostic("[BLE] Disconnecting device...");
                 let _ = adapter.disconnect_device(&device).await;
-                eprintln!("[BLE] Device disconnected");
+                crate::frontend_log::diagnostic("[BLE] Device disconnected");
             }
             DisconnectReason::DeviceDisconnected | DisconnectReason::EventStreamEnded => {
                 let state = disconnect_app_handle.state::<super::commands::ActiveConnection>();
@@ -171,7 +181,7 @@ pub async fn gatt_connect(
     let write_task = tauri::async_runtime::spawn(async move {
         while let Some(data) = recv.next().await {
             if let Err(error) = characteristic.write(&data).await {
-                eprintln!("[BLE] Write failed: {:?}", error);
+                crate::frontend_log::diagnostic(format!("[BLE] Write failed: {:?}", error));
                 let state = write_app_handle.state::<super::commands::ActiveConnection>();
                 if state.close_if_current(generation).await {
                     emit_disconnected(&write_app_handle, generation);
@@ -193,10 +203,10 @@ pub async fn gatt_connect(
         )
         .await;
 
-    eprintln!(
+    crate::frontend_log::diagnostic(format!(
         "[BLE connect] Connection established (generation {})",
         generation
-    );
+    ));
     Ok(super::commands::ConnectionHandle { generation })
 }
 
@@ -217,11 +227,17 @@ pub async fn gatt_list_devices() -> Result<Vec<super::commands::AvailableDevice>
     let mut devices = vec![];
     if let Ok(adapter) = adapter {
         if let Ok(connected) = adapter.connected_devices_with_services(&[SVC_UUID]).await {
-            eprintln!("[BLE scan] Found {} connected device(s)", connected.len());
+            crate::frontend_log::diagnostic(format!(
+                "[BLE scan] Found {} connected device(s)",
+                connected.len()
+            ));
             for device in &connected {
                 let label = device.name_async().await.unwrap_or("Unknown".to_string());
                 let id = serde_json::to_string(&device.id()).unwrap();
-                eprintln!("[BLE scan] Connected: {} ({})", label, id);
+                crate::frontend_log::diagnostic(format!(
+                    "[BLE scan] Connected: {} ({})",
+                    label, id
+                ));
                 devices.push(super::commands::AvailableDevice { label, id });
             }
         }
@@ -239,12 +255,15 @@ pub async fn gatt_list_devices() -> Result<Vec<super::commands::AvailableDevice>
                     continue;
                 }
                 let label = device.name_async().await.unwrap_or("Unknown".to_string());
-                eprintln!("[BLE scan] Advertising: {} ({})", label, id);
+                crate::frontend_log::diagnostic(format!(
+                    "[BLE scan] Advertising: {} ({})",
+                    label, id
+                ));
                 devices.push(super::commands::AvailableDevice { label, id });
             }
         }
 
-        eprintln!("[BLE scan] Total: {} device(s)", devices.len());
+        crate::frontend_log::diagnostic(format!("[BLE scan] Total: {} device(s)", devices.len()));
     }
 
     Ok(devices)

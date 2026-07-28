@@ -26,8 +26,6 @@ function suppressConsoleErrorFor(value: unknown): void {
 }
 
 export function logFrontend(level: FrontendLogLevel, message: string, error?: unknown): void {
-  if (!import.meta.env.DEV) return;
-
   const stack = error instanceof Error ? error.stack : undefined;
   const entry = {
     level,
@@ -43,8 +41,6 @@ export function logFrontend(level: FrontendLogLevel, message: string, error?: un
 }
 
 export function installFrontendLogForwarding(): void {
-  if (!import.meta.env.DEV) return;
-
   const originalError = console.error.bind(console);
   const originalWarn = console.warn.bind(console);
 

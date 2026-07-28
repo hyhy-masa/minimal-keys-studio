@@ -6,7 +6,7 @@ use std::env;
 mod flash;
 mod frontend_log;
 mod transport;
-use frontend_log::log_from_frontend;
+use frontend_log::{frontend_log_path, log_from_frontend};
 use transport::commands::{transport_close, transport_send_data, ActiveConnection};
 
 use transport::gatt::{gatt_connect, gatt_list_devices};
@@ -19,6 +19,10 @@ fn main() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .setup(|app| {
+            frontend_log::initialize(&app.handle());
+            Ok(())
+        })
         .manage(ActiveConnection::new())
         .manage(flash::FlashState::new())
         .invoke_handler(tauri::generate_handler![
@@ -29,6 +33,7 @@ fn main() {
             serial_list_devices,
             serial_connect,
             log_from_frontend,
+            frontend_log_path,
             flash::fw_fetch_manifest,
             flash::fw_download_asset,
             flash::flash_scan_volumes,

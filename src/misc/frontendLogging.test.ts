@@ -8,7 +8,7 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: mocks.invoke,
 }));
 
-import { installFrontendLogForwarding } from "./frontendLogging";
+import { installFrontendLogForwarding, logFrontend } from "./frontendLogging";
 
 describe("installFrontendLogForwarding", () => {
   let originalError: typeof console.error;
@@ -27,10 +27,23 @@ describe("installFrontendLogForwarding", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     console.error = originalError;
     console.warn = originalWarn;
     window.onerror = originalOnError;
     window.onunhandledrejection = originalUnhandledRejection;
+  });
+
+  it("forwards an application log when DEV is false", async () => {
+    vi.stubEnv("DEV", false);
+
+    logFrontend("warn", "release connection diagnostic");
+    await Promise.resolve();
+
+    expect(mocks.invoke).toHaveBeenCalledWith("log_from_frontend", {
+      level: "warn",
+      message: "release connection diagnostic",
+    });
   });
 
   it("forwards console.error without changing its original behavior", async () => {

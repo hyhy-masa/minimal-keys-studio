@@ -1,4 +1,5 @@
 import React from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useModalRef } from "./misc/useModalRef";
 
 import cannonKeys from "./assets/cannonkeys.png";
@@ -177,6 +178,15 @@ const sponsors = [
 
 export const AboutModal = ({ open, onClose }: AboutModalProps) => {
   const ref = useModalRef(open, true);
+  const [logPath, setLogPath] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    void invoke<string | null>("frontend_log_path")
+      .then(setLogPath)
+      .catch(() => setLogPath(null));
+  }, [open]);
+
   return (
     <GenericModal ref={ref} className="min-w-min w-[70vw]" onClose={onClose}>
       <div className="flex justify-between items-start">
@@ -205,6 +215,13 @@ export const AboutModal = ({ open, onClose }: AboutModalProps) => {
           following vendors:
         </p>
       </div>
+      <section className="mt-4 rounded-md border border-base-300 bg-base-200 p-3">
+        <h2 className="font-semibold">困ったときは</h2>
+        <p className="mt-1 text-sm">ログ保存先</p>
+        <p className="mt-1 break-all rounded bg-base-100 p-2 font-mono text-xs">
+          {logPath ?? "ログ保存先を取得できませんでした"}
+        </p>
+      </section>
       <div className="grid gap-2 auto-rows-auto grid-cols-[auto_minmax(min-content,1fr)] justify-items-center items-center">
         {sponsors.map((s) => {
           const heightVariants = {

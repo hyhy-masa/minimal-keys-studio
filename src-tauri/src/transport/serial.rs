@@ -18,7 +18,7 @@ pub async fn serial_connect(
     app_handle: AppHandle,
     state: State<'_, super::commands::ActiveConnection>,
 ) -> Result<super::commands::ConnectionHandle, String> {
-    eprintln!("[USB] Opening port: {id}");
+    crate::frontend_log::diagnostic(format!("[USB] Opening port: {id}"));
     match tokio_serial::new(id.clone(), 9600).open_native_async() {
         Ok(mut port) => {
             #[cfg(unix)]
@@ -35,7 +35,7 @@ pub async fn serial_connect(
                 loop {
                     match reader.read(&mut buffer).await {
                         Ok(0) => {
-                            eprintln!("[USB] Read task ended: EOF");
+                            crate::frontend_log::diagnostic("[USB] Read task ended: EOF");
                             break;
                         }
                         Ok(size) => {
@@ -48,7 +48,9 @@ pub async fn serial_connect(
                             );
                         }
                         Err(error) => {
-                            eprintln!("[USB] Read task ended with error: {error}");
+                            crate::frontend_log::diagnostic(format!(
+                                "[USB] Read task ended with error: {error}"
+                            ));
                             break;
                         }
                     }
@@ -64,7 +66,7 @@ pub async fn serial_connect(
             let write_process = tauri::async_runtime::spawn(async move {
                 while let Some(data) = recv.next().await {
                     if let Err(error) = writer.write_all(&data).await {
-                        eprintln!("[USB] Write failed: {error}");
+                        crate::frontend_log::diagnostic(format!("[USB] Write failed: {error}"));
                         break;
                     }
                 }
@@ -83,11 +85,16 @@ pub async fn serial_connect(
                 )
                 .await;
 
-            eprintln!("[USB] Connection established (generation {generation})");
+            crate::frontend_log::diagnostic(format!(
+                "[USB] Connection established (generation {generation})"
+            ));
             Ok(super::commands::ConnectionHandle { generation })
         }
         Err(e) => {
-            eprintln!("[USB] Failed to open port {id}: {}", e.description);
+            crate::frontend_log::diagnostic(format!(
+                "[USB] Failed to open port {id}: {}",
+                e.description
+            ));
             Err(format!("Failed to open the serial port: {}", e.description))
         }
     }
@@ -130,9 +137,12 @@ pub async fn serial_list_devices(
         }
     }
 
-    eprintln!("[USB] Found {} port(s)", candidates.len());
+    crate::frontend_log::diagnostic(format!("[USB] Found {} port(s)", candidates.len()));
     for candidate in &candidates {
-        eprintln!("[USB] Port: id={}, label={}", candidate.id, candidate.label);
+        crate::frontend_log::diagnostic(format!(
+            "[USB] Port: id={}, label={}",
+            candidate.id, candidate.label
+        ));
     }
 
     Ok(candidates)
