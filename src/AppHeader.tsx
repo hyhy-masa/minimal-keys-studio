@@ -39,6 +39,7 @@ export interface AppHeaderProps {
   onFwUpdateOpenChange?: (open: boolean) => void;
   isWireless?: boolean;
   availableUpdate?: ReleaseInfo | null;
+  firmwareUpdateEnabled?: boolean;
 }
 
 export const AppHeader = ({
@@ -56,11 +57,12 @@ export const AppHeader = ({
   onFwUpdateOpenChange,
   isWireless,
   availableUpdate,
+  firmwareUpdateEnabled,
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
   const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
-  const fwUpdateEnabled = isFirmwareUpdateEnabled();
+  const fwUpdateEnabled = firmwareUpdateEnabled ?? isFirmwareUpdateEnabled();
   const { osMode, setOsMode } = useOsMode();
 
   const lockState = useContext(LockStateContext);
@@ -98,10 +100,10 @@ export const AppHeader = ({
   const updateForPopover = availableUpdate ?? manualAvailableUpdate;
 
   return (
-    <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-12 max-w-full border-b border-gray-200 bg-white">
-      <div className="flex px-3 items-center gap-2">
-        <img src={`${import.meta.env.BASE_URL}minimal-keys-logo.png`} alt="Logo" className="h-8 rounded" />
-        <p className="font-semibold text-base">minimal-keys カスタマイズ</p>
+    <header className="top-0 left-0 right-0 grid min-h-12 max-w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center justify-between border-b border-gray-200 bg-white">
+      <div className="flex min-w-0 items-center gap-2 overflow-hidden px-3">
+        <img src={`${import.meta.env.BASE_URL}minimal-keys-logo.png`} alt="Logo" className="h-8 shrink-0 rounded" />
+        <p className="truncate whitespace-nowrap font-semibold text-base">minimal-keys カスタマイズ</p>
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">
         <h2 className="my-2 text-lg">設定を初期化</h2>
@@ -136,7 +138,7 @@ export const AppHeader = ({
       )}
       <MenuTrigger>
         <Button
-          className="text-center rac-disabled:opacity-0 hover:bg-base-300 transition-all duration-100 p-1 pl-2 rounded-lg"
+          className="min-h-11 shrink-0 whitespace-nowrap rounded-lg p-1 pl-2 text-center transition-all duration-100 hover:bg-base-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rac-disabled:opacity-0"
           isDisabled={!connectedDeviceLabel}
         >
           {isWireless === true ? <Bluetooth className="inline-block w-4" aria-label="ワイヤレス" /> : isWireless === false ? <Usb className="inline-block w-4" aria-label="USB" /> : null}
@@ -161,10 +163,11 @@ export const AppHeader = ({
           </Menu>
         </Popover>
       </MenuTrigger>
-      <div className="flex justify-end gap-1 px-2 items-center">
-        <div className="flex bg-base-200 rounded-md p-0.5 mr-2" data-tour="os-toggle">
+      <div className="min-w-0 overflow-x-auto" role="toolbar" aria-label="操作ツールバー">
+        <div className="flex min-w-full w-max items-center justify-end gap-1 px-2">
+        <div className="mr-2 flex shrink-0 rounded-md bg-base-200 p-0.5" data-tour="os-toggle">
           <button
-            className={`px-3 py-1 text-sm rounded transition-all ${
+            className={`min-h-11 min-w-11 shrink-0 rounded px-3 py-1 text-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               osMode === "mac"
                 ? "bg-white text-primary font-medium shadow-sm"
                 : "text-base-content/50 hover:text-base-content"
@@ -174,7 +177,7 @@ export const AppHeader = ({
             Mac
           </button>
           <button
-            className={`px-3 py-1 text-sm rounded transition-all ${
+            className={`min-h-11 min-w-11 shrink-0 rounded px-3 py-1 text-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               osMode === "windows"
                 ? "bg-white text-primary font-medium shadow-sm"
                 : "text-base-content/50 hover:text-base-content"
@@ -184,11 +187,11 @@ export const AppHeader = ({
             Windows
           </button>
         </div>
-        <div className="flex items-center gap-1" data-tour="undo-redo">
+        <div className="flex shrink-0 items-center gap-1" data-tour="undo-redo">
           {onUndo && (
             <Tooltip label="元に戻す">
               <Button
-                className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+                className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded p-1.5 enabled:hover:bg-base-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
                 isDisabled={!canUndo}
                 onPress={onUndo}
               >
@@ -200,7 +203,7 @@ export const AppHeader = ({
           {onRedo && (
             <Tooltip label="やり直し">
               <Button
-                className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+                className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded p-1.5 enabled:hover:bg-base-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
                 isDisabled={!canRedo}
                 onPress={onRedo}
               >
@@ -209,10 +212,10 @@ export const AppHeader = ({
             </Tooltip>
           )}
         </div>
-        <div className="flex items-center gap-1" data-tour="save-discard">
+        <div className="flex shrink-0 items-center gap-1" data-tour="save-discard">
           <Tooltip label="保存">
             <Button
-              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded p-1.5 enabled:hover:bg-base-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
               isDisabled={!unsaved}
               onPress={onSave}
             >
@@ -221,7 +224,7 @@ export const AppHeader = ({
           </Tooltip>
           <Tooltip label="破棄">
             <Button
-              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300 disabled:opacity-50"
+              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded p-1.5 enabled:hover:bg-base-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
               onPress={onDiscard}
               isDisabled={!unsaved}
             >
@@ -232,20 +235,20 @@ export const AppHeader = ({
         {fwUpdateEnabled && (
           <Button
             aria-label="ファームウェア更新"
-            className="flex min-h-11 items-center gap-1 rounded border border-base-300 px-2 py-1.5 text-sm text-base-content/60 transition-colors enabled:hover:bg-base-200 enabled:hover:text-base-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="flex min-h-11 shrink-0 items-center gap-1 whitespace-nowrap rounded border border-base-300 px-2 py-1.5 text-sm text-base-content/60 transition-colors enabled:hover:bg-base-200 enabled:hover:text-base-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             onPress={() => onFwUpdateOpenChange?.(true)}
           >
             <Download className="inline-block w-4" />
-            ファーム更新
+            <span className="whitespace-nowrap">ファーム更新</span>
           </Button>
         )}
         <MenuTrigger>
           <Button
             aria-label={availableUpdate ? "アプリの更新があります" : "アプリ更新"}
-            className={`relative inline-flex min-h-11 min-w-11 items-center justify-center rounded px-2 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${availableUpdate ? "bg-primary/10 text-primary font-medium" : "text-base-content/50 hover:bg-base-200"}`}
+            className={`relative inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center whitespace-nowrap rounded px-2 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${availableUpdate ? "bg-primary/10 text-primary font-medium" : "text-base-content/50 hover:bg-base-200"}`}
           >
             <CircleArrowUp className="w-4" />
-            <span className="ml-1">{availableUpdate ? "アプリ更新あり" : "アプリ更新"}</span>
+            <span className="ml-1 whitespace-nowrap">{availableUpdate ? "アプリ更新あり" : "アプリ更新"}</span>
             {availableUpdate && <span aria-label="アプリの更新があります" role="status" className="absolute right-1 top-1 h-2 w-2 rounded-full bg-error ring-2 ring-white" />}
           </Button>
           <Popover className="w-72 rounded-lg border border-base-300 bg-base-100 p-3 shadow-md">
@@ -268,7 +271,7 @@ export const AppHeader = ({
         {onStartTour && (
           <Tooltip label="使い方を見る">
             <Button
-              className="flex items-center justify-center p-1.5 rounded enabled:hover:bg-base-300"
+              className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded p-1.5 enabled:hover:bg-base-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               onPress={onStartTour}
               aria-label="使い方を見る"
             >
@@ -276,6 +279,7 @@ export const AppHeader = ({
             </Button>
           </Tooltip>
         )}
+        </div>
       </div>
     </header>
   );

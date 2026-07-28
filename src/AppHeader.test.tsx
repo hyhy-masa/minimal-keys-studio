@@ -45,6 +45,45 @@ beforeEach(() => {
 });
 
 describe("AppHeader", () => {
+  it("keeps the toolbar reachable without allowing its controls to shrink", () => {
+    vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(true);
+    render(
+      <AppHeader
+        connectedDeviceLabel="minimal-keys"
+        onUndo={vi.fn()}
+        onRedo={vi.fn()}
+        onStartTour={vi.fn()}
+        onFwUpdateOpenChange={vi.fn()}
+      />,
+    );
+
+    const toolbar = screen.getByRole("toolbar", { name: "操作ツールバー" });
+    expect(toolbar).toHaveClass("min-w-0", "overflow-x-auto");
+    expect(screen.getByRole("button", { name: "minimal-keys" })).toBeInTheDocument();
+
+    for (const name of [
+      "Mac",
+      "Windows",
+      "元に戻す",
+      "やり直し",
+      "保存",
+      "破棄",
+      "ファームウェア更新",
+      "アプリ更新",
+      "使い方を見る",
+    ]) {
+      expect(screen.getByRole("button", { name })).toHaveClass("shrink-0");
+    }
+  });
+
+  it("keeps Japanese update labels on one line", () => {
+    vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(true);
+    render(<AppHeader onFwUpdateOpenChange={vi.fn()} />);
+
+    expect(screen.getByText("ファーム更新")).toHaveClass("whitespace-nowrap");
+    expect(screen.getByText("アプリ更新")).toHaveClass("whitespace-nowrap");
+  });
+
   it("手動確認で更新が見つかった場合は版名とダウンロード導線を表示する", async () => {
     let resolveCheck: ((result: Awaited<ReturnType<typeof checkForUpdate>>) => void) | undefined;
     vi.mocked(checkForUpdate).mockImplementation(
