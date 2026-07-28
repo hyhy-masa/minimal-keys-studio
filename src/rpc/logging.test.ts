@@ -7,6 +7,7 @@ import {
   type RpcConnection,
 } from "@zmkfirmware/zmk-studio-ts-client";
 import {
+  callRpcOrNotify,
   call_rpc,
   RPC_WRITE_TIMEOUT_MS,
   registerForceDisconnect,
@@ -77,6 +78,20 @@ function createConnectionWithHangingWrite(): RpcConnection {
   };
 }
 
+function createConnectionWithFailedWrite(): RpcConnection {
+  return {
+    label: "failed-write",
+    request_response_readable: new ReadableStream<RequestResponse>(),
+    request_writable: new WritableStream<Request>({
+      write() {
+        throw new Error("write failed");
+      },
+    }),
+    notification_readable: new ReadableStream(),
+    current_request: 0,
+  };
+}
+
 async function waitForWrites(writes: Request[], count: number): Promise<void> {
   for (let i = 0; i < 20 && writes.length < count; i += 1) {
     await Promise.resolve();
@@ -86,7 +101,6 @@ async function waitForWrites(writes: Request[], count: number): Promise<void> {
 
 describe("call_rpc", () => {
   afterEach(() => {
-    registerForceDisconnect(null);
     vi.useRealTimers();
   });
 
@@ -206,18 +220,49 @@ describe("call_rpc", () => {
     await expect(pending).rejects.toBeInstanceOf(ErrorClass);
   });
 
-  it("does not call forceDisconnect after a timeout", async () => {
+  it("calls the registered unusable-connection handler after a write timeout", async () => {
     vi.useFakeTimers();
-    const { conn, writes } = createConnection();
+    const conn = createConnectionWithHangingWrite();
     const forceDisconnect = vi.fn();
-    registerForceDisconnect(forceDisconnect);
+    registerForceDisconnect(conn, forceDisconnect);
 
-    const pending = call_rpc(conn, req, 25);
+    const pending = call_rpc(conn, req);
     const assertion = expect(pending).rejects.toBeInstanceOf(RpcTimeoutError);
-    await waitForWrites(writes, 1);
-    await vi.advanceTimersByTimeAsync(25);
+    await vi.advanceTimersByTimeAsync(RPC_WRITE_TIMEOUT_MS);
+
+    await assertion;
+    expect(forceDisconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not notify the active connection when a probe connection becomes unusable", async () => {
+    vi.useFakeTimers();
+    const active = createConnection().conn;
+    const probe = createConnectionWithHangingWrite();
+    const forceDisconnect = vi.fn();
+    registerForceDisconnect(active, forceDisconnect);
+
+    const pending = call_rpc(probe, req);
+    const assertion = expect(pending).rejects.toBeInstanceOf(RpcTimeoutError);
+    await vi.advanceTimersByTimeAsync(RPC_WRITE_TIMEOUT_MS);
 
     await assertion;
     expect(forceDisconnect).not.toHaveBeenCalled();
+  });
+});
+
+describe("callRpcOrNotify", () => {
+  it.each([
+    ["save", { keymap: { saveChanges: true } }, "保存できませんでした"],
+    ["discard", { keymap: { discardChanges: true } }, "破棄できませんでした"],
+  ])("notifies when %s communication fails", async (_name, request, message) => {
+    const notify = vi.fn();
+
+    await expect(
+      callRpcOrNotify(createConnectionWithFailedWrite(), request, () =>
+        notify(message, "error")
+      )
+    ).resolves.toBeUndefined();
+
+    expect(notify).toHaveBeenCalledWith(message, "error");
   });
 });

@@ -11,7 +11,11 @@ import {
 } from "lucide-react";
 
 import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
-import { call_rpc, registerForceDisconnect } from "./rpc/logging";
+import {
+  call_rpc,
+  callRpcOrNotify,
+  registerForceDisconnect,
+} from "./rpc/logging";
 
 import type { Notification } from "@zmkfirmware/zmk-studio-ts-client/studio";
 import { ConnectionState, ConnectionContext } from "./rpc/ConnectionContext";
@@ -156,7 +160,7 @@ async function connect(
   abortController: AbortController,
   onError: (msg: string) => void,
   isWireless?: boolean
-) {
+): Promise<boolean> {
   const signal = abortController.signal;
   const conn = await create_rpc_connection(transport, { signal });
 
@@ -174,7 +178,7 @@ async function connect(
     // Tear the transport down; a still-pending getDeviceInfo would otherwise
     // hold the client's global RPC mutex and poison every later attempt.
     abortController.abort("connect-failed");
-    return;
+    return false;
   }
 
   listen_for_notifications(conn.notification_readable, signal)
@@ -189,6 +193,7 @@ async function connect(
 
   setConnectedDeviceName(details.name);
   setConn({ conn });
+  return true;
 }
 
 type ActiveTab = "keymap" | "trackball" | "encoder" | "combo" | "bluetooth" | "battery" | "holdtap" | "settings";
@@ -287,9 +292,12 @@ function AppInner() {
         return;
       }
 
-      const locked_resp = await call_rpc(conn.conn, {
-        core: { getLockState: true },
-      });
+      const locked_resp = await callRpcOrNotify(
+        conn.conn,
+        { core: { getLockState: true } },
+        () => toast("接続状態を確認できませんでした", "error")
+      );
+      if (!locked_resp) return;
 
       setLockState(
         locked_resp.core?.getLockState ||
@@ -297,8 +305,8 @@ function AppInner() {
       );
     }
 
-    updateLockState();
-  }, [conn, setLockState, reset]);
+    void updateLockState();
+  }, [conn, setLockState, reset, toast]);
 
   const save = useCallback(() => {
     async function doSave() {
@@ -306,7 +314,12 @@ function AppInner() {
         return;
       }
 
-      const resp = await call_rpc(conn.conn, { keymap: { saveChanges: true } });
+      const resp = await callRpcOrNotify(
+        conn.conn,
+        { keymap: { saveChanges: true } },
+        () => toast("保存できませんでした", "error")
+      );
+      if (!resp) return;
       if (!resp.keymap?.saveChanges || resp.keymap?.saveChanges.err) {
         toast("保存できませんでした", "error");
       } else {
@@ -316,7 +329,7 @@ function AppInner() {
       }
     }
 
-    doSave();
+    void doSave();
   }, [conn, toast, trackEvent]);
 
   const discard = useCallback(() => {
@@ -325,9 +338,12 @@ function AppInner() {
         return;
       }
 
-      const resp = await call_rpc(conn.conn, {
-        keymap: { discardChanges: true },
-      });
+      const resp = await callRpcOrNotify(
+        conn.conn,
+        { keymap: { discardChanges: true } },
+        () => toast("破棄できませんでした", "error")
+      );
+      if (!resp) return;
       if (!resp.keymap?.discardChanges) {
         toast("破棄できませんでした", "error");
       } else {
@@ -340,7 +356,7 @@ function AppInner() {
       setKeymapVersion((v) => v + 1);
     }
 
-    doDiscard();
+    void doDiscard();
   }, [conn, toast, reset, trackEvent]);
 
   const resetSettings = useCallback(() => {
@@ -349,9 +365,12 @@ function AppInner() {
         return;
       }
 
-      const resp = await call_rpc(conn.conn, {
-        core: { resetSettings: true },
-      });
+      const resp = await callRpcOrNotify(
+        conn.conn,
+        { core: { resetSettings: true } },
+        () => toast("設定の初期化に失敗しました", "error")
+      );
+      if (!resp) return;
       if (!resp.core?.resetSettings) {
         toast("設定の初期化に失敗しました", "error");
       } else {
@@ -362,7 +381,7 @@ function AppInner() {
       setKeymapVersion((v) => v + 1);
     }
 
-    doReset();
+    void doReset();
   }, [conn, toast, reset]);
 
   const disconnect = useCallback(() => {
@@ -380,29 +399,38 @@ function AppInner() {
   }, [conn, connectionAbort]);
 
   const onConnect = useCallback(
-    (t: RpcTransport, isWireless?: boolean) => {
+    async (t: RpcTransport, isWireless?: boolean): Promise<boolean> => {
       setIsWireless(isWireless);
       const ac = new AbortController();
       setConnectionAbort(ac);
-      connect(t, setConn, setConnectedDeviceName, ac, (msg) => toast(msg, "error"), isWireless).catch(
-        () => toast("デバイスへの接続に失敗しました", "error")
-      );
+      try {
+        return await connect(
+          t,
+          setConn,
+          setConnectedDeviceName,
+          ac,
+          (msg) => toast(msg, "error"),
+          isWireless
+        );
+      } catch {
+        toast("デバイスへの接続に失敗しました", "error");
+        return false;
+      }
     },
     [setConn, setConnectedDeviceName, toast]
   );
 
   useEffect(() => {
-    if (!conn.conn) {
-      registerForceDisconnect(null);
-      return;
-    }
+    if (!conn.conn) return;
 
-    registerForceDisconnect(() => {
+    const activeConn = conn.conn;
+
+    registerForceDisconnect(activeConn, () => {
       toast("デバイスの応答がありません。接続を解除しました", "error");
       connectionAbort.abort("rpc-timeout");
     });
 
-    return () => registerForceDisconnect(null);
+    return () => registerForceDisconnect(activeConn, null);
   }, [conn.conn, connectionAbort, toast]);
 
   return (

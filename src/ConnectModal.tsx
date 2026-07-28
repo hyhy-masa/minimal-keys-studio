@@ -28,7 +28,7 @@ export type TransportFactory = {
 export interface ConnectModalProps {
   open?: boolean;
   transports: TransportFactory[];
-  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void;
+  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => Promise<boolean>;
 }
 
 function SimpleDevicePicker({
@@ -36,7 +36,7 @@ function SimpleDevicePicker({
   onTransportCreated,
 }: {
   transports: TransportFactory[];
-  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void;
+  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => Promise<boolean>;
 }) {
   const [selectedTransport, setSelectedTransport] = useState<
     TransportFactory | undefined
@@ -55,7 +55,7 @@ function SimpleDevicePicker({
 
         if (!ignore) {
           if (transport) {
-            onTransportCreated(transport, selectedTransport?.isWireless);
+            await onTransportCreated(transport, selectedTransport?.isWireless);
           }
           setSelectedTransport(undefined);
         }
@@ -103,7 +103,7 @@ function DeviceList({
 }: {
   open: boolean;
   transports: TransportFactory[];
-  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void;
+  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => Promise<boolean>;
 }) {
   const [devices, setDevices] = useState<
     Array<[TransportFactory, AvailableDevice]>
@@ -143,7 +143,7 @@ function DeviceList({
     setConnecting(true);
     try {
       const rpcTransport = await transport.pick_and_connect!.connect(device);
-      onTransportCreated(rpcTransport, transport.isWireless);
+      await onTransportCreated(rpcTransport, transport.isWireless);
     } catch (e) {
       console.error("Failed to connect:", e);
       if (e instanceof Error) {
@@ -321,7 +321,7 @@ function ConnectOptions({
   open,
 }: {
   transports: TransportFactory[];
-  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => void;
+  onTransportCreated: (t: RpcTransport, isWireless?: boolean) => Promise<boolean>;
   open?: boolean;
 }) {
   const useSimplePicker = useMemo(
@@ -375,14 +375,25 @@ export const ConnectModal = ({
   const handleUsbConnect = useCallback(async () => {
     setUsbFailureText(undefined);
     setView("usb-searching");
+    let transport: RpcTransport;
     try {
-      const { transport } = await autoConnectUsb();
-      onTransportCreated(transport);
+      ({ transport } = await autoConnectUsb());
     } catch (error) {
       const reason = error instanceof AutoConnectError ? error.reason : "no-response";
       setUsbFailureText(getAutoConnectFailureText(reason));
       setView("usb-failed");
+      return;
     }
+
+    try {
+      const connected = await onTransportCreated(transport, false);
+      if (connected) return;
+    } catch {
+      // Connection establishment failures use the same retryable state.
+    }
+
+    setUsbFailureText("接続できませんでした。もう一度お試しください");
+    setView("usb-failed");
   }, [onTransportCreated]);
 
   const deviceList =

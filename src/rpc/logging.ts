@@ -18,12 +18,17 @@ export class RpcTimeoutError extends Error {
   }
 }
 
-let forceDisconnect: (() => void) | null = null;
+const forceDisconnectHandlers = new WeakMap<RpcConnection, () => void>();
 
-export function registerForceDisconnect(fn: (() => void) | null): void {
-  forceDisconnect = fn;
-  // Kept for public API compatibility. Session timeouts must not invoke it.
-  void forceDisconnect;
+export function registerForceDisconnect(
+  conn: RpcConnection,
+  fn: (() => void) | null
+): void {
+  if (fn) {
+    forceDisconnectHandlers.set(conn, fn);
+  } else {
+    forceDisconnectHandlers.delete(conn);
+  }
 }
 
 type PendingRequest = {
@@ -166,6 +171,7 @@ class RpcSession {
     if (this.poisonedError) return;
     this.poisonedError = error;
     this.rejectAll(error);
+    forceDisconnectHandlers.get(this.conn)?.();
   }
 }
 
@@ -182,4 +188,18 @@ export function call_rpc(
     sessions.set(conn, session);
   }
   return session.call(req, timeoutMs);
+}
+
+export async function callRpcOrNotify(
+  conn: RpcConnection,
+  req: Omit<Request, "requestId">,
+  onFailure: () => void,
+  timeoutMs: number = RPC_TIMEOUT_MS
+): Promise<RequestResponse | undefined> {
+  try {
+    return await call_rpc(conn, req, timeoutMs);
+  } catch {
+    onFailure();
+    return undefined;
+  }
 }
