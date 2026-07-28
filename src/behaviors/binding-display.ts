@@ -1,7 +1,7 @@
 import { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { hid_usage_page_and_id_from_usage } from "../hid-usages";
 import { getHidKeyDescription, getMouseKeyDescription } from "../keyboard/key-descriptions";
-import { modifierSymbols } from "../keyboard/key-label-utils";
+import { formatModifierKeycode } from "../keyboard/key-label-utils";
 
 /**
  * Format a binding's parameters into a human-readable detail string.
@@ -28,7 +28,7 @@ export function formatBindingDetail(
       return `${layerName} + ${keyName}`;
     }
     case "Mod-Tap": {
-      const mod = modifierSymbols(binding.param1);
+      const mod = formatModifierKeycode(binding.param1);
       const [rawPage, id] = hid_usage_page_and_id_from_usage(binding.param2);
       const page = rawPage & 0xff;
       const keyName = getHidKeyDescription(page, id).roleName;
@@ -45,7 +45,7 @@ export function formatBindingDetail(
       return layers[binding.param1]?.name ?? `L${binding.param1}`;
     }
     case "Sticky Key": {
-      return modifierSymbols(binding.param1);
+      return formatModifierKeycode(binding.param1);
     }
     case "Hold-Tap": {
       if (!binding.param2) return "";

@@ -38,10 +38,10 @@ describe("formatBindingDetail", () => {
   });
 
   it("shows modifier symbols + key for Mod-Tap", () => {
-    // param1 = Ctrl (0x01), param2 = A (0x70004)
+    // param1 = Left Ctrl (0x700E0), param2 = A (0x70004)
     const result = formatBindingDetail(
       "Mod-Tap",
-      { behaviorId: 4, param1: 0x01, param2: 0x70004 },
+      { behaviorId: 4, param1: 0x700E0, param2: 0x70004 },
       layers,
     );
     expect(result).toBe("⌃ + A");
@@ -59,7 +59,7 @@ describe("formatBindingDetail", () => {
   it("shows modifier symbols for Sticky Key", () => {
     const result = formatBindingDetail(
       "Sticky Key",
-      { behaviorId: 6, param1: 0x02, param2: 0 },
+      { behaviorId: 6, param1: 0x700E1, param2: 0 },
       layers,
     );
     expect(result).toBe("⇧");

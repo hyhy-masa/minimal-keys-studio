@@ -13,6 +13,11 @@ export interface ReleaseInfo {
   prerelease?: boolean;
 }
 
+export type UpdateCheckResult =
+  | { status: "available"; release: ReleaseInfo }
+  | { status: "latest" }
+  | { status: "error" };
+
 interface ParsedVersion {
   major: number;
   minor: number;
@@ -101,10 +106,10 @@ async function fetchLatestRelease(): Promise<unknown> {
 export async function checkForUpdate(
   currentVersion = CURRENT_APP_VERSION,
   fetcher: ReleaseFetcher = fetchLatestRelease
-): Promise<ReleaseInfo | null> {
+): Promise<UpdateCheckResult> {
   try {
     const value = await fetcher();
-    if (!isReleaseInfo(value)) return null;
+    if (!isReleaseInfo(value)) return { status: "error" };
 
     const release: ReleaseInfo = {
       tagName: value.tag_name,
@@ -112,9 +117,11 @@ export async function checkForUpdate(
       draft: value.draft === true,
       prerelease: value.prerelease === true,
     };
-    return shouldNotifyForRelease(release, currentVersion) ? release : null;
+    return shouldNotifyForRelease(release, currentVersion)
+      ? { status: "available", release }
+      : { status: "latest" };
   } catch {
-    return null;
+    return { status: "error" };
   }
 }
 

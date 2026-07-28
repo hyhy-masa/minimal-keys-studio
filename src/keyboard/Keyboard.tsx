@@ -417,6 +417,17 @@ export default function Keyboard() {
     return keymap.layers[selectedLayerIndex].bindings[selectedKeyPosition];
   }, [keymap, selectedLayerIndex, selectedKeyPosition]);
 
+  useEffect(() => {
+    const behavior = selectedBinding
+      ? behaviors?.[selectedBinding.behaviorId]
+      : undefined;
+    setModifierFlags(
+      behavior?.displayName === "Key Press"
+        ? (selectedBinding!.param1 >>> 24) & 0xff
+        : 0,
+    );
+  }, [behaviors, selectedBinding]);
+
   const encoderSummary = useEncoderBindings(
     behaviors ? Object.values(behaviors) : [],
     selectedLayerIndex,

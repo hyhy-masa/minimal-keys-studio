@@ -38,6 +38,15 @@ beforeEach(() => {
 });
 
 describe("AppHeader", () => {
+  it("shows a persistent update label and badge when an update is available", () => {
+    render(
+      <AppHeader
+        availableUpdate={{ tagName: "v1.2.3", htmlUrl: "https://example.com/release" }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "アプリの更新があります" })).toHaveTextContent("更新あり");
+  });
   it("shows a help button that starts the tour", () => {
     const onStartTour = vi.fn();
     render(<AppHeader onStartTour={onStartTour} />);

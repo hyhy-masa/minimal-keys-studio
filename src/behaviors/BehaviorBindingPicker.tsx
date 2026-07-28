@@ -6,6 +6,7 @@ import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { getBehaviorDescription } from "./behavior-descriptions";
 import { formatBindingDetail } from "./binding-display";
 import { PickerTabs } from "./picker/PickerTabs";
+import { applyModifierFlags } from "./modifier-flags";
 
 export interface BehaviorBindingPickerProps {
   binding: BehaviorBinding;
@@ -14,19 +15,6 @@ export interface BehaviorBindingPickerProps {
   onBindingChanged: (binding: BehaviorBinding) => void;
   keyPosition?: number;
   modifierFlags?: number;
-}
-
-function applyModifierFlags(
-  binding: BehaviorBinding,
-  modFlags: number,
-  behaviors: GetBehaviorDetailsResponse[]
-): BehaviorBinding {
-  if (modFlags === 0) return binding;
-  const behavior = behaviors.find((b) => b.id === binding.behaviorId);
-  if (behavior?.displayName !== "Key Press") return binding;
-  const existingMods = (binding.param1 >> 24) & 0xff;
-  const newMods = existingMods | modFlags;
-  return { ...binding, param1: (newMods << 24) | (binding.param1 & 0x00ffffff) };
 }
 
 export const BehaviorBindingPicker = ({

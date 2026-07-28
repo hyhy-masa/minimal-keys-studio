@@ -1,28 +1,24 @@
+import { CURRENT_APP_VERSION } from "./update/versionCheck";
+
 export interface AppFooterProps {
   onShowAbout: () => void;
   onShowLicenseNotice: () => void;
-  onStartTour: () => void;
 }
 
 export const AppFooter = ({
   onShowAbout,
   onShowLicenseNotice,
-  onStartTour,
 }: AppFooterProps) => {
   return (
     <div className="grid justify-center p-1 bg-base-200">
       <div>
-        <span>&copy; 2024 - The ZMK Contributors</span> -{" "}
+        <span>minimal-keys カスタマイズ v{CURRENT_APP_VERSION}</span> ｜{" "}
         <a className="hover:text-primary hover:cursor-pointer" onClick={onShowAbout}>
-          About ZMK Studio
+          このアプリについて
         </a>{" "}
         -{" "}
         <a className="hover:text-primary hover:cursor-pointer" onClick={onShowLicenseNotice}>
-          License NOTICE
-        </a>{" "}
-        -{" "}
-        <a className="hover:text-primary hover:cursor-pointer" onClick={onStartTour}>
-          使い方を見る
+          ライセンス
         </a>
       </div>
     </div>

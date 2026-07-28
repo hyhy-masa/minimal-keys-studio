@@ -9,7 +9,6 @@ interface ModifierItem {
   label: string;
   symbol: string;
   hidId: number; // for standalone Key Press
-  bitmask: number; // for Mod-Tap / Sticky Key
 }
 
 // Labels are OS-dependent: Cmd on Mac, Win on Windows
@@ -19,18 +18,17 @@ interface ModifierDef {
   symbol: string;
   winSymbol: string;
   hidId: number;
-  bitmask: number;
 }
 
 const modifierDefs: ModifierDef[] = [
-  { macLabel: "Ctrl (左)", winLabel: "Ctrl (左)", symbol: "⌃", winSymbol: "⌃", hidId: 224, bitmask: 0x01 },
-  { macLabel: "Shift (左)", winLabel: "Shift (左)", symbol: "⇧", winSymbol: "⇧", hidId: 225, bitmask: 0x02 },
-  { macLabel: "Alt/Option (左)", winLabel: "Alt (左)", symbol: "⌥", winSymbol: "Alt", hidId: 226, bitmask: 0x04 },
-  { macLabel: "⌘ Cmd (左)", winLabel: "Win (左)", symbol: "⌘", winSymbol: "⊞", hidId: 227, bitmask: 0x08 },
-  { macLabel: "Ctrl (右)", winLabel: "Ctrl (右)", symbol: "⌃", winSymbol: "⌃", hidId: 228, bitmask: 0x10 },
-  { macLabel: "Shift (右)", winLabel: "Shift (右)", symbol: "⇧", winSymbol: "⇧", hidId: 229, bitmask: 0x20 },
-  { macLabel: "Alt/Option (右)", winLabel: "Alt (右)", symbol: "⌥", winSymbol: "Alt", hidId: 230, bitmask: 0x40 },
-  { macLabel: "⌘ Cmd (右)", winLabel: "Win (右)", symbol: "⌘", winSymbol: "⊞", hidId: 231, bitmask: 0x80 },
+  { macLabel: "Ctrl (左)", winLabel: "Ctrl (左)", symbol: "⌃", winSymbol: "⌃", hidId: 224 },
+  { macLabel: "Shift (左)", winLabel: "Shift (左)", symbol: "⇧", winSymbol: "⇧", hidId: 225 },
+  { macLabel: "Alt/Option (左)", winLabel: "Alt (左)", symbol: "⌥", winSymbol: "Alt", hidId: 226 },
+  { macLabel: "⌘ Cmd (左)", winLabel: "Win (左)", symbol: "⌘", winSymbol: "⊞", hidId: 227 },
+  { macLabel: "Ctrl (右)", winLabel: "Ctrl (右)", symbol: "⌃", winSymbol: "⌃", hidId: 228 },
+  { macLabel: "Shift (右)", winLabel: "Shift (右)", symbol: "⇧", winSymbol: "⇧", hidId: 229 },
+  { macLabel: "Alt/Option (右)", winLabel: "Alt (右)", symbol: "⌥", winSymbol: "Alt", hidId: 230 },
+  { macLabel: "⌘ Cmd (右)", winLabel: "Win (右)", symbol: "⌘", winSymbol: "⊞", hidId: 231 },
 ];
 
 function getModifiers(os: import("../use-cases").UserOS): ModifierItem[] {
@@ -38,7 +36,6 @@ function getModifiers(os: import("../use-cases").UserOS): ModifierItem[] {
     label: os === "mac" ? d.macLabel : d.winLabel,
     symbol: os === "mac" ? d.symbol : d.winSymbol,
     hidId: d.hidId,
-    bitmask: d.bitmask,
   }));
 }
 

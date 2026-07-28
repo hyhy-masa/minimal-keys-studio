@@ -12,12 +12,14 @@ import { useModalRef } from "./misc/useModalRef";
 import { LockStateContext } from "./rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { ConnectionContext } from "./rpc/ConnectionContext";
-import { ChevronDown, Undo2, Redo2, Save, Trash2, CircleHelp, Download } from "lucide-react";
+import { ChevronDown, Undo2, Redo2, Save, Trash2, CircleHelp, Download, CircleArrowUp, Bluetooth, Usb } from "lucide-react";
 import { useOsMode } from "./OsModeContext";
 import { Tooltip } from "./misc/Tooltip";
 import { GenericModal } from "./GenericModal";
 import { FirmwareUpdateModal } from "./firmware-update/FirmwareUpdateModal";
 import { isFirmwareUpdateEnabled } from "./firmware-update/isTauri";
+import { checkForUpdate, CURRENT_APP_VERSION, type ReleaseInfo, type UpdateCheckResult } from "./update/versionCheck";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 export interface AppHeaderProps {
   connectedDeviceLabel?: string;
@@ -35,6 +37,8 @@ export interface AppHeaderProps {
   // working; the button is a no-op until App wires onFwUpdateOpenChange.
   fwUpdateOpen?: boolean;
   onFwUpdateOpenChange?: (open: boolean) => void;
+  isWireless?: boolean;
+  availableUpdate?: ReleaseInfo | null;
 }
 
 export const AppHeader = ({
@@ -50,8 +54,11 @@ export const AppHeader = ({
   onStartTour,
   fwUpdateOpen = false,
   onFwUpdateOpenChange,
+  isWireless,
+  availableUpdate,
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
+  const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
   const fwUpdateEnabled = isFirmwareUpdateEnabled();
   const { osMode, setOsMode } = useOsMode();
 
@@ -120,6 +127,7 @@ export const AppHeader = ({
           className="text-center rac-disabled:opacity-0 hover:bg-base-300 transition-all duration-100 p-1 pl-2 rounded-lg"
           isDisabled={!connectedDeviceLabel}
         >
+          {isWireless === true ? <Bluetooth className="inline-block w-4" aria-label="ワイヤレス" /> : isWireless === false ? <Usb className="inline-block w-4" aria-label="USB" /> : null}
           <span className="w-2 h-2 rounded-full bg-success inline-block" />
           {connectedDeviceLabel}
           <ChevronDown className="inline-block w-4" />
@@ -218,6 +226,32 @@ export const AppHeader = ({
             ファーム更新
           </Button>
         )}
+        <MenuTrigger>
+          <Button
+            aria-label={availableUpdate ? "アプリの更新があります" : "更新を確認"}
+            className={`relative inline-flex min-h-11 min-w-11 items-center justify-center rounded px-2 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${availableUpdate ? "bg-primary/10 text-primary font-medium" : "text-base-content/50 hover:bg-base-200"}`}
+          >
+            <CircleArrowUp className="w-4" />
+            {availableUpdate && <span className="ml-1">更新あり</span>}
+            {availableUpdate && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-error ring-2 ring-white" />}
+          </Button>
+          <Popover className="w-72 rounded-lg border border-base-300 bg-base-100 p-3 shadow-md">
+            <div className="text-sm">現在のバージョン: {CURRENT_APP_VERSION}</div>
+            <div className="my-3 border-t border-base-300" />
+            {availableUpdate ? (
+              <div className="space-y-2 text-sm">
+                <p>新しいバージョン {availableUpdate.tagName} が公開されています</p>
+                <button className="min-h-11 rounded bg-primary px-3 py-2 text-sm font-medium text-primary-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" onClick={() => openUrl(availableUpdate.htmlUrl).catch(() => undefined)}>ダウンロードページを開く</button>
+              </div>
+            ) : (
+              <div className="space-y-2 text-sm">
+                <button className="min-h-11 rounded border border-primary px-3 py-2 text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50" disabled={updateResult?.status === "available"} onClick={async () => setUpdateResult(await checkForUpdate())}>更新を確認</button>
+                {updateResult?.status === "latest" && <p>最新版です</p>}
+                {updateResult?.status === "error" && <p>確認できませんでした</p>}
+              </div>
+            )}
+          </Popover>
+        </MenuTrigger>
         {onStartTour && (
           <Tooltip label="使い方を見る">
             <Button

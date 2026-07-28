@@ -62,6 +62,15 @@ describe("checkForUpdate", () => {
       checkForUpdate("0.4.0", async () => {
         throw new Error("offline");
       })
-    ).resolves.toBeNull();
+    ).resolves.toEqual({ status: "error" });
+  });
+
+  it("distinguishes the latest version from a failed check", async () => {
+    await expect(
+      checkForUpdate("0.4.0", async () => ({
+        tag_name: "v0.4.0",
+        html_url: "https://example.com/release",
+      }))
+    ).resolves.toEqual({ status: "latest" });
   });
 });

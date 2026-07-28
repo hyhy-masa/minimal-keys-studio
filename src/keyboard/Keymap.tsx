@@ -16,7 +16,7 @@ import { useOsMode } from "../OsModeContext";
 import { getHidKeyDescription, getMouseKeyDescription } from "./key-descriptions";
 import { hid_usage_page_and_id_from_usage } from "../hid-usages";
 import type { ReactNode } from "react";
-import { modifierSymbols } from "./key-label-utils";
+import { formatModifierKeycode } from "./key-label-utils";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -59,7 +59,7 @@ function getKeyDisplay(
     case "Mod-Tap":
       // param1 = modifier, param2 = tap key
       return {
-        header: modifierSymbols(binding.param1),
+        header: formatModifierKeycode(binding.param1),
         children: <span>{hidParamLabel(binding.param2)}</span>,
       };
 
@@ -95,7 +95,7 @@ function getKeyDisplay(
       };
 
     case "Sticky Key": {
-      const modLabel = modifierSymbols(binding.param1);
+      const modLabel = formatModifierKeycode(binding.param1);
       return {
         header: "Sticky",
         children: <span>{modLabel}</span>,

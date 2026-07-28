@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { modifierSymbols } from "./key-label-utils";
+import { formatModifierKeycode, modifierSymbols } from "./key-label-utils";
 
 describe("modifierSymbols", () => {
   it("converts Ctrl bitmask to ⌃", () => {
@@ -34,5 +34,24 @@ describe("modifierSymbols", () => {
   });
   it("falls back for unknown bitmask 0", () => {
     expect(modifierSymbols(0)).toBe("Mod0");
+  });
+});
+
+describe("formatModifierKeycode", () => {
+  it.each([
+    [224, "⌃"],
+    [225, "⇧"],
+    [226, "⌥"],
+    [227, "⌘"],
+    [228, "R⌃"],
+    [229, "R⇧"],
+    [230, "R⌥"],
+    [231, "R⌘"],
+  ])("formats keyboard modifier usage %i as %s", (id, expected) => {
+    expect(formatModifierKeycode((7 << 16) + id)).toBe(expected);
+  });
+
+  it("keeps implicit modifiers separate from the HID usage", () => {
+    expect(formatModifierKeycode((0x02 << 24) | (7 << 16) | 226)).toBe("⇧⌥");
   });
 });
