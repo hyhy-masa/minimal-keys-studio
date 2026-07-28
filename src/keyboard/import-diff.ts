@@ -27,6 +27,13 @@ export interface ImportChanges {
   bindings: BindingChange[];
 }
 
+export function calculateUnappliedLayerCount(
+  currentLayerCount: number,
+  importedLayerCount: number,
+): number {
+  return Math.max(0, importedLayerCount - currentLayerCount);
+}
+
 function normalizedBindingValue(value: unknown): number | undefined {
   if (value === undefined) return 0;
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;

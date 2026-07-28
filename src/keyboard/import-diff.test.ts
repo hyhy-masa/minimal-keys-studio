@@ -1,10 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { calculateImportChanges } from "./import-diff";
+import { calculateImportChanges, calculateUnappliedLayerCount } from "./import-diff";
 
 const binding = (behaviorId: number, param1 = 0, param2 = 0) => ({
   behaviorId,
   param1,
   param2,
+});
+
+describe("calculateUnappliedLayerCount", () => {
+  it("returns the number of imported layers that do not fit", () => {
+    expect(calculateUnappliedLayerCount(3, 5)).toBe(2);
+  });
+
+  it("returns zero when all imported layers fit", () => {
+    expect(calculateUnappliedLayerCount(3, 3)).toBe(0);
+    expect(calculateUnappliedLayerCount(3, 2)).toBe(0);
+  });
 });
 
 const currentKeymap = {

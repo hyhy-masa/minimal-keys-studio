@@ -50,7 +50,10 @@ import {
   downloadJson,
   openFilePicker,
 } from "./keymap-io";
-import { calculateImportChanges } from "./import-diff";
+import {
+  calculateImportChanges,
+  calculateUnappliedLayerCount,
+} from "./import-diff";
 import { AutoMouseLayerControl } from "../trackball/AutoMouseLayerControl";
 
 // Keeps loading state visible for at least minMs so users always see feedback.
@@ -680,8 +683,15 @@ export default function Keyboard() {
     }
 
     const changes = calculateImportChanges(keymap, result.layers);
+    const unappliedLayerCount = calculateUnappliedLayerCount(
+      keymap.layers.length,
+      result.layers.length,
+    );
     const writeCount = changes.layerProps.length + changes.bindings.length;
-    if (!confirm(`${result.layers.length} レイヤー、${keyCount} キー/レイヤーをインポートします。\n変更のある ${writeCount} か所を書き込みます。\n現在のキーマップを上書きします。続けますか？`)) {
+    const layerLimitWarning = unappliedLayerCount > 0
+      ? `\nこのファイルには${result.layers.length}つのレイヤーがありますが、書き込めるのは${keymap.layers.length}つまでです。残り${unappliedLayerCount}つは反映されません。続けますか？`
+      : "";
+    if (!confirm(`${result.layers.length} レイヤー、${keyCount} キー/レイヤーをインポートします。\n変更のある ${writeCount} か所を書き込みます。\n現在のキーマップを上書きします。${layerLimitWarning || "続けますか？"}`)) {
       return;
     }
 
@@ -689,7 +699,12 @@ export default function Keyboard() {
     setImportProgress({ completed: 0, total: writeCount });
     try {
       if (writeCount === 0) {
-        toast("変更はありませんでした", "success");
+        toast(
+          unappliedLayerCount > 0
+            ? `書き込める範囲に変更はありませんでした。残り${unappliedLayerCount}つのレイヤーは反映されていません`
+            : "変更はありませんでした",
+          unappliedLayerCount > 0 ? "info" : "success",
+        );
         return;
       }
 
@@ -718,14 +733,42 @@ export default function Keyboard() {
         15000
       );
       const refreshed = resp?.keymap?.getKeymap;
-      if (refreshed) {
-        setKeymap(() => refreshed);
+      if (!refreshed) {
+        throw new Error("Keymap response was empty after import");
       }
+      setKeymap(() => refreshed);
 
-      toast("キーマップをインポートしました", "success");
+      toast(
+        unappliedLayerCount > 0
+          ? `書き込める${keymap.layers.length}つのレイヤーをインポートしました。残り${unappliedLayerCount}つのレイヤーは反映されていません`
+          : "キーマップをインポートしました",
+        unappliedLayerCount > 0 ? "info" : "success",
+      );
     } catch (e) {
       console.error("Import failed:", e);
-      toast("インポート中にエラーが発生しました", "error");
+      try {
+        const resp = await call_rpc(
+          conn.conn,
+          { keymap: { getKeymap: true } },
+          15000,
+        );
+        const refreshed = resp?.keymap?.getKeymap;
+        if (!refreshed) {
+          throw new Error("Keymap response was empty after import failure");
+        }
+        setKeymap(() => refreshed);
+        toast(
+          "一部だけ書き込まれました。実機の現在状態を読み込みました。元に戻すには「破棄」を押してください",
+          "error",
+        );
+      } catch (refreshError) {
+        console.error("Failed to refresh keymap after import failure:", refreshError);
+        setKeymap(undefined);
+        toast(
+          "一部だけ書き込まれた可能性がありますが、実機の状態を確認できません。編集や保存をせず、「破棄」を押すか再接続してください",
+          "error",
+        );
+      }
     } finally {
       setImporting(false);
       setImportProgress(null);
