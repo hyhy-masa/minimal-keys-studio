@@ -45,11 +45,12 @@ beforeEach(() => {
 });
 
 describe("AppHeader", () => {
-  it("keeps the toolbar reachable without allowing its controls to shrink", () => {
+  it("keeps every toolbar control visible without horizontal scrolling", () => {
     vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(true);
     render(
       <AppHeader
         connectedDeviceLabel="minimal-keys"
+        isWireless={true}
         onUndo={vi.fn()}
         onRedo={vi.fn()}
         onStartTour={vi.fn()}
@@ -58,8 +59,8 @@ describe("AppHeader", () => {
     );
 
     const toolbar = screen.getByRole("toolbar", { name: "操作ツールバー" });
-    expect(toolbar).toHaveClass("min-w-0", "overflow-x-auto");
-    expect(screen.getByRole("button", { name: "minimal-keys" })).toBeInTheDocument();
+    expect(toolbar).not.toHaveClass("min-w-0", "overflow-x-auto");
+    expect(screen.getByRole("button", { name: "ワイヤレスで接続中: minimal-keys" })).toBeInTheDocument();
 
     for (const name of [
       "Mac",
@@ -74,6 +75,70 @@ describe("AppHeader", () => {
     ]) {
       expect(screen.getByRole("button", { name })).toHaveClass("shrink-0");
     }
+  });
+
+  it("fits the worst-case toolbar inside the 900px window width budget", () => {
+    // Hand-measured rendered widths at the current font and spacing: each
+    // control group includes its own padding, margins, and adjacent flex gaps.
+    const minimumWindowWidth = 900;
+    const leftZoneWidth = 124;
+    const toolbarWidths = {
+      osToggle: 120,
+      undoRedo: 92,
+      saveDiscard: 92,
+      firmwareUpdate: 112,
+      appUpdateAvailable: 156,
+      help: 44,
+      toolbarPaddingAndGaps: 53,
+    };
+    // Buttons the table above accounts for: Mac, Windows, 元に戻す, やり直し,
+    // 保存, 破棄, ファームウェア更新, アプリ更新, 使い方を見る.
+    const budgetedButtons = 9;
+    const toolbarWidth = Object.values(toolbarWidths).reduce((sum, width) => sum + width, 0);
+
+    expect(toolbarWidth).toBeLessThanOrEqual(minimumWindowWidth - leftZoneWidth);
+
+    // The sum alone cannot notice a control that was added without being
+    // measured, so pin the button count to the table. Adding a toolbar button
+    // fails here until its width is folded into toolbarWidths above.
+    vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(true);
+    render(
+      <AppHeader
+        connectedDeviceLabel="minimal-keys"
+        isWireless={true}
+        onUndo={vi.fn()}
+        onRedo={vi.fn()}
+        onStartTour={vi.fn()}
+        onFwUpdateOpenChange={vi.fn()}
+      />,
+    );
+    const toolbar = screen.getByRole("toolbar", { name: "操作ツールバー" });
+    expect(toolbar.querySelectorAll("button")).toHaveLength(budgetedButtons);
+  });
+
+  it.each([
+    [true, "ワイヤレスで接続中: minimal-keys"],
+    [false, "USBで接続中: minimal-keys"],
+  ])("labels the connection type and device name accessibly", (isWireless, label) => {
+    render(<AppHeader connectedDeviceLabel="minimal-keys" isWireless={isWireless} />);
+
+    expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+  });
+
+  it("labels a missing connection as disconnected", () => {
+    render(<AppHeader />);
+
+    expect(screen.getByRole("button", { name: "未接続" })).toBeDisabled();
+  });
+
+  it("shows the device name as a non-interactive first menu row", async () => {
+    render(<AppHeader connectedDeviceLabel="minimal-keys" isWireless={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "USBで接続中: minimal-keys" }));
+
+    const deviceRow = await screen.findByText("minimal-keys");
+    expect(deviceRow).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getAllByRole("menuitem")[1]).toHaveTextContent("切断");
   });
 
   it("keeps Japanese update labels on one line", () => {

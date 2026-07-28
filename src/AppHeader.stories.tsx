@@ -83,3 +83,20 @@ export const Wide2000WithUpdate: Story = {
     },
   },
 };
+
+export const UsbConnection: Story = {
+  name: "USB接続",
+  decorators: atWidth(900),
+  args: {
+    isWireless: false,
+  },
+};
+
+export const Disconnected: Story = {
+  name: "未接続",
+  decorators: atWidth(900),
+  args: {
+    connectedDeviceLabel: undefined,
+    isWireless: undefined,
+  },
+};

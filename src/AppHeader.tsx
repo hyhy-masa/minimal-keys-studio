@@ -98,12 +98,50 @@ export const AppHeader = ({
   };
   const manualAvailableUpdate = updateResult?.status === "available" ? updateResult.release : null;
   const updateForPopover = availableUpdate ?? manualAvailableUpdate;
+  const connectionLabel = !connectedDeviceLabel
+    ? "未接続"
+    : isWireless === true
+      ? `ワイヤレスで接続中: ${connectedDeviceLabel}`
+      : isWireless === false
+        ? `USBで接続中: ${connectedDeviceLabel}`
+        : `接続中: ${connectedDeviceLabel}`;
 
   return (
-    <header className="top-0 left-0 right-0 grid min-h-12 max-w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center justify-between border-b border-gray-200 bg-white">
-      <div className="flex min-w-0 items-center gap-2 overflow-hidden px-3">
+    <header className="@container flex min-h-12 max-w-full items-center justify-between border-b border-gray-200 bg-white">
+      <div className="flex shrink-0 items-center gap-2 px-3">
         <img src={`${import.meta.env.BASE_URL}minimal-keys-logo.png`} alt="Logo" className="h-8 shrink-0 rounded" />
-        <p className="truncate whitespace-nowrap font-semibold text-base">minimal-keys カスタマイズ</p>
+        <MenuTrigger>
+          <Tooltip label={connectionLabel}>
+            <Button
+              aria-label={connectionLabel}
+              className="min-h-11 min-w-11 shrink-0 whitespace-nowrap rounded-lg p-1 pl-2 text-center transition-all duration-100 hover:bg-base-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rac-disabled:opacity-0"
+              isDisabled={!connectedDeviceLabel}
+            >
+              {isWireless === true ? <Bluetooth className="inline-block w-4" aria-hidden="true" /> : isWireless === false ? <Usb className="inline-block w-4" aria-hidden="true" /> : null}
+              <span className="w-2 h-2 rounded-full bg-success inline-block" />
+              <ChevronDown className="inline-block w-4" aria-hidden="true" />
+            </Button>
+          </Tooltip>
+          <Popover>
+            <Menu className="shadow-md rounded bg-base-100 text-base-content cursor-pointer overflow-hidden">
+              <MenuItem className="cursor-default whitespace-nowrap border-b border-base-300 px-2 py-1 text-sm text-base-content/60" isDisabled>
+                {connectedDeviceLabel}
+              </MenuItem>
+              <MenuItem
+                className="px-2 py-1 hover:bg-base-200"
+                onAction={onDisconnect}
+              >
+                切断
+              </MenuItem>
+              <MenuItem
+                className="px-2 py-1 hover:bg-base-200"
+                onAction={() => setShowSettingsReset(true)}
+              >
+                設定を初期化
+              </MenuItem>
+            </Menu>
+          </Popover>
+        </MenuTrigger>
       </div>
       <GenericModal ref={showSettingsRef} className="max-w-[50vw]">
         <h2 className="my-2 text-lg">設定を初期化</h2>
@@ -136,38 +174,10 @@ export const AppHeader = ({
           onClose={() => onFwUpdateOpenChange?.(false)}
         />
       )}
-      <MenuTrigger>
-        <Button
-          className="min-h-11 shrink-0 whitespace-nowrap rounded-lg p-1 pl-2 text-center transition-all duration-100 hover:bg-base-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rac-disabled:opacity-0"
-          isDisabled={!connectedDeviceLabel}
-        >
-          {isWireless === true ? <Bluetooth className="inline-block w-4" aria-label="ワイヤレス" /> : isWireless === false ? <Usb className="inline-block w-4" aria-label="USB" /> : null}
-          <span className="w-2 h-2 rounded-full bg-success inline-block" />
-          {connectedDeviceLabel}
-          <ChevronDown className="inline-block w-4" />
-        </Button>
-        <Popover>
-          <Menu className="shadow-md rounded bg-base-100 text-base-content cursor-pointer overflow-hidden">
-            <MenuItem
-              className="px-2 py-1 hover:bg-base-200"
-              onAction={onDisconnect}
-            >
-              切断
-            </MenuItem>
-            <MenuItem
-              className="px-2 py-1 hover:bg-base-200"
-              onAction={() => setShowSettingsReset(true)}
-            >
-              設定を初期化
-            </MenuItem>
-          </Menu>
-        </Popover>
-      </MenuTrigger>
-      <div className="min-w-0 overflow-x-auto" role="toolbar" aria-label="操作ツールバー">
-        <div className="flex min-w-full w-max items-center justify-end gap-1 px-2">
+      <div className="flex flex-1 shrink-0 items-center justify-end gap-1 px-2" role="toolbar" aria-label="操作ツールバー">
         <div className="mr-2 flex shrink-0 rounded-md bg-base-200 p-0.5" data-tour="os-toggle">
           <button
-            className={`min-h-11 min-w-11 shrink-0 rounded px-3 py-1 text-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+            className={`min-h-11 min-w-11 shrink-0 whitespace-nowrap rounded px-3 py-1 text-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               osMode === "mac"
                 ? "bg-white text-primary font-medium shadow-sm"
                 : "text-base-content/50 hover:text-base-content"
@@ -177,7 +187,7 @@ export const AppHeader = ({
             Mac
           </button>
           <button
-            className={`min-h-11 min-w-11 shrink-0 rounded px-3 py-1 text-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+            className={`min-h-11 min-w-11 shrink-0 whitespace-nowrap rounded px-3 py-1 text-sm transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
               osMode === "windows"
                 ? "bg-white text-primary font-medium shadow-sm"
                 : "text-base-content/50 hover:text-base-content"
@@ -239,7 +249,7 @@ export const AppHeader = ({
             onPress={() => onFwUpdateOpenChange?.(true)}
           >
             <Download className="inline-block w-4" />
-            <span className="whitespace-nowrap">ファーム更新</span>
+            <span className="hidden shrink-0 whitespace-nowrap @[52rem]:inline">ファーム更新</span>
           </Button>
         )}
         <MenuTrigger>
@@ -248,7 +258,7 @@ export const AppHeader = ({
             className={`relative inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center whitespace-nowrap rounded px-2 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${availableUpdate ? "bg-primary/10 text-primary font-medium" : "text-base-content/50 hover:bg-base-200"}`}
           >
             <CircleArrowUp className="w-4" />
-            <span className="ml-1 whitespace-nowrap">{availableUpdate ? "アプリ更新あり" : "アプリ更新"}</span>
+            <span className="ml-1 hidden shrink-0 whitespace-nowrap @[52rem]:inline">{availableUpdate ? "アプリ更新あり" : "アプリ更新"}</span>
             {availableUpdate && <span aria-label="アプリの更新があります" role="status" className="absolute right-1 top-1 h-2 w-2 rounded-full bg-error ring-2 ring-white" />}
           </Button>
           <Popover className="w-72 rounded-lg border border-base-300 bg-base-100 p-3 shadow-md">
@@ -279,7 +289,6 @@ export const AppHeader = ({
             </Button>
           </Tooltip>
         )}
-        </div>
       </div>
     </header>
   );
