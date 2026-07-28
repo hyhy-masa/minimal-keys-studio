@@ -219,7 +219,8 @@ export const AppHeader = ({
         </div>
         {fwUpdateEnabled && (
           <Button
-            className="flex items-center gap-1 px-2 py-1.5 rounded text-sm enabled:hover:bg-base-300"
+            aria-label="ファームウェア更新"
+            className="flex min-h-11 items-center gap-1 rounded border border-base-300 px-2 py-1.5 text-sm text-base-content/60 transition-colors enabled:hover:bg-base-200 enabled:hover:text-base-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             onPress={() => onFwUpdateOpenChange?.(true)}
           >
             <Download className="inline-block w-4" />
@@ -228,12 +229,12 @@ export const AppHeader = ({
         )}
         <MenuTrigger>
           <Button
-            aria-label={availableUpdate ? "アプリの更新があります" : "更新を確認"}
+            aria-label={availableUpdate ? "アプリの更新があります" : "アプリ更新"}
             className={`relative inline-flex min-h-11 min-w-11 items-center justify-center rounded px-2 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${availableUpdate ? "bg-primary/10 text-primary font-medium" : "text-base-content/50 hover:bg-base-200"}`}
           >
             <CircleArrowUp className="w-4" />
-            {availableUpdate && <span className="ml-1">更新あり</span>}
-            {availableUpdate && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-error ring-2 ring-white" />}
+            <span className="ml-1">{availableUpdate ? "アプリ更新あり" : "アプリ更新"}</span>
+            {availableUpdate && <span aria-label="アプリの更新があります" role="status" className="absolute right-1 top-1 h-2 w-2 rounded-full bg-error ring-2 ring-white" />}
           </Button>
           <Popover className="w-72 rounded-lg border border-base-300 bg-base-100 p-3 shadow-md">
             <div className="text-sm">現在のバージョン: {CURRENT_APP_VERSION}</div>

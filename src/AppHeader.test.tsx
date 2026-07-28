@@ -45,7 +45,14 @@ describe("AppHeader", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "アプリの更新があります" })).toHaveTextContent("更新あり");
+    expect(screen.getByRole("button", { name: "アプリの更新があります" })).toHaveTextContent("アプリ更新あり");
+    expect(screen.getByRole("status", { name: "アプリの更新があります" })).toBeInTheDocument();
+  });
+
+  it("gives the app update control a distinct label when no update is available", () => {
+    render(<AppHeader />);
+
+    expect(screen.getByRole("button", { name: "アプリ更新" })).toBeInTheDocument();
   });
   it("shows a help button that starts the tour", () => {
     const onStartTour = vi.fn();
@@ -67,20 +74,27 @@ describe("AppHeader firmware-update button (F-6)", () => {
   it("shows the firmware-update button when the feature flag is on", () => {
     vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(true);
     render(<AppHeader onFwUpdateOpenChange={vi.fn()} />);
-    expect(screen.getByRole("button", { name: /ファーム更新/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "ファームウェア更新" })).toBeTruthy();
   });
 
   it("calls onFwUpdateOpenChange(true) when the button is pressed", () => {
     vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(true);
     const onFwUpdateOpenChange = vi.fn();
     render(<AppHeader onFwUpdateOpenChange={onFwUpdateOpenChange} />);
-    screen.getByRole("button", { name: /ファーム更新/ }).click();
+    screen.getByRole("button", { name: "ファームウェア更新" }).click();
     expect(onFwUpdateOpenChange).toHaveBeenCalledWith(true);
   });
 
   it("hides the firmware-update button when the feature flag is off", () => {
     vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(false);
     render(<AppHeader />);
-    expect(screen.queryByRole("button", { name: /ファーム更新/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "ファームウェア更新" })).toBeNull();
+  });
+
+  it("does not show an update badge for firmware updates", () => {
+    vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(true);
+    render(<AppHeader onFwUpdateOpenChange={vi.fn()} />);
+
+    expect(screen.queryByRole("status", { name: "ファームウェアの更新があります" })).toBeNull();
   });
 });
