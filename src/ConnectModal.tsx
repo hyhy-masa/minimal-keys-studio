@@ -14,6 +14,7 @@ import {
   getAutoConnectFailureText,
   usbAutoConnectSearchingText,
 } from "./connect/ja";
+import { useToast } from "./misc/Toast";
 
 export type TransportFactory = {
   label: string;
@@ -31,6 +32,17 @@ export interface ConnectModalProps {
   onTransportCreated: (t: RpcTransport, isWireless?: boolean) => Promise<boolean>;
 }
 
+function getConnectionErrorText(error: unknown): string {
+  if (
+    error instanceof Error &&
+    (error.message.includes("Failed to connect to any BLE profile") ||
+      error.message.includes("Unable to locate the required studio GATT service"))
+  ) {
+    return "キーボードが見つかりません。電源が入っているか確認してください";
+  }
+  return "接続できませんでした。もう一度お試しください";
+}
+
 function SimpleDevicePicker({
   transports,
   onTransportCreated,
@@ -38,6 +50,7 @@ function SimpleDevicePicker({
   transports: TransportFactory[];
   onTransportCreated: (t: RpcTransport, isWireless?: boolean) => Promise<boolean>;
 }) {
+  const { toast } = useToast();
   const [selectedTransport, setSelectedTransport] = useState<
     TransportFactory | undefined
   >(undefined);
@@ -63,7 +76,7 @@ function SimpleDevicePicker({
         if (!ignore) {
           console.error(e);
           if (e instanceof Error && !(e instanceof UserCancelledError)) {
-            alert(e.message);
+            toast(getConnectionErrorText(e), "error");
           }
           setSelectedTransport(undefined);
         }
@@ -75,7 +88,7 @@ function SimpleDevicePicker({
     return () => {
       ignore = true;
     };
-  }, [selectedTransport, onTransportCreated]);
+  }, [selectedTransport, onTransportCreated, toast]);
 
   const connections = transports.map((t) => (
     <li key={t.label} className="list-none">
@@ -105,6 +118,7 @@ function DeviceList({
   transports: TransportFactory[];
   onTransportCreated: (t: RpcTransport, isWireless?: boolean) => Promise<boolean>;
 }) {
+  const { toast } = useToast();
   const [devices, setDevices] = useState<
     Array<[TransportFactory, AvailableDevice]>
   >([]);
@@ -146,13 +160,11 @@ function DeviceList({
       await onTransportCreated(rpcTransport, transport.isWireless);
     } catch (e) {
       console.error("Failed to connect:", e);
-      if (e instanceof Error) {
-        alert(e.message);
-      }
+      toast(getConnectionErrorText(e), "error");
     } finally {
       setConnecting(false);
     }
-  }, [selectedIndex, devices, onTransportCreated]);
+  }, [selectedIndex, devices, onTransportCreated, toast]);
 
   return (
     <div className="flex flex-col gap-3">

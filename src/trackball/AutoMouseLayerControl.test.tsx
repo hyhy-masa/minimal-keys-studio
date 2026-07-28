@@ -128,6 +128,12 @@ describe("AutoMouseLayerControlView", () => {
     expect(screen.getByText("500 ms")).toBeTruthy();
   });
 
+  it("切り替わるまでを2000msまで設定できる", () => {
+    renderView({ enabled: true, activationDelayMs: 2000 });
+
+    expect(screen.getByLabelText("切り替わるまでの時間")).toHaveAttribute("max", "2000");
+  });
+
   it("レイヤーが空でも読み込み表示を壊さない", () => {
     renderView({ layers: [] });
 

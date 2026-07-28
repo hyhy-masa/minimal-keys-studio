@@ -96,7 +96,7 @@ export function AutoMouseLayerControlView({
               aria-label="切り替わるまでの時間"
               type="range"
               min={0}
-              max={500}
+              max={2000}
               step={10}
               value={activationDelayMs}
               disabled={delayControlsDisabled}

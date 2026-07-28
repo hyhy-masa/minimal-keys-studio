@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 // jsdom does not implement <dialog> methods used by useModalRef
 beforeAll(() => {
@@ -29,15 +29,43 @@ vi.mock("./firmware-update/FirmwareUpdateModal", () => ({
 vi.mock("./firmware-update/isTauri", () => ({
   isFirmwareUpdateEnabled: vi.fn(() => false),
 }));
+vi.mock("./update/versionCheck", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./update/versionCheck")>()),
+  checkForUpdate: vi.fn(),
+}));
+vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
 
 import { AppHeader } from "./AppHeader";
 import { isFirmwareUpdateEnabled } from "./firmware-update/isTauri";
+import { checkForUpdate } from "./update/versionCheck";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 beforeEach(() => {
   vi.mocked(isFirmwareUpdateEnabled).mockReturnValue(false);
 });
 
 describe("AppHeader", () => {
+  it("手動確認で更新が見つかった場合は版名とダウンロード導線を表示する", async () => {
+    let resolveCheck: ((result: Awaited<ReturnType<typeof checkForUpdate>>) => void) | undefined;
+    vi.mocked(checkForUpdate).mockImplementation(
+      () => new Promise((resolve) => { resolveCheck = resolve; }),
+    );
+    vi.mocked(openUrl).mockResolvedValue(undefined);
+    render(<AppHeader />);
+
+    fireEvent.click(screen.getByRole("button", { name: "アプリ更新" }));
+    fireEvent.click(screen.getByRole("button", { name: "更新を確認" }));
+
+    expect(await screen.findByRole("button", { name: "確認中..." })).toBeDisabled();
+    resolveCheck?.({
+      status: "available",
+      release: { tagName: "v0.5.0", htmlUrl: "https://example.com/v0.5.0" },
+    });
+    expect(await screen.findByText("新しいバージョン v0.5.0 があります")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "ダウンロードページを開く" }));
+    await waitFor(() => expect(openUrl).toHaveBeenCalledWith("https://example.com/v0.5.0"));
+  });
+
   it("shows a persistent update label and badge when an update is available", () => {
     render(
       <AppHeader

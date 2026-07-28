@@ -59,6 +59,7 @@ export const AppHeader = ({
 }: AppHeaderProps) => {
   const [showSettingsReset, setShowSettingsReset] = useState(false);
   const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const fwUpdateEnabled = isFirmwareUpdateEnabled();
   const { osMode, setOsMode } = useOsMode();
 
@@ -84,6 +85,17 @@ export const AppHeader = ({
   useSub("rpc_notification.keymap.unsavedChangesStatusChanged", (unsaved) =>
     setUnsaved(unsaved)
   );
+
+  const handleUpdateCheck = async () => {
+    setIsCheckingUpdate(true);
+    try {
+      setUpdateResult(await checkForUpdate());
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+  const manualAvailableUpdate = updateResult?.status === "available" ? updateResult.release : null;
+  const updateForPopover = availableUpdate ?? manualAvailableUpdate;
 
   return (
     <header className="top-0 left-0 right-0 grid grid-cols-[1fr_auto_1fr] items-center justify-between h-12 max-w-full border-b border-gray-200 bg-white">
@@ -239,14 +251,14 @@ export const AppHeader = ({
           <Popover className="w-72 rounded-lg border border-base-300 bg-base-100 p-3 shadow-md">
             <div className="text-sm">現在のバージョン: {CURRENT_APP_VERSION}</div>
             <div className="my-3 border-t border-base-300" />
-            {availableUpdate ? (
+            {updateForPopover ? (
               <div className="space-y-2 text-sm">
-                <p>新しいバージョン {availableUpdate.tagName} が公開されています</p>
-                <button className="min-h-11 rounded bg-primary px-3 py-2 text-sm font-medium text-primary-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" onClick={() => openUrl(availableUpdate.htmlUrl).catch(() => undefined)}>ダウンロードページを開く</button>
+                <p>新しいバージョン {updateForPopover.tagName} があります</p>
+                <button className="min-h-11 rounded bg-primary px-3 py-2 text-sm font-medium text-primary-content focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" onClick={() => openUrl(updateForPopover.htmlUrl).catch(() => undefined)}>ダウンロードページを開く</button>
               </div>
             ) : (
               <div className="space-y-2 text-sm">
-                <button className="min-h-11 rounded border border-primary px-3 py-2 text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50" disabled={updateResult?.status === "available"} onClick={async () => setUpdateResult(await checkForUpdate())}>更新を確認</button>
+                <button className="min-h-11 rounded border border-primary px-3 py-2 text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50" disabled={isCheckingUpdate} onClick={handleUpdateCheck}>{isCheckingUpdate ? "確認中..." : "更新を確認"}</button>
                 {updateResult?.status === "latest" && <p>最新版です</p>}
                 {updateResult?.status === "error" && <p>確認できませんでした</p>}
               </div>
