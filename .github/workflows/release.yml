@@ -62,6 +62,9 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # ファーム更新機能を配布ビルドで有効にする。実機での書き込みを
+          # 確認済みのため開放した（2026-07-28 まさかず判断）。
+          VITE_FEATURE_FW_UPDATE: '1'
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'minimal-keys カスタマイズ ${{ github.ref_name }}'
