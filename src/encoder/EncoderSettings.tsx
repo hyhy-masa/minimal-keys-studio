@@ -8,6 +8,7 @@ import { useToast } from "../misc/Toast";
 import * as RSR from "../proto/rsr";
 import { useLayers } from "../rpc/useLayers";
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
+import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import { useBehaviorList } from "../behaviors/BehaviorsContext";
 
@@ -143,14 +144,17 @@ export function EncoderSettings() {
     if (!subsystem || selectedSensorIndex === null) return;
     setSaving(true);
     try {
-      const cwRsr = behaviorToRsrBinding(cwBinding);
-      const ccwRsr = behaviorToRsrBinding(ccwBinding);
+      const cwRsr = behaviorToRsrBinding(cwBinding, behaviors);
+      const ccwRsr = behaviorToRsrBinding(ccwBinding, behaviors);
 
       const cwBehavior = behaviors.find((b) => b.id === cwRsr.behaviorId);
       const ccwBehavior = behaviors.find((b) => b.id === ccwRsr.behaviorId);
       console.debug(`[Encoder] Saving sensor=${selectedSensorIndex} layer=${selectedLayer}`);
-      console.debug(`[Encoder] CW: behaviorId=${cwRsr.behaviorId} (${cwBehavior?.displayName ?? 'unknown'}) param1=${cwRsr.param1} param2=${cwRsr.param2}`);
-      console.debug(`[Encoder] CCW: behaviorId=${ccwRsr.behaviorId} (${ccwBehavior?.displayName ?? 'unknown'}) param1=${ccwRsr.param1} param2=${ccwRsr.param2}`);
+      console.debug(`[Encoder] CW: behaviorId=${cwRsr.behaviorId} (${cwBehavior?.displayName ?? 'unknown'}) param1=${cwRsr.param1} param2=${cwRsr.param2} tapMs=${cwRsr.tapMs}`);
+      console.debug(`[Encoder] CCW: behaviorId=${ccwRsr.behaviorId} (${ccwBehavior?.displayName ?? 'unknown'}) param1=${ccwRsr.param1} param2=${ccwRsr.param2} tapMs=${ccwRsr.tapMs}`);
+      console.debug(`[Encoder] behaviors known to Studio: ${behaviors.length} -> ${behaviors.map((b) => `${b.id}:${b.displayName}`).join(" | ")}`);
+      console.debug(`[Encoder] layers reported by FW: ${JSON.stringify(layers.map((l) => ({ id: l.id, index: l.index, name: l.name })))}`);
+      console.debug(`[Encoder] selectedLayer=${selectedLayer} (this is a layer *id*, sent verbatim to the FW)`);
 
       const cwResp = await callWithTimeout(
         "setLayerCwBinding",
@@ -190,7 +194,7 @@ export function EncoderSettings() {
     } finally {
       setSaving(false);
     }
-  }, [subsystem, selectedSensorIndex, selectedLayer, cwBinding, ccwBinding, callWithTimeout, behaviors, toast]);
+  }, [subsystem, selectedSensorIndex, selectedLayer, cwBinding, ccwBinding, callWithTimeout, behaviors, layers, toast]);
 
   if (!subsystem) {
     return (
@@ -326,11 +330,47 @@ function rsrBindingToBehavior(b: RSR.Binding | null): BehaviorBinding {
   };
 }
 
-function behaviorToRsrBinding(b: BehaviorBinding): RSR.Binding {
+/**
+ * Hold time the firmware keeps the bound behavior pressed on each detent.
+ *
+ * Must be > 0: behavior_queue only defers the release when `wait > 0`
+ * (zmk/app/src/behavior_queue.c), so with 0 the press and the release run in
+ * the same loop iteration. 5 matches the devicetree default on &rsr_trans.
+ */
+const ENCODER_TAP_MS = 5;
+
+/**
+ * Hold time for behaviors that emit movement *while held* rather than once.
+ *
+ * mouse_scroll / mouse_move are "zmk,behavior-input-two-axis": they emit
+ * `speed * trigger_period_ms / 1000` units every trigger period, and the period
+ * defaults to 16ms (zmk,behavior-input-two-axis.yaml). A 5ms tap therefore ends
+ * before the first period elapses and produces *zero* movement — assigning
+ * scroll to an encoder looked completely dead.
+ *
+ * 30ms clears the 16ms period with a full period of margin, so one detent always
+ * yields at least one wheel unit. (The firmware's own
+ * behavior_sensor_rotate_mouse_wheel_up_down node uses `tap-ms = <20>`, but that
+ * node is never referenced from the keymap, so 20 is an intent, not a measured
+ * value — and it leaves no margin.)
+ */
+const ENCODER_TAP_MS_HELD = 30;
+
+/** Behaviors whose output depends on how long they are held (see above). */
+const HELD_BEHAVIOR_NAMES = ["mouse_scroll", "mouse_move"];
+
+function behaviorToRsrBinding(
+  b: BehaviorBinding,
+  behaviors: GetBehaviorDetailsResponse[],
+): RSR.Binding {
+  const displayName = behaviors.find((x) => x.id === b.behaviorId)?.displayName;
+  const tapMs = HELD_BEHAVIOR_NAMES.includes(displayName ?? "")
+    ? ENCODER_TAP_MS_HELD
+    : ENCODER_TAP_MS;
   return {
     behaviorId: b.behaviorId,
     param1: b.param1 ?? 0,
     param2: b.param2 ?? 0,
-    tapMs: 0,
+    tapMs,
   };
 }

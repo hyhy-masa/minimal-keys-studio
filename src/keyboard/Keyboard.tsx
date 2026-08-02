@@ -431,10 +431,16 @@ export default function Keyboard() {
     );
   }, [behaviors, selectedBinding]);
 
-  const encoderSummary = useEncoderBindings(
-    behaviors ? Object.values(behaviors) : [],
-    selectedLayerIndex,
+  // Memoized: Object.values() returns a fresh array every render, and it feeds
+  // useEncoderBindings' effect dependencies. Without this the encoder summary
+  // refetched (2 RPCs) on every re-render, saturating the serial RPC queue over
+  // BLE until unrelated calls hit the 8s timeout and poisoned the connection.
+  const behaviorList = useMemo(
+    () => (behaviors ? Object.values(behaviors) : []),
+    [behaviors],
   );
+
+  const encoderSummary = useEncoderBindings(behaviorList, selectedLayerIndex);
 
   const moveLayer = useCallback(
     (start: number, end: number) => {

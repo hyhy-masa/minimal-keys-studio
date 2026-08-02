@@ -192,11 +192,27 @@ export function getTextNavItems(os: UserOS): ActionItem[] {
 
 // --- Scroll ---
 
+// These used to be `Key Press` with the Consumer-page AC Scroll usages
+// (0x233/0x234/0x236/0x237). macOS silently ignores those usages, so picking
+// "スクロール" did nothing at all — on encoders and on regular keys alike.
+//
+// The working path is ZMK's mouse_scroll (&msc), a "zmk,behavior-input-two-axis"
+// that emits INPUT_REL_WHEEL / INPUT_REL_HWHEEL. Its single parameter packs both
+// axes as signed 16-bit halves — MOVE_X(hor) in [31:16], MOVE_Y(vert) in [15:0]
+// (zmk/app/include/dt-bindings/zmk/pointing.h). Positive vert = up, per SCRL_UP.
+//
+// SCRL_VAL mirrors ZMK_POINTING_DEFAULT_SCRL_VAL as overridden in the
+// minimal-keys keymap, so scrolling assigned from Studio matches the built-in
+// SCROLL key rather than moving at a different speed.
+const SCRL_VAL = 100;
+const scrollVert = (v: number) => v & 0xffff;
+const scrollHor = (v: number) => ((v & 0xffff) << 16) >>> 0;
+
 export const scrollItems: ActionItem[] = [
-  { label: "スクロール上", description: "画面を上にスクロール", behaviorName: "Key Press", param1: consumer(0x233) },
-  { label: "スクロール下", description: "画面を下にスクロール", behaviorName: "Key Press", param1: consumer(0x234) },
-  { label: "横スクロール左", description: "画面を左にスクロール", behaviorName: "Key Press", param1: consumer(0x236) },
-  { label: "横スクロール右", description: "画面を右にスクロール", behaviorName: "Key Press", param1: consumer(0x237) },
+  { label: "スクロール上", description: "画面を上にスクロール", behaviorName: "mouse_scroll", param1: scrollVert(SCRL_VAL) },
+  { label: "スクロール下", description: "画面を下にスクロール", behaviorName: "mouse_scroll", param1: scrollVert(-SCRL_VAL) },
+  { label: "横スクロール左", description: "画面を左にスクロール", behaviorName: "mouse_scroll", param1: scrollHor(-SCRL_VAL) },
+  { label: "横スクロール右", description: "画面を右にスクロール", behaviorName: "mouse_scroll", param1: scrollHor(SCRL_VAL) },
 ];
 
 // --- Mouse (existing) ---
