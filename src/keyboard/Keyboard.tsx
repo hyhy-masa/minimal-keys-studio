@@ -28,6 +28,10 @@ import { ConnectionContext } from "../rpc/ConnectionContext";
 import { UndoRedoContext } from "../undoRedo";
 import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
 import {
+  getModifierFlags,
+  replaceModifierFlags,
+} from "../behaviors/modifier-flags";
+import {
   useBehaviorMap,
   useBehaviorsLoading,
   useBehaviorsStatus,
@@ -421,15 +425,24 @@ export default function Keyboard() {
   }, [keymap, selectedLayerIndex, selectedKeyPosition]);
 
   useEffect(() => {
-    const behavior = selectedBinding
-      ? behaviors?.[selectedBinding.behaviorId]
-      : undefined;
     setModifierFlags(
-      behavior?.displayName === "Key Press"
-        ? (selectedBinding!.param1 >>> 24) & 0xff
-        : 0,
+      getModifierFlags(selectedBinding, behaviors ? Object.values(behaviors) : []),
     );
   }, [behaviors, selectedBinding]);
+
+  const handleModifierFlagsChanged = useCallback(
+    (flags: number) => {
+      setModifierFlags(flags);
+
+      const behavior = selectedBinding
+        ? behaviors?.[selectedBinding.behaviorId]
+        : undefined;
+      if (!selectedBinding || behavior?.displayName !== "Key Press") return;
+
+      doUpdateBinding(replaceModifierFlags(selectedBinding, flags));
+    },
+    [behaviors, doUpdateBinding, selectedBinding],
+  );
 
   // Memoized: Object.values() returns a fresh array every render, and it feeds
   // useEncoderBindings' effect dependencies. Without this the encoder summary
@@ -873,7 +886,7 @@ export default function Keyboard() {
 
         <ModifierPanel
           modifierFlags={modifierFlags}
-          onModifierFlagsChanged={setModifierFlags}
+          onModifierFlagsChanged={handleModifierFlagsChanged}
           osMode={osMode}
         />
       </div>

@@ -15,9 +15,7 @@ export function formatBindingDetail(
   switch (displayName) {
     case "Key Press": {
       if (!binding.param1) return "";
-      const [rawPage, id] = hid_usage_page_and_id_from_usage(binding.param1);
-      const page = rawPage & 0xff;
-      return getHidKeyDescription(page, id).roleName;
+      return formatModifierKeycode(binding.param1);
     }
     case "Layer-Tap": {
       // ZMK layer binding param1 = layer index (0-based position in layers array)

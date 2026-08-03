@@ -15,9 +15,9 @@ describe("applyModifierFlags", () => {
     expect(afterSelectingKeyB.param1 >>> 24).toBe(0);
   });
 
-  it("replaces existing modifiers so they can be intentionally removed", () => {
+  it("keeps modifiers embedded in the selected binding", () => {
     const binding = { behaviorId: 1, param1: (0x08 << 24) | 0x70004, param2: 0 };
 
-    expect(applyModifierFlags(binding, 0, [keyPress]).param1 >>> 24).toBe(0);
+    expect(applyModifierFlags(binding, 0, [keyPress]).param1 >>> 24).toBe(0x08);
   });
 });
