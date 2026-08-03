@@ -8,6 +8,7 @@ import {
 import { useToast } from "../misc/Toast";
 import * as RIP from "../proto/rip";
 import { ConfirmDialog } from "../ConfirmDialog";
+import { useLayers } from "../rpc/useLayers";
 
 export function TrackballSettings() {
   const subsystem = useCustomSubsystem(RIP.SUBSYSTEM_ID);
@@ -35,9 +36,11 @@ export function TrackballSettings() {
   const [yInvert, setYInvert] = useState(false);
   const [xySwap, setXySwap] = useState(false);
   const [xyToScroll, setXyToScroll] = useState(false);
+  const [activeLayers, setActiveLayers] = useState(0);
   const [axisSnapMode, setAxisSnapMode] = useState<RIP.AxisSnapMode>(0);
   const [axisSnapThreshold, setAxisSnapThreshold] = useState(0);
   const [axisSnapTimeout, setAxisSnapTimeout] = useState(0);
+  const layers = useLayers();
 
   // Discover processors via listInputProcessors (data arrives via notifications)
   useEffect(() => {
@@ -100,6 +103,7 @@ export function TrackballSettings() {
     setYInvert(info.yInvert);
     setXySwap(info.xySwapEnabled);
     setXyToScroll(info.xyToScrollEnabled);
+    setActiveLayers(info.activeLayers);
     setAxisSnapMode(info.axisSnapMode);
     setAxisSnapThreshold(info.axisSnapThreshold);
     setAxisSnapTimeout(info.axisSnapTimeoutMs);
@@ -148,6 +152,9 @@ export function TrackballSettings() {
       if (xyToScroll !== selectedProcessor.xyToScrollEnabled) {
         await callWithTimeout("setXyToScrollEnabled", RIP.encodeSetXyToScrollEnabled(id, xyToScroll));
       }
+      if (activeLayers !== selectedProcessor.activeLayers) {
+        await callWithTimeout("setActiveLayers", RIP.encodeSetActiveLayers(id, activeLayers));
+      }
       if (axisSnapMode !== selectedProcessor.axisSnapMode) {
         await callWithTimeout("setAxisSnapMode", RIP.encodeSetAxisSnapMode(id, axisSnapMode));
       }
@@ -176,6 +183,7 @@ export function TrackballSettings() {
     yInvert,
     xySwap,
     xyToScroll,
+    activeLayers,
     axisSnapMode,
     axisSnapThreshold,
     axisSnapTimeout,
@@ -321,6 +329,51 @@ export function TrackballSettings() {
             <span className="text-sm">スクロールモード</span>
           </label>
         </div>
+      </section>
+
+      {/* Scroll mode active layers */}
+      <section className="flex flex-col gap-2">
+        <h3 className="text-sm font-medium text-base-content/70">
+          スクロールモードを有効にするレイヤー
+        </h3>
+        {layers.length === 0 ? (
+          <p className="text-sm text-base-content/50">
+            レイヤーを読み込んでいます…
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-base-content/50">
+              {activeLayers === 0
+                ? "選択なしの場合は全レイヤーで有効です。"
+                : "選択したレイヤーでのみ有効です。"}
+            </p>
+            <div className="flex flex-col gap-1">
+              {layers.map((layer) => {
+                const bit = 1 << layer.id;
+                const isSelected =
+                  activeLayers !== 0 && (activeLayers & bit) !== 0;
+                return (
+                  <label key={layer.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={(event) => {
+                        setActiveLayers((current) => {
+                          if (event.target.checked) {
+                            return current === 0 ? bit : current | bit;
+                          }
+                          return current & ~bit;
+                        });
+                      }}
+                      className="rounded"
+                    />
+                    <span className="text-sm">{layer.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </>
+        )}
       </section>
 
       {/* Axis Snapping */}
