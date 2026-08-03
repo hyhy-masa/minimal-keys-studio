@@ -49,4 +49,17 @@ describe("SystemTab", () => {
     fireEvent.click(screen.getByText("BT 次へ"));
     expect(onApply).toHaveBeenCalledWith({ behaviorId: 32, param1: 1, param2: 0 });
   });
+
+  it.each([
+    [0, 0],
+    [1, 1],
+    [2, 2],
+    [3, 3],
+    [4, 4],
+  ])("BT プロファイル %i: click to apply BT_SEL with profile %i", (profile, expectedParam2) => {
+    const onApply = vi.fn();
+    render(<SystemTab behaviors={mockBehaviors} onApplyBinding={onApply} />);
+    fireEvent.click(screen.getByText(`BT プロファイル ${profile}`));
+    expect(onApply).toHaveBeenCalledWith({ behaviorId: 32, param1: 3, param2: expectedParam2 });
+  });
 });

@@ -110,11 +110,32 @@ function getKeyDisplay(
       };
     }
 
-    case "Bluetooth":
+    case "Bluetooth": {
+      let label: string;
+      switch (binding.param1) {
+        case 0:
+          label = "CLR";
+          break;
+        case 1:
+          label = "NXT";
+          break;
+        case 2:
+          label = "PRV";
+          break;
+        case 3:
+          label = String(binding.param2);
+          break;
+        case 4:
+          label = "ALL";
+          break;
+        default:
+          label = `?${binding.param1}`;
+      }
       return {
         header: "BT",
-        children: <span>{binding.param1}</span>,
+        children: <span>{label}</span>,
       };
+    }
 
     case "None":
       return { header: "None", children: <span></span> };

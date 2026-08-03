@@ -24,12 +24,14 @@ const systemBehaviorNames = [
 
 // Known Bluetooth operations
 const btOperations = [
-  { label: "BT クリア", description: "現在のペアリングを消去", param1: 0 },
-  { label: "BT 次へ", description: "次のプロファイルに切替", param1: 1 },
-  { label: "BT 前へ", description: "前のプロファイルに切替", param1: 2 },
-  { label: "BT プロファイル 0", description: "プロファイル0に切替", param1: 3 },
-  { label: "BT プロファイル 1", description: "プロファイル1に切替", param1: 4 },
-  { label: "BT プロファイル 2", description: "プロファイル2に切替", param1: 5 },
+  { label: "BT クリア", description: "現在のペアリングを消去", param1: 0, param2: 0 },
+  { label: "BT 次へ", description: "次のプロファイルに切替", param1: 1, param2: 0 },
+  { label: "BT 前へ", description: "前のプロファイルに切替", param1: 2, param2: 0 },
+  { label: "BT プロファイル 0", description: "プロファイル0に切替", param1: 3, param2: 0 },
+  { label: "BT プロファイル 1", description: "プロファイル1に切替", param1: 3, param2: 1 },
+  { label: "BT プロファイル 2", description: "プロファイル2に切替", param1: 3, param2: 2 },
+  { label: "BT プロファイル 3", description: "プロファイル3に切替", param1: 3, param2: 3 },
+  { label: "BT プロファイル 4", description: "プロファイル4に切替", param1: 3, param2: 4 },
 ];
 
 interface SystemTabProps {
@@ -51,9 +53,9 @@ export function SystemTab({ behaviors, onApplyBinding }: SystemTabProps) {
     onApplyBinding({ behaviorId: behavior.id, param1: 0, param2: 0 });
   };
 
-  const handleBtClick = (param1: number) => {
+  const handleBtClick = (param1: number, param2: number) => {
     if (!btBehavior) return;
-    onApplyBinding({ behaviorId: btBehavior.id, param1, param2: 0 });
+    onApplyBinding({ behaviorId: btBehavior.id, param1, param2 });
   };
 
   return (
@@ -82,9 +84,9 @@ export function SystemTab({ behaviors, onApplyBinding }: SystemTabProps) {
           <div className="flex flex-col gap-1">
             {btOperations.map((op) => (
               <button
-                key={op.param1}
+                key={`${op.param1}-${op.param2}`}
                 className="flex items-center gap-3 px-3 py-2 text-sm rounded-md border border-base-300 bg-white hover:bg-primary/10 hover:border-primary/30 transition-all text-left"
-                onClick={() => handleBtClick(op.param1)}
+                onClick={() => handleBtClick(op.param1, op.param2)}
               >
                 <span className="font-medium">{op.label}</span>
                 <span className="text-base-content/50">{op.description}</span>
