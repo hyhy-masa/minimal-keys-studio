@@ -24,6 +24,7 @@ export interface InputProcessorInfo {
   tempLayerActivationDelayMs: number;
   tempLayerDeactivationDelayMs: number;
   activeLayers: number;
+  scrollLayers: number;
   axisSnapMode: AxisSnapMode;
   axisSnapThreshold: number;
   axisSnapTimeoutMs: number;
@@ -204,6 +205,15 @@ export function encodeSetYInvert(id: number, invert: boolean): Uint8Array {
   return w.finish();
 }
 
+export function encodeSetScrollLayers(id: number, layers: number): Uint8Array {
+  const inner = _m0.Writer.create();
+  if (id !== 0) inner.uint32(8).uint32(id);
+  if (layers !== 0) inner.uint32(16).uint32(layers);
+  const w = _m0.Writer.create();
+  w.uint32(162).bytes(inner.finish()); // field 20
+  return w.finish();
+}
+
 // --- Response decoding ---
 
 function decodeInputProcessorInfo(reader: _m0.Reader, length: number): InputProcessorInfo {
@@ -212,7 +222,7 @@ function decodeInputProcessorInfo(reader: _m0.Reader, length: number): InputProc
     id: 0, name: "", scaleMultiplier: 0, scaleDivisor: 0,
     rotationDegrees: 0, tempLayerEnabled: false, tempLayerLayer: 0,
     tempLayerActivationDelayMs: 0, tempLayerDeactivationDelayMs: 0,
-    activeLayers: 0, axisSnapMode: 0, axisSnapThreshold: 0,
+    activeLayers: 0, scrollLayers: 0, axisSnapMode: 0, axisSnapThreshold: 0,
     axisSnapTimeoutMs: 0, xyToScrollEnabled: false,
     xySwapEnabled: false, xInvert: false, yInvert: false,
   };
@@ -236,6 +246,7 @@ function decodeInputProcessorInfo(reader: _m0.Reader, length: number): InputProc
       case 15: info.xySwapEnabled = reader.bool(); break;
       case 16: info.xInvert = reader.bool(); break;
       case 17: info.yInvert = reader.bool(); break;
+      case 18: info.scrollLayers = reader.uint32(); break;
       default: reader.skipType(tag & 7); break;
     }
   }

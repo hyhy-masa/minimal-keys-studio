@@ -37,6 +37,7 @@ export function TrackballSettings() {
   const [xySwap, setXySwap] = useState(false);
   const [xyToScroll, setXyToScroll] = useState(false);
   const [activeLayers, setActiveLayers] = useState(0);
+  const [scrollLayers, setScrollLayers] = useState(0);
   const [axisSnapMode, setAxisSnapMode] = useState<RIP.AxisSnapMode>(0);
   const [axisSnapThreshold, setAxisSnapThreshold] = useState(0);
   const [axisSnapTimeout, setAxisSnapTimeout] = useState(0);
@@ -104,6 +105,7 @@ export function TrackballSettings() {
     setXySwap(info.xySwapEnabled);
     setXyToScroll(info.xyToScrollEnabled);
     setActiveLayers(info.activeLayers);
+    setScrollLayers(info.scrollLayers);
     setAxisSnapMode(info.axisSnapMode);
     setAxisSnapThreshold(info.axisSnapThreshold);
     setAxisSnapTimeout(info.axisSnapTimeoutMs);
@@ -155,6 +157,9 @@ export function TrackballSettings() {
       if (activeLayers !== selectedProcessor.activeLayers) {
         await callWithTimeout("setActiveLayers", RIP.encodeSetActiveLayers(id, activeLayers));
       }
+      if (scrollLayers !== selectedProcessor.scrollLayers) {
+        await callWithTimeout("setScrollLayers", RIP.encodeSetScrollLayers(id, scrollLayers));
+      }
       if (axisSnapMode !== selectedProcessor.axisSnapMode) {
         await callWithTimeout("setAxisSnapMode", RIP.encodeSetAxisSnapMode(id, axisSnapMode));
       }
@@ -184,6 +189,7 @@ export function TrackballSettings() {
     xySwap,
     xyToScroll,
     activeLayers,
+    scrollLayers,
     axisSnapMode,
     axisSnapThreshold,
     axisSnapTimeout,
@@ -331,10 +337,10 @@ export function TrackballSettings() {
         </div>
       </section>
 
-      {/* Scroll mode active layers */}
+      {/* Trackball settings active layers */}
       <section className="flex flex-col gap-2">
         <h3 className="text-sm font-medium text-base-content/70">
-          スクロールモードを有効にするレイヤー
+          トラックボール設定を有効にするレイヤー
         </h3>
         {layers.length === 0 ? (
           <p className="text-sm text-base-content/50">
@@ -349,7 +355,7 @@ export function TrackballSettings() {
             </p>
             <div className="flex flex-col gap-1">
               {layers.map((layer) => {
-                const bit = 1 << layer.id;
+                const bit = 1 << layer.index;
                 const isSelected =
                   activeLayers !== 0 && (activeLayers & bit) !== 0;
                 return (
@@ -365,6 +371,53 @@ export function TrackballSettings() {
                           return current & ~bit;
                         });
                       }}
+                      className="rounded"
+                    />
+                    <span className="text-sm">{layer.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </section>
+
+      {/* Scroll layers */}
+      <section className="flex flex-col gap-2">
+        <h3 className="text-sm font-medium text-base-content/70">
+          スクロールするレイヤー
+        </h3>
+        {layers.length === 0 ? (
+          <p className="text-sm text-base-content/50">
+            レイヤーを読み込んでいます…
+          </p>
+        ) : (
+          <>
+            {scrollLayers !== 0 && (scrollLayers & (scrollLayers - 1)) !== 0 && (
+              <p className="text-sm text-base-content/50">
+                現在は複数のレイヤーが設定されています。1つ選ぶと置き換わります
+              </p>
+            )}
+            <div className="flex flex-col gap-1">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  name="scroll-layers"
+                  checked={scrollLayers === 0}
+                  onChange={() => setScrollLayers(0)}
+                  className="rounded"
+                />
+                <span className="text-sm">なし（スクロールモードを使わない）</span>
+              </label>
+              {layers.map((layer) => {
+                const bit = 1 << layer.index;
+                return (
+                  <label key={layer.id} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="scroll-layers"
+                      checked={scrollLayers === bit}
+                      onChange={() => setScrollLayers(bit)}
                       className="rounded"
                     />
                     <span className="text-sm">{layer.name}</span>
