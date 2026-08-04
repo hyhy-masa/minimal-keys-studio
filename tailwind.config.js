@@ -6,9 +6,6 @@ export default {
   content: ["./index.html", "./download.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
-      fontSize: {
-        xs: "0.4rem",
-      },
       fontFamily: {
         sans: ["Inter", "system-ui"],
         keycap: ["Inter", "system-ui"],
