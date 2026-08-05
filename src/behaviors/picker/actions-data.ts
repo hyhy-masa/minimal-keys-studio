@@ -240,17 +240,6 @@ export const mediaItems: ActionItem[] = [
   { label: "イジェクト", description: "ディスク取り出し", behaviorName: "Key Press", param1: consumer(0xb8) },
 ];
 
-// --- App Launch (existing) ---
-
-export const appLaunchItems: ActionItem[] = [
-  { label: "電卓", description: "電卓アプリを起動", behaviorName: "Key Press", param1: consumer(0x192) },
-  { label: "メール", description: "メールアプリを起動", behaviorName: "Key Press", param1: consumer(0x18a) },
-  { label: "ブラウザ", description: "Webブラウザを起動", behaviorName: "Key Press", param1: consumer(0x196) },
-  { label: "ファイル", description: "ファイルマネージャを起動", behaviorName: "Key Press", param1: consumer(0x194) },
-  { label: "スリープ", description: "スリープモードへ", behaviorName: "Key Press", param1: consumer(0x32) },
-  { label: "ロック", description: "画面をロック", behaviorName: "Key Press", param1: consumer(0x19e) },
-];
-
 // --- Navigation (existing) ---
 
 export const navItems: ActionItem[] = [

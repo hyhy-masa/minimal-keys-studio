@@ -13,7 +13,6 @@ import {
   scrollItems,
   mouseItems,
   mediaItems,
-  appLaunchItems,
   navItems,
 } from "./actions-data";
 
@@ -27,7 +26,6 @@ type SubCategory =
   | "scroll"
   | "mouse"
   | "media"
-  | "apps"
   | "nav";
 
 const subCategories: { id: SubCategory; label: string }[] = [
@@ -40,7 +38,6 @@ const subCategories: { id: SubCategory; label: string }[] = [
   { id: "scroll", label: "スクロール" },
   { id: "mouse", label: "マウス" },
   { id: "media", label: "メディア" },
-  { id: "apps", label: "アプリ起動" },
   { id: "nav", label: "ナビゲーション" },
 ];
 
@@ -154,7 +151,6 @@ export function ActionsTab({ keyPosition, behaviors, osMode, onApplyBinding }: A
       {activeSub === "scroll" && renderActionItems(scrollItems)}
       {activeSub === "mouse" && renderActionItems(mouseItems)}
       {activeSub === "media" && renderActionItems(mediaItems)}
-      {activeSub === "apps" && renderActionItems(appLaunchItems)}
       {activeSub === "nav" && renderActionItems(navItems)}
     </div>
   );
