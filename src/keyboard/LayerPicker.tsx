@@ -24,6 +24,8 @@ interface LayerPickerProps {
   selectedLayerIndex: number;
   canAdd?: boolean;
   canRemove?: boolean;
+  /** Drag-to-reorder. Off means the list order cannot be changed at all. */
+  canReorder?: boolean;
 
   onLayerClicked?: LayerClickCallback;
   onLayerMoved?: LayerMovedCallback;
@@ -107,6 +109,7 @@ export const LayerPicker = ({
   selectedLayerIndex,
   canAdd,
   canRemove,
+  canReorder = true,
   onLayerClicked,
   onLayerMoved,
   onAddClicked,
@@ -210,7 +213,7 @@ export const LayerPicker = ({
         }
         className="ml-2 items-center justify-center cursor-pointer"
         onSelectionChange={selectionChanged}
-        dragAndDropHooks={dragAndDropHooks}
+        dragAndDropHooks={canReorder ? dragAndDropHooks : undefined}
         {...props}
       >
         {(layer_item) => (

@@ -235,6 +235,19 @@ function useLayouts(): [
   ];
 }
 
+// Removing or reordering a layer shifts every later layer's index by one, but
+// the settings we persist on the keyboard (scroll layers, runtime input
+// processor active_layers, the auto-mouse temp layer) all store an index. A
+// customer who deletes or drags a layer keeps the same stored number while it
+// silently starts pointing at a different layer.
+//
+// Until those settings are migrated to layer ids, we take away the two controls
+// that can shift indices. Adding is already blocked by the firmware whenever
+// there is no free layer slot, so it needs no flag here.
+//
+// Flip this back to true once the id migration lands.
+const LAYER_INDEX_MUTATION_ENABLED: boolean = false;
+
 export default function Keyboard() {
   const [
     layouts,
@@ -835,8 +848,13 @@ export default function Keyboard() {
               onLayerMoved={moveLayer}
               canAdd={(keymap.availableLayers || 0) > 0}
               canRemove={(keymap.layers?.length || 0) > 1}
+              canReorder={LAYER_INDEX_MUTATION_ENABLED}
               onAddClicked={addLayer}
-              onRemoveClicked={() => setShowRemoveLayerConfirm(true)}
+              onRemoveClicked={
+                LAYER_INDEX_MUTATION_ENABLED
+                  ? () => setShowRemoveLayerConfirm(true)
+                  : undefined
+              }
               onLayerNameChanged={changeLayerName}
             />
           </div>
