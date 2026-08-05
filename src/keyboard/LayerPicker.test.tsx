@@ -64,7 +64,15 @@ describe("LayerPicker layer-order controls", () => {
     );
   });
 
-  it("leaves the add button alone — the firmware already gates it", () => {
+  it("drops the add button when no add handler is given", () => {
+    const { container } = render(
+      <LayerPicker layers={layers} selectedLayerIndex={0} canAdd canReorder={false} />
+    );
+
+    expect(container.querySelector(".lucide-plus")).toBeNull();
+  });
+
+  it("shows the add button when an add handler is given", () => {
     const { container } = render(
       <LayerPicker
         layers={layers}

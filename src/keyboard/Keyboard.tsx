@@ -235,18 +235,21 @@ function useLayouts(): [
   ];
 }
 
-// Removing or reordering a layer shifts every later layer's index by one, but
-// the settings we persist on the keyboard (scroll layers, runtime input
-// processor active_layers, the auto-mouse temp layer) all store an index. A
-// customer who deletes or drags a layer keeps the same stored number while it
-// silently starts pointing at a different layer.
+// The layer set is fixed when the firmware is built: six numbered layers plus
+// MOUSE. This app does not add, remove, or reorder them.
 //
-// Until those settings are migrated to layer ids, we take away the two controls
-// that can shift indices. Adding is already blocked by the firmware whenever
-// there is no free layer slot, so it needs no flag here.
+// That is a deliberate product decision, and it is also what keeps the stored
+// settings honest. The layer references we persist on the keyboard (scroll
+// layers, runtime input processor active_layers, the auto-mouse temp layer) are
+// all indices. Removing or reordering a layer shifts every later index by one,
+// so a stored number would keep pointing at the same slot while a different
+// layer moved into it. Deleting also frees a layer id for reuse, which would
+// later let a brand-new layer inherit a setting meant for the deleted one.
 //
-// Flip this back to true once the id migration lands.
-const LAYER_INDEX_MUTATION_ENABLED: boolean = false;
+// Holding the layer set still means neither can happen. Turning this on again
+// requires migrating those settings to layer ids first, and clearing a layer's
+// settings when it is deleted.
+const LAYER_SET_EDITABLE: boolean = false;
 
 export default function Keyboard() {
   const [
@@ -848,10 +851,10 @@ export default function Keyboard() {
               onLayerMoved={moveLayer}
               canAdd={(keymap.availableLayers || 0) > 0}
               canRemove={(keymap.layers?.length || 0) > 1}
-              canReorder={LAYER_INDEX_MUTATION_ENABLED}
-              onAddClicked={addLayer}
+              canReorder={LAYER_SET_EDITABLE}
+              onAddClicked={LAYER_SET_EDITABLE ? addLayer : undefined}
               onRemoveClicked={
-                LAYER_INDEX_MUTATION_ENABLED
+                LAYER_SET_EDITABLE
                   ? () => setShowRemoveLayerConfirm(true)
                   : undefined
               }
