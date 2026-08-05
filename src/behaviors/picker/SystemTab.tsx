@@ -22,16 +22,10 @@ const systemBehaviorNames = [
   "Macro",
 ];
 
-// Known Bluetooth operations
-const btOperations = [
+const btCommands = [
   { label: "BT クリア", description: "現在のペアリングを消去", param1: 0, param2: 0 },
   { label: "BT 次へ", description: "次のプロファイルに切替", param1: 1, param2: 0 },
   { label: "BT 前へ", description: "前のプロファイルに切替", param1: 2, param2: 0 },
-  { label: "BT プロファイル 0", description: "プロファイル0に切替", param1: 3, param2: 0 },
-  { label: "BT プロファイル 1", description: "プロファイル1に切替", param1: 3, param2: 1 },
-  { label: "BT プロファイル 2", description: "プロファイル2に切替", param1: 3, param2: 2 },
-  { label: "BT プロファイル 3", description: "プロファイル3に切替", param1: 3, param2: 3 },
-  { label: "BT プロファイル 4", description: "プロファイル4に切替", param1: 3, param2: 4 },
 ];
 
 interface SystemTabProps {
@@ -48,6 +42,23 @@ export function SystemTab({ behaviors, onApplyBinding }: SystemTabProps) {
   // Separate BT from others
   const btBehavior = availableBehaviors.find((b) => b.displayName === "Bluetooth");
   const otherBehaviors = availableBehaviors.filter((b) => b.displayName !== "Bluetooth");
+  const btProfileRange = btBehavior?.metadata
+    .find((parameters) => parameters.param2.some((parameter) => parameter.range))
+    ?.param2.find((parameter) => parameter.range)?.range;
+  const btOperations = [
+    ...btCommands,
+    ...(btProfileRange
+      ? Array.from({ length: btProfileRange.max - btProfileRange.min + 1 }, (_, index) => {
+          const profile = btProfileRange.min + index;
+          return {
+            label: `BT プロファイル ${profile}`,
+            description: `プロファイル${profile}に切替`,
+            param1: 3,
+            param2: profile,
+          };
+        })
+      : []),
+  ];
 
   const handleZeroParamClick = (behavior: GetBehaviorDetailsResponse) => {
     onApplyBinding({ behaviorId: behavior.id, param1: 0, param2: 0 });
