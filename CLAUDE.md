@@ -46,3 +46,7 @@ Changes to RPC or proto require updates in BOTH repos:
 - **FW**: ZMK fork proto definitions (C)
 
 Always verify both sides when touching the communication layer.
+
+## 記憶（第二の脳）
+- 運用知識・過去の学び・人物/競合/ツール: `~/.claude/projects/-Users-masakazuhayata-claude/memory/MEMORY.md`（索引→必要ページだけRead。人物・競合・ツールはまず `entities/INDEX.md`）
+- 振り返り・セッション記録・判断: `~/Library/CloudStorage/Dropbox/memo/07-Claude/_index.md`
