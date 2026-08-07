@@ -104,7 +104,13 @@ export function TrackballSettings() {
     setYInvert(info.yInvert);
     setXySwap(info.xySwapEnabled);
     setXyToScroll(info.xyToScrollEnabled);
-    setActiveLayers(info.activeLayers);
+    // 0 = every layer. The picker for this is gone: it could only switch the
+    // whole processor off per layer, not hold per-layer settings, so a customer
+    // who touched it lost rotation, XY-to-scroll and the auto-mouse layer on
+    // every other layer while the screen still looked right. Reading 0 here
+    // rather than the device value means the next save normalises a keyboard
+    // that was left in that state.
+    setActiveLayers(0);
     setScrollLayers(info.scrollLayers);
     setAxisSnapMode(info.axisSnapMode);
     setAxisSnapThreshold(info.axisSnapThreshold);
@@ -335,51 +341,6 @@ export function TrackballSettings() {
             <span className="text-sm">スクロールモード</span>
           </label>
         </div>
-      </section>
-
-      {/* Trackball settings active layers */}
-      <section className="flex flex-col gap-2">
-        <h3 className="text-sm font-medium text-base-content/70">
-          トラックボール設定を有効にするレイヤー
-        </h3>
-        {layers.length === 0 ? (
-          <p className="text-sm text-base-content/50">
-            レイヤーを読み込んでいます…
-          </p>
-        ) : (
-          <>
-            <p className="text-sm text-base-content/50">
-              {activeLayers === 0
-                ? "選択なしの場合は全レイヤーで有効です。"
-                : "選択したレイヤーでのみ有効です。"}
-            </p>
-            <div className="flex flex-col gap-1">
-              {layers.map((layer) => {
-                const bit = 1 << layer.index;
-                const isSelected =
-                  activeLayers !== 0 && (activeLayers & bit) !== 0;
-                return (
-                  <label key={layer.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={(event) => {
-                        setActiveLayers((current) => {
-                          if (event.target.checked) {
-                            return current === 0 ? bit : current | bit;
-                          }
-                          return current & ~bit;
-                        });
-                      }}
-                      className="rounded"
-                    />
-                    <span className="text-sm">{layer.name}</span>
-                  </label>
-                );
-              })}
-            </div>
-          </>
-        )}
       </section>
 
       {/* Scroll layers */}

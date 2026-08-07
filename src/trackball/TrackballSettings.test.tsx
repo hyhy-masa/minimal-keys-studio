@@ -92,28 +92,8 @@ afterEach(() => {
 });
 
 describe("TrackballSettings", () => {
-  it("選択なしを全レイヤーで有効として表示する", async () => {
-    await renderConnectedSettings(0);
-
-    expect(
-      screen.getByText("選択なしの場合は全レイヤーで有効です。")
-    ).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: "ベース" })).not.toBeChecked();
-    expect(screen.getByRole("checkbox", { name: "レイヤー4" })).not.toBeChecked();
-  });
-
-  it("active_layers はレイヤー index のビットマスクを送信する", async () => {
-    await renderConnectedSettings(0);
-
-    fireEvent.click(screen.getByRole("checkbox", { name: "レイヤー4" }));
-    fireEvent.click(screen.getByRole("button", { name: "適用" }));
-
-    await waitFor(() => {
-      expect(encodeSetActiveLayers).toHaveBeenCalledWith(1, 16);
-    });
-    expect(callRPC).toHaveBeenCalledWith("active-layers:16", 5000);
-  });
-
+  
+  
   it("レイヤー4をスクロールするレイヤーに選ぶとビットマスク16を送信する", async () => {
     await renderConnectedSettings();
 
@@ -157,12 +137,24 @@ describe("TrackballSettings", () => {
     expect(screen.getByRole("radio", { name: "レイヤー4" })).not.toBeChecked();
   });
 
-  it("初期値から有効レイヤーを変えなければ送信しない", async () => {
-    await renderConnectedSettings(16);
+  // The active-layers picker is gone on purpose. It could only switch the whole
+  // processor off per layer — never hold per-layer settings — so a customer who
+  // touched it silently lost rotation, XY-to-scroll and the auto-mouse layer
+  // everywhere else while the screen still looked correct.
+  it("トラックボール設定を有効にするレイヤーの選択は出さない", async () => {
+    await renderConnectedSettings();
 
-    expect(screen.getByRole("checkbox", { name: "レイヤー4" })).toBeChecked();
-    fireEvent.click(screen.getByRole("button", { name: "適用" }));
+    expect(screen.queryByText(/有効にするレイヤー/)).toBeNull();
+    expect(
+      screen.queryByText("選択なしの場合は全レイヤーで有効です。")
+    ).toBeNull();
+  });
 
-    expect(encodeSetActiveLayers).not.toHaveBeenCalled();
+  // The scroll-layer picker lives in the same tab and must survive the removal,
+  // so a passing suite means "that one is gone" rather than "the tab is empty".
+  it("スクロールするレイヤーの選択は残っている", async () => {
+    await renderConnectedSettings();
+
+    expect(screen.getByText("スクロールするレイヤー")).toBeInTheDocument();
   });
 });
