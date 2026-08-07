@@ -4,9 +4,6 @@ import {
 } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
-import { resolveBehaviorId } from "../behaviors/resolve-behavior";
-import type { KeyRecommendation } from "./key-roles";
-
 import {
   PhysicalLayout as PhysicalLayoutComp,
 } from "./PhysicalLayout";
@@ -161,7 +158,6 @@ export interface KeymapProps {
   selectedLayerIndex: number;
   selectedKeyPosition: number | undefined;
   onKeyPositionClicked: (keyPosition: number) => void;
-  onBindingApply?: (binding: BehaviorBinding) => void;
   encoderRotationLabel?: string;
 }
 
@@ -174,7 +170,6 @@ export const Keymap = ({
   selectedLayerIndex,
   selectedKeyPosition,
   onKeyPositionClicked,
-  onBindingApply,
   encoderRotationLabel,
 }: KeymapProps) => {
   const { osMode } = useOsMode();
@@ -185,13 +180,6 @@ export const Keymap = ({
 
   const behaviorList = Object.values(behaviors);
   const os = osMode;
-
-  const handleRecommendationClick = (rec: KeyRecommendation) => {
-    const behaviorId = resolveBehaviorId(rec.behaviorDisplayName, behaviorList);
-    if (behaviorId !== undefined && onBindingApply) {
-      onBindingApply({ behaviorId, param1: rec.param1, param2: rec.param2 });
-    }
-  };
 
   const positions = layout.keys.map((k, i) => {
     if (i >= keymap.layers[selectedLayerIndex].bindings.length) {
@@ -235,7 +223,6 @@ export const Keymap = ({
       oneU={oneU}
       selectedPosition={selectedKeyPosition}
       onPositionClicked={onKeyPositionClicked}
-      onRecommendationClick={handleRecommendationClick}
       encoderRotationLabel={encoderRotationLabel}
     />
   );

@@ -91,7 +91,7 @@ function useMinLoadingTime(isLoading: boolean, minMs = 500): boolean {
 function KeyboardArea({
   layouts, keymap, behaviors, behaviorsLoading, selectedPhysicalLayoutIndex,
   selectedLayerIndex, selectedKeyPosition, onKeyPositionClicked,
-  onBindingApply, encoderRotationLabel, showLoading,
+  encoderRotationLabel, showLoading,
 }: {
   layouts: PhysicalLayout[] | undefined;
   keymap: Keymap | undefined;
@@ -101,7 +101,6 @@ function KeyboardArea({
   selectedLayerIndex: number;
   selectedKeyPosition: number | undefined;
   onKeyPositionClicked: (pos: number) => void;
-  onBindingApply: (binding: import("@zmkfirmware/zmk-studio-ts-client/keymap").BehaviorBinding) => void;
   encoderRotationLabel?: string;
   showLoading: boolean;
 }) {
@@ -149,7 +148,6 @@ function KeyboardArea({
           selectedLayerIndex={selectedLayerIndex}
           selectedKeyPosition={selectedKeyPosition}
           onKeyPositionClicked={onKeyPositionClicked}
-          onBindingApply={onBindingApply}
           encoderRotationLabel={encoderRotationLabel}
         />
       ) : (
@@ -920,7 +918,6 @@ export default function Keyboard() {
         selectedLayerIndex={selectedLayerIndex}
         selectedKeyPosition={selectedKeyPosition}
         onKeyPositionClicked={setSelectedKeyPosition}
-        onBindingApply={doUpdateBinding}
         encoderRotationLabel={encoderSummary?.rotationLabel}
         showLoading={showLoading}
       />

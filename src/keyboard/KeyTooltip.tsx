@@ -1,6 +1,5 @@
 import { createPortal } from "react-dom";
 import type { TooltipData } from "./tooltip-data";
-import type { KeyRecommendation } from "./key-roles";
 
 export interface AnchorRect {
   top: number;
@@ -15,8 +14,6 @@ export interface KeyTooltipProps {
   encoderRotationLabel?: string;
   onTooltipMouseEnter?: () => void;
   onTooltipMouseLeave?: () => void;
-  onRecommendationClick?: (rec: KeyRecommendation) => void;
-  onMoreClick?: () => void;
   onEncoderPressSettingClick?: () => void;
   onEncoderRotationSettingClick?: () => void;
 }
@@ -27,8 +24,6 @@ export function KeyTooltip({
   encoderRotationLabel,
   onTooltipMouseEnter,
   onTooltipMouseLeave,
-  onRecommendationClick,
-  onMoreClick,
   onEncoderPressSettingClick,
   onEncoderRotationSettingClick,
 }: KeyTooltipProps) {
@@ -48,13 +43,7 @@ export function KeyTooltip({
       case "simple":
         return <SimpleTooltip data={data} />;
       case "detail":
-        return (
-          <DetailTooltip
-            data={data}
-            onRecommendationClick={onRecommendationClick}
-            onMoreClick={onMoreClick}
-          />
-        );
+        return <DetailTooltip data={data} />;
       case "encoder":
         return (
           <EncoderTooltip
@@ -96,15 +85,7 @@ function SimpleTooltip({ data }: { data: TooltipData }) {
   );
 }
 
-function DetailTooltip({
-  data,
-  onRecommendationClick,
-  onMoreClick,
-}: {
-  data: TooltipData;
-  onRecommendationClick?: (rec: KeyRecommendation) => void;
-  onMoreClick?: () => void;
-}) {
+function DetailTooltip({ data }: { data: TooltipData }) {
   return (
     <div className="px-3 py-2.5 flex flex-col gap-2">
       <div>
@@ -113,31 +94,6 @@ function DetailTooltip({
           <div className="text-sm text-base-content/70 mt-0.5">{data.description}</div>
         )}
       </div>
-      {data.recommendations && data.recommendations.length > 0 && (
-        <>
-          <div className="border-t border-base-300" />
-          <div className="flex flex-col gap-1.5">
-            <div className="text-sm text-base-content/50">おすすめ</div>
-            <div className="flex gap-1.5 flex-wrap">
-              {data.recommendations.slice(0, 3).map((rec) => (
-                <button
-                  key={rec.label}
-                  className="px-2.5 py-1 rounded bg-base-200 hover:bg-primary hover:text-primary-content text-sm transition-colors"
-                  onClick={() => onRecommendationClick?.(rec)}
-                >
-                  {rec.label}
-                </button>
-              ))}
-            </div>
-            <button
-              className="text-sm text-primary hover:underline text-left"
-              onClick={onMoreClick}
-            >
-              もっと見る →
-            </button>
-          </div>
-        </>
-      )}
     </div>
   );
 }

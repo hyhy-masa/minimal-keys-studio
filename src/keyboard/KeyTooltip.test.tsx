@@ -17,28 +17,22 @@ describe("KeyTooltip", () => {
     expect(screen.getByText("文字入力")).toBeTruthy();
   });
 
-  it("renders detail tooltip with description and recommendations", () => {
+  // The tooltip explains the key and stops there. It used to also suggest
+  // replacements, which is why these two assertions travel together: the name and
+  // description must survive, and the suggestion block must not come back.
+  it("renders detail tooltip with description, and no suggestions", () => {
     const data: TooltipData = {
       type: "detail",
       roleName: "コピーする",
       description: "選択した部分を記憶する",
-      recommendations: [
-        { label: "貼り付け", description: "記憶を出す", behaviorDisplayName: "Key Press", param1: 0, param2: 0 },
-        { label: "元に戻す", description: "取り消す", behaviorDisplayName: "Key Press", param1: 0, param2: 0 },
-      ],
     };
     render(
-      <KeyTooltip
-        data={data}
-        anchorRect={{ top: 100, left: 100, width: 48, height: 48 }}
-        onRecommendationClick={() => {}}
-        onMoreClick={() => {}}
-      />
+      <KeyTooltip data={data} anchorRect={{ top: 100, left: 100, width: 48, height: 48 }} />
     );
     expect(screen.getByText("コピーする")).toBeTruthy();
     expect(screen.getByText("選択した部分を記憶する")).toBeTruthy();
-    expect(screen.getByText("貼り付け")).toBeTruthy();
-    expect(screen.getByText("もっと見る →")).toBeTruthy();
+    expect(screen.queryByText("おすすめ")).toBeNull();
+    expect(screen.queryByText("もっと見る →")).toBeNull();
   });
 
   it("renders encoder tooltip with press and rotation info", () => {

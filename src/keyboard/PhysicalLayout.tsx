@@ -33,7 +33,6 @@ interface PhysicalLayoutProps {
   selectedPosition?: number;
   oneU?: number;
   onPositionClicked?: (position: number) => void;
-  onRecommendationClick?: (rec: import("./key-roles").KeyRecommendation) => void;
   encoderRotationLabel?: string;
 }
 
@@ -76,7 +75,6 @@ export const PhysicalLayout = ({
   selectedPosition,
   oneU = 56,
   onPositionClicked,
-  onRecommendationClick,
   encoderRotationLabel,
 }: PhysicalLayoutProps) => {
   const rightMost = positions
@@ -97,8 +95,6 @@ export const PhysicalLayout = ({
           selected={idx === selectedPosition}
           tooltipData={p.tooltipData}
           encoderRotationLabel={idx === ENCODER_POSITION ? encoderRotationLabel : undefined}
-          onRecommendationClick={onRecommendationClick}
-          onMoreClick={() => onPositionClicked?.(idx)}
           {...p}
         />
       </div>

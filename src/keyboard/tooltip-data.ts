@@ -3,7 +3,7 @@ import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { hid_usage_page_and_id_from_usage } from "../hid-usages";
 import { getUseCaseCategories, type UserOS } from "../behaviors/use-cases";
 import { getBehaviorDescription } from "../behaviors/behavior-descriptions";
-import { keyRoleMap, type KeyRecommendation } from "./key-roles";
+import { keyRoleMap } from "./key-roles";
 import {
   getHidKeyDescription,
   getMouseKeyDescription,
@@ -19,7 +19,6 @@ export interface TooltipData {
   type: TooltipType;
   roleName: string;
   description?: string;
-  recommendations?: KeyRecommendation[];
   isEncoder?: boolean;
   encoderOptions?: EncoderOption[];
 }
@@ -61,7 +60,6 @@ export function resolveTooltipData(
       type: "detail",
       roleName: "無効",
       description: "キーを押しても何も起きません",
-      recommendations: keyRoleMap[keyPosition]?.recommendations,
     };
   }
 
@@ -81,7 +79,6 @@ export function resolveTooltipData(
       type: "detail",
       roleName: getBehaviorRoleName(displayName),
       description: desc.description,
-      recommendations: keyRoleMap[keyPosition]?.recommendations,
     };
   }
 
@@ -92,7 +89,6 @@ export function resolveTooltipData(
       type: "detail",
       roleName: mouseDesc.roleName,
       description: mouseDesc.description,
-      recommendations: keyRoleMap[keyPosition]?.recommendations,
     };
   }
 
@@ -100,13 +96,14 @@ export function resolveTooltipData(
   const resolved = resolveBindingLabel(binding, behaviors, displayName, os);
   const role = keyRoleMap[keyPosition];
 
-  // Has use-case match or recommendations → detail
+  // Has use-case match, or sits at a key position we have a role for → detail.
+  // The role no longer contributes content to the tooltip, but it still marks the
+  // keys whose meaning is worth spelling out rather than showing as a bare letter.
   if (resolved.fromUseCase || role) {
     return {
       type: "detail",
       roleName: resolved.roleName,
       description: resolved.description,
-      recommendations: role?.recommendations,
     };
   }
 

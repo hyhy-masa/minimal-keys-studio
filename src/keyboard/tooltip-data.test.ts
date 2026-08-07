@@ -35,12 +35,13 @@ describe("resolveTooltipData", () => {
     expect(result.type).toBe("detail" satisfies TooltipType);
   });
 
-  it("resolves thumb key with recommendations", () => {
+  // A key we have a role for still earns the roomier "detail" tooltip, even though
+  // the role itself no longer puts anything in it.
+  it("resolves thumb key to detail", () => {
     const binding: BehaviorBinding = { behaviorId: 1, param1: key(44), param2: 0 }; // Space
     const result = resolveTooltipData(binding, fakeBehaviors, 38, "mac"); // left thumb center
     expect(result.type).toBe("detail" satisfies TooltipType);
-    expect(result.recommendations).toBeDefined();
-    expect(result.recommendations!.length).toBeGreaterThan(0);
+    expect(result.roleName).toBeTruthy();
   });
 
   it("resolves layer behavior with description", () => {

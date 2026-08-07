@@ -12,8 +12,6 @@ interface KeyProps {
   onClick?: () => void;
   tooltipData?: TooltipData | null;
   encoderRotationLabel?: string;
-  onRecommendationClick?: (rec: import("./key-roles").KeyRecommendation) => void;
-  onMoreClick?: () => void;
 }
 
 interface BehaviorShortName {
@@ -51,8 +49,6 @@ export const Key = ({
   onClick,
   tooltipData,
   encoderRotationLabel,
-  onRecommendationClick,
-  onMoreClick,
   children,
 }: PropsWithChildren<KeyProps>) => {
   const pixelWidth = width * oneU - 4;
@@ -139,14 +135,6 @@ export const Key = ({
           encoderRotationLabel={encoderRotationLabel}
           onTooltipMouseEnter={cancelHideTimer}
           onTooltipMouseLeave={startHideTimer}
-          onRecommendationClick={(rec) => {
-            setShowTooltip(false);
-            onRecommendationClick?.(rec);
-          }}
-          onMoreClick={() => {
-            setShowTooltip(false);
-            onMoreClick?.();
-          }}
         />
       )}
     </>
