@@ -7,6 +7,7 @@ import { SettingsCard } from "../misc/SettingsCard";
 import { LoadingSkeleton } from "../misc/LoadingSkeleton";
 import * as HT from "../proto/holdtap";
 import { ConfirmDialog } from "../ConfirmDialog";
+import { holdTapLabel, isHoldTapVisible } from "./hold-tap-labels";
 
 // -1 as uint32 in protobuf = "not configured in device tree" = effectively 0ms
 const SENTINEL = 0xFFFFFFFF;
@@ -86,9 +87,11 @@ export function HoldTapSettings() {
         const list = resp.listHoldTaps?.holdTaps ?? [];
         setHoldTaps(list);
 
-        if (list.length > 0) {
-          setSelectedId(list[0].id);
-          applyInfo(list[0]);
+        // 使われていない項目は画面に出さないので、最初に選ぶのも見える側から
+        const first = list.find((ht) => isHoldTapVisible(ht.name));
+        if (first) {
+          setSelectedId(first.id);
+          applyInfo(first);
         }
       } catch (e) {
         if (version === discoveryVersionRef.current) {
@@ -111,6 +114,10 @@ export function HoldTapSettings() {
   }
 
   const selected = holdTaps.find((h) => h.id === selectedId) ?? null;
+
+  // ファームウェアは device tree にある hold-tap を全部返してくるが、キーマップで
+  // 使われていないものは触っても何も起きないので画面には出さない。
+  const visibleHoldTaps = holdTaps.filter((h) => isHoldTapVisible(h.name));
 
   const handleApply = useCallback(async () => {
     if (!subsystem || selectedId === null || !selected) return;
@@ -215,15 +222,21 @@ export function HoldTapSettings() {
         長押し設定
         {selected && (
           <span className="text-sm font-normal text-base-content/60 ml-2">
-            ({selected.name})
+            ({holdTapLabel(selected.name).name})
           </span>
         )}
       </h2>
 
+      {selected && holdTapLabel(selected.name).description && (
+        <p className="text-sm text-base-content/60 -mt-2">
+          {holdTapLabel(selected.name).description}
+        </p>
+      )}
+
       {/* Instance selector */}
-      {holdTaps.length > 1 && (
+      {visibleHoldTaps.length > 1 && (
         <section className="flex gap-2 flex-wrap">
-          {holdTaps.map((ht) => (
+          {visibleHoldTaps.map((ht) => (
             <Button
               key={ht.id}
               className={`rounded-md px-3 py-1.5 text-sm transition-all ${
@@ -236,13 +249,13 @@ export function HoldTapSettings() {
                 applyInfo(ht);
               }}
             >
-              {ht.name}
+              {holdTapLabel(ht.name).name}
             </Button>
           ))}
         </section>
       )}
 
-      {holdTaps.length === 0 && !loading && (
+      {visibleHoldTaps.length === 0 && !loading && (
         <p className="text-base-content/50 text-sm">
           長押し設定の対象が見つかりません。
         </p>
