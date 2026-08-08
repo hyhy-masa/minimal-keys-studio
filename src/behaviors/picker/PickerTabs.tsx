@@ -38,8 +38,16 @@ export function PickerTabs({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Tab bar */}
-      <div className="flex gap-0.5 bg-base-200 p-1 rounded-lg overflow-x-auto">
+      {/*
+        Tab bar.
+
+        以前は overflow-x-auto で横スクロールにしていたが、幅が足りないと
+        「修飾キー」以降がウィンドウの外に隠れ、ウィンドウを広げても戻って
+        こなかった（親の箱に min-w-0 が無く、幅の変化がここまで伝わって
+        いなかった）。隠れる作りをやめ、狭いときは折り返す。
+        タブは6つしかないので、折り返しても2段で収まる。
+      */}
+      <div className="flex flex-wrap gap-0.5 bg-base-200 p-1 rounded-lg">
         {tabs.map((tab) => (
           <button
             key={tab.id}

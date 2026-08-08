@@ -824,7 +824,13 @@ export default function Keyboard() {
 
   return (
     <div className="grid grid-cols-[auto_1fr] grid-rows-[55fr_45fr] bg-base-300 max-w-full min-w-0 min-h-0 h-full">
-      <div className="p-2 flex flex-col gap-2 bg-gray-50 border-r border-gray-200 row-span-2">
+      {/*
+        左のサイドバー（レイヤー・保存/読込・自動マウスレイヤー・修飾キー）。
+        min-h-0 が無いと grid 行より高くなっても縮まらず、外枠の overflow-hidden に
+        下から切り落とされる（低いウィンドウで「自動マウスレイヤー」以降が消えて
+        いた）。切るのではなくスクロールさせる。
+      */}
+      <div className="p-2 flex flex-col gap-2 bg-gray-50 border-r border-gray-200 row-span-2 min-h-0 overflow-y-auto">
         {!showLoading && layouts ? (
           <div className="col-start-3 row-start-1 row-end-2">
             <PhysicalLayoutPicker
@@ -922,7 +928,9 @@ export default function Keyboard() {
         showLoading={showLoading}
       />
       <div
-        className="p-3 col-start-2 row-start-2 bg-white border-t border-gray-200 overflow-y-auto"
+        // min-w-0: grid の 1fr 列は既定で中身より小さくならないため、これが
+        // 無いとウィンドウ幅の変化が中のタブバーまで伝わらない
+        className="p-3 col-start-2 row-start-2 min-w-0 bg-white border-t border-gray-200 overflow-y-auto"
         data-tour="binding-panel"
       >
         {!showLoading && keymap && selectedBinding != null && behaviorsLoading ? (

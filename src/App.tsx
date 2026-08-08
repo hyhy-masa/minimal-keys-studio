@@ -455,7 +455,25 @@ function AppInner() {
             open={showLicenseNotice}
             onClose={() => setShowLicenseNotice(false)}
           />
-          <div className="bg-base-100 text-base-content h-full max-h-[100vh] w-full max-w-[100vw] inline-grid grid-cols-[auto] grid-rows-[auto_auto_auto_1fr_auto] overflow-hidden">
+          {/*
+            アプリの外枠。
+
+            以前は inline-grid ＋ grid-rows-[auto_auto_auto_1fr_auto] だった。
+            2つ壊れていた。
+
+            1. inline-grid は中身の大きさで決まる箱なので、外枠がウィンドウに
+               追従しない。
+            2. 行を5つ宣言しているのに、子要素は3つ（未接続時）か4つ（接続時）
+               しかない。nav が conn.conn の条件付きだから数が変わる。余った
+               1fr 行がフッターに割り当たり、ウィンドウを広げた分が全部そこへ
+               流れ込んでいた（実測: rows = 49px 304px 29px 906px 0px。中身は
+               304px のまま、906px が空いていた）。
+
+            行数を数え直しても、子の数が変わる作りでは同じ事故が起きる。
+            flex 列にして「中身が残りを取る」形にする（下の flex-1 min-h-0）。
+            これなら子が増えても減っても崩れない。
+          */}
+          <div className="bg-base-100 text-base-content flex h-screen w-full max-w-[100vw] flex-col overflow-hidden">
             <AppHeader
               connectedDeviceLabel={connectedDeviceName}
               canUndo={canUndo}
@@ -500,7 +518,8 @@ function AppInner() {
                 ))}
               </nav>
             )}
-            <div className="min-h-0 overflow-hidden h-full">
+            {/* ヘッダー・nav・フッターを除いた残り全部を中身に渡す */}
+            <div className="min-h-0 flex-1 overflow-hidden">
               <div className={activeTab === "keymap" ? "h-full" : "hidden"}><Keyboard key={keymapVersion} /></div>
               {mountedTabs.has("trackball") && <div className={activeTab === "trackball" ? "h-full" : "hidden"}><TrackballSettings /></div>}
               {mountedTabs.has("encoder") && <div className={activeTab === "encoder" ? "h-full" : "hidden"}><EncoderSettings /></div>}
