@@ -25,6 +25,10 @@ src/data
 *.sw?
 
 *storybook.log
+storybook-static
+
+# Agent scratch (plan-runner writes here)
+.plan-run
 
 # Rust vendored crates (src-tauri has its own anchored /target/ in src-tauri/.gitignore)
 /crates/**/target/

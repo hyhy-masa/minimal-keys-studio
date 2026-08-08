@@ -22,6 +22,12 @@ jobs:
           node-version-file: '.node-version'
           cache: "npm"
 
+      # package-lock.json is written by npm 11 on the dev machine, but Node 22
+      # ships npm 10, which rejects that lockfile with "Missing from lock file".
+      # Match CI to whatever writes the lock instead of moving the Node version
+      # (the Node version is shared with the Tauri build).
+      - run: npm i -g npm@11
+
       - run: npm ci
       - run: npm run lint
       - run: npm test
@@ -51,6 +57,9 @@ jobs:
           targets: ${{ matrix.platform == 'macos-15' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@v2
+
+      # Same reason as the test job: keep CI's npm on the major that wrote the lock.
+      - run: npm i -g npm@11
 
       - run: npm ci
 

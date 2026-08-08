@@ -25,6 +25,9 @@ jobs:
           node-version: "22"
           cache: "npm"
 
+      # Same reason as release.yml: keep CI's npm on the major that wrote the lock.
+      - run: npm i -g npm@11
+
       - run: npm ci
 
       - run: npm run build
