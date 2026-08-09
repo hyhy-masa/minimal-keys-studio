@@ -32,4 +32,6 @@ storybook-static
 
 # Rust vendored crates (src-tauri has its own anchored /target/ in src-tauri/.gitignore)
 /crates/**/target/
-/crates/**/Cargo.lock
+# Cargo.lock IS tracked here: CI runs `cargo test --manifest-path crates/*/Cargo.toml`
+# standalone, so without the lock those runs resolve dependencies fresh every time
+# and can go red on a day nobody touched this repo.
