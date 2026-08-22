@@ -123,6 +123,19 @@ async function renderKeyboard() {
   mocks.callRpc.mockClear();
 }
 
+async function confirmImport() {
+  fireEvent.click(screen.getByRole("button", { name: "読込" }));
+  await screen.findByRole("dialog", { name: "キーマップをインポート" });
+  fireEvent.click(screen.getByRole("button", { name: "インポートする" }));
+}
+
+function writeRequests() {
+  return mocks.callRpc.mock.calls.filter(([, request]) =>
+    "setLayerProps" in (request as { keymap?: object }).keymap! ||
+    "setLayerBinding" in (request as { keymap?: object }).keymap!
+  );
+}
+
 describe("Keyboard import", () => {
   it("does not write after choosing a file or cancelling, and starts writing only after confirmation", async () => {
     await renderKeyboard();
@@ -146,5 +159,51 @@ describe("Keyboard import", () => {
         { keymap: { setLayerBinding: { layerId: 10, keyPosition: 0, binding: importedLayers[0].bindings[0] } } }
       );
     });
+  });
+
+  it("stops before bindings when a layer property write returns a non-OK response", async () => {
+    await renderKeyboard();
+    mocks.calculateImportChanges.mockReturnValue({
+      layerProps: [{ layerId: 10, name: "Imported" }],
+      bindings: [{ layerId: 10, keyPosition: 0, binding: importedLayers[0].bindings[0] }],
+    });
+    mocks.callRpc
+      .mockResolvedValueOnce({ keymap: { setLayerProps: 3 } })
+      .mockResolvedValueOnce({ keymap: { getKeymap: currentKeymap } });
+
+    await confirmImport();
+
+    await waitFor(() => {
+      expect(mocks.callRpc).toHaveBeenCalledWith({}, { keymap: { getKeymap: true } }, 15000);
+    });
+    expect(writeRequests()).toHaveLength(1);
+    expect(mocks.toast).not.toHaveBeenCalledWith("キーマップをインポートしました", "success");
+  });
+
+  it("stops before the later binding when the first binding returns response value 3", async () => {
+    const firstBinding = { behaviorId: 1, param1: 1, param2: 0 };
+    const secondBinding = { behaviorId: 1, param1: 2, param2: 0 };
+    await renderKeyboard();
+    mocks.calculateImportChanges.mockReturnValue({
+      layerProps: [],
+      bindings: [
+        { layerId: 10, keyPosition: 0, binding: firstBinding },
+        { layerId: 10, keyPosition: 1, binding: secondBinding },
+      ],
+    });
+    mocks.callRpc
+      .mockResolvedValueOnce({ keymap: { setLayerBinding: 3 } })
+      .mockResolvedValueOnce({ keymap: { getKeymap: currentKeymap } });
+
+    await confirmImport();
+
+    await waitFor(() => {
+      expect(mocks.callRpc).toHaveBeenCalledWith({}, { keymap: { getKeymap: true } }, 15000);
+    });
+    expect(writeRequests()).toHaveLength(1);
+    expect(writeRequests()[0]?.[1]).toEqual({
+      keymap: { setLayerBinding: { layerId: 10, keyPosition: 0, binding: firstBinding } },
+    });
+    expect(mocks.toast).not.toHaveBeenCalledWith("キーマップをインポートしました", "success");
   });
 });

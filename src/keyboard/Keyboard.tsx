@@ -698,11 +698,21 @@ export default function Keyboard() {
       };
 
       for (const { layerId, name } of changes.layerProps) {
-        await call_rpc(conn.conn, { keymap: { setLayerProps: { layerId, name } } });
+        const response = await call_rpc(conn.conn, { keymap: { setLayerProps: { layerId, name } } });
+        if (response.keymap?.setLayerProps !== SetLayerPropsResponse.SET_LAYER_PROPS_RESP_OK) {
+          throw new Error(
+            `Layer property write failed at layerId=${layerId}, response=${String(response.keymap?.setLayerProps)}`
+          );
+        }
         advanceProgress();
       }
       for (const { layerId, keyPosition, binding } of changes.bindings) {
-        await call_rpc(conn.conn, { keymap: { setLayerBinding: { layerId, keyPosition, binding } } });
+        const response = await call_rpc(conn.conn, { keymap: { setLayerBinding: { layerId, keyPosition, binding } } });
+        if (response.keymap?.setLayerBinding !== SetLayerBindingResponse.SET_LAYER_BINDING_RESP_OK) {
+          throw new Error(
+            `Layer binding write failed at layerId=${layerId}, keyPosition=${keyPosition}, response=${String(response.keymap?.setLayerBinding)}`
+          );
+        }
         advanceProgress();
       }
 
@@ -723,7 +733,8 @@ export default function Keyboard() {
         const refreshed = resp?.keymap?.getKeymap;
         if (!refreshed) throw new Error("Keymap response was empty after import failure");
         setKeymap(() => refreshed);
-        toast("一部だけ書き込まれました。実機の現在状態を読み込みました。元に戻すには「破棄」を押してください", "error");
+        const detail = e instanceof Error ? ` (${e.message})` : "";
+        toast(`一部だけ書き込まれました。実機の現在状態を読み込みました。元に戻すには「破棄」を押してください${detail}`, "error");
       } catch (refreshError) {
         console.error("Failed to refresh keymap after import failure:", refreshError);
         setKeymap(undefined);
