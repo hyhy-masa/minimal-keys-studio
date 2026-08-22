@@ -78,7 +78,11 @@ interface BehaviorsCache {
   details: GetBehaviorDetailsResponse[];
 }
 
-/** The cache is for one firmware build; any change to the id list retires it. */
+/**
+ * The cache is for one firmware build; any change to the id list retires it.
+ * A build that keeps the same ids but changes display names or metadata cannot be
+ * detected until the firmware exposes a build identifier that can join this cache key.
+ */
 function cacheMatchesDevice(
   cache: BehaviorsCache | null,
   deviceIds: readonly number[]
