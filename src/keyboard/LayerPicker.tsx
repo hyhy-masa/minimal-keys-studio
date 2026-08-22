@@ -213,7 +213,9 @@ export const LayerPicker = ({
         }
         className="ml-2 items-center justify-center cursor-pointer"
         onSelectionChange={selectionChanged}
-        dragAndDropHooks={canReorder ? dragAndDropHooks : undefined}
+        dragAndDropHooks={
+          canReorder && onLayerMoved ? dragAndDropHooks : undefined
+        }
         {...props}
       >
         {(layer_item) => (

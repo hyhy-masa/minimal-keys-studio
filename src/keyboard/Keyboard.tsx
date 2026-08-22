@@ -233,8 +233,9 @@ function useLayouts(): [
   ];
 }
 
-// The layer set is fixed when the firmware is built: six numbered layers plus
-// MOUSE. This app does not add, remove, or reorder them.
+// Layers may only be appended while the firmware reports free layer slots.
+// Adding consumes the first empty slot, which is always after the active
+// layers, so it leaves every existing layer index unchanged.
 //
 // That is a deliberate product decision, and it is also what keeps the stored
 // settings honest. The layer references we persist on the keyboard (scroll
@@ -244,10 +245,8 @@ function useLayouts(): [
 // layer moved into it. Deleting also frees a layer id for reuse, which would
 // later let a brand-new layer inherit a setting meant for the deleted one.
 //
-// Holding the layer set still means neither can happen. Turning this on again
-// requires migrating those settings to layer ids first, and clearing a layer's
-// settings when it is deleted.
-const LAYER_SET_EDITABLE: boolean = false;
+// Removing or reordering must stay unavailable until those settings migrate to
+// layer ids, and deletion also clears the deleted layer's settings.
 
 export default function Keyboard() {
   const [
@@ -468,33 +467,6 @@ export default function Keyboard() {
   );
 
   const encoderSummary = useEncoderBindings(behaviorList, selectedLayerIndex);
-
-  const moveLayer = useCallback(
-    (start: number, end: number) => {
-      const doMove = async (startIndex: number, destIndex: number) => {
-        if (!conn.conn) {
-          return;
-        }
-
-        const resp = await call_rpc(conn.conn, {
-          keymap: { moveLayer: { startIndex, destIndex } },
-        });
-
-        if (resp.keymap?.moveLayer?.ok) {
-          setKeymap(resp.keymap?.moveLayer?.ok);
-          setSelectedLayerIndex(destIndex);
-        } else {
-          console.error("Error moving", resp);
-        }
-      };
-
-      undoRedo?.(async () => {
-        await doMove(start, end);
-        return () => doMove(end, start);
-      });
-    },
-    [undoRedo, conn.conn, setKeymap]
-  );
 
   const addLayer = useCallback(() => {
     async function doAdd(): Promise<number> {
@@ -852,16 +824,9 @@ export default function Keyboard() {
               layers={keymap.layers}
               selectedLayerIndex={selectedLayerIndex}
               onLayerClicked={setSelectedLayerIndex}
-              onLayerMoved={moveLayer}
               canAdd={(keymap.availableLayers || 0) > 0}
-              canRemove={(keymap.layers?.length || 0) > 1}
-              canReorder={LAYER_SET_EDITABLE}
-              onAddClicked={LAYER_SET_EDITABLE ? addLayer : undefined}
-              onRemoveClicked={
-                LAYER_SET_EDITABLE
-                  ? () => setShowRemoveLayerConfirm(true)
-                  : undefined
-              }
+              canReorder={false}
+              onAddClicked={addLayer}
               onLayerNameChanged={changeLayerName}
             />
           </div>
