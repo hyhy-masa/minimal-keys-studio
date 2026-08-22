@@ -58,12 +58,36 @@ export function useBehaviorsStatus(): {
 }
 
 // Behavior details are static per firmware build, so they are cached across
-// sessions; the id list from the device decides whether the cache is valid.
+// sessions. What makes them safe to reuse is the id list: behavior ids are
+// assigned per build and are neither stable nor contiguous across firmware
+// versions — one shipped device reports [1,2,3,4,5,35,7,…,34], and a build that
+// adds or drops a behavior renumbers the rest. So the cache is only usable when
+// the device reports exactly the id list it was written for.
+//
+// Skipping that check silently relabels the whole keymap: a customer who
+// updated firmware had id 4 cached as "Caps Word" from the previous build while
+// the new build calls it "Key Press", so every letter key exported as Caps Word
+// (146 of them) and every transparent key as Reset (375). The export is a
+// faithful record of what the app believed, which is why re-importing it was
+// rejected binding by binding — Caps Word takes no parameters, and the keycodes
+// carried over were not zero.
 export const BEHAVIORS_CACHE_KEY = "behaviors-cache-v1";
 
 interface BehaviorsCache {
   ids: number[];
   details: GetBehaviorDetailsResponse[];
+}
+
+/** The cache is for one firmware build; any change to the id list retires it. */
+function cacheMatchesDevice(
+  cache: BehaviorsCache | null,
+  deviceIds: readonly number[]
+): boolean {
+  return (
+    !!cache &&
+    cache.ids.length === deviceIds.length &&
+    cache.ids.every((id, index) => id === deviceIds[index])
+  );
 }
 
 function readCache(): BehaviorsCache | null {
@@ -126,8 +150,9 @@ export function BehaviorsProvider({ children }: { children: React.ReactNode }) {
         const behaviorIds = resp.behaviors?.listAllBehaviors?.behaviors ?? [];
 
         const cached = readCache();
+        const reusable = cacheMatchesDevice(cached, behaviorIds);
         const cachedById = new Map(
-          (cached?.details ?? []).map((d) => [d.id, d])
+          (reusable ? cached!.details : []).map((d) => [d.id, d])
         );
 
         const map: BehaviorMap = {};
