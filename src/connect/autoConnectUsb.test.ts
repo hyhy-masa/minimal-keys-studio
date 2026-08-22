@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   connect: vi.fn(),
   createRpcConnection: vi.fn(),
   callRpc: vi.fn(),
+  logFrontend: vi.fn(),
 }));
 
 vi.mock("../tauri/serial", () => ({
@@ -18,6 +19,10 @@ vi.mock("@zmkfirmware/zmk-studio-ts-client", () => ({
 
 vi.mock("../rpc/logging", () => ({
   call_rpc: mocks.callRpc,
+}));
+
+vi.mock("../misc/frontendLogging", () => ({
+  logFrontend: mocks.logFrontend,
 }));
 
 import {
@@ -51,6 +56,7 @@ describe("autoConnectUsb", () => {
     mocks.connect.mockReset();
     mocks.createRpcConnection.mockReset();
     mocks.callRpc.mockReset();
+    mocks.logFrontend.mockReset();
     mockLocalStorage.getItem.mockClear();
     mockLocalStorage.setItem.mockClear();
     mockLocalStorage.removeItem.mockClear();
@@ -172,6 +178,83 @@ describe("autoConnectUsb", () => {
     await expect(autoConnectUsb()).rejects.toMatchObject({
       reason: "no-response",
     });
+  });
+
+  it("retries every candidate once with the longer timeout after the fast pass is silent", async () => {
+    const retryProbeTransport = { id: "retry-probe" };
+    const freshTransport = { id: "fresh" };
+    mocks.listDevices.mockResolvedValue([firstDevice, secondDevice]);
+    mocks.connect
+      .mockResolvedValueOnce({ id: "first-fast-probe" })
+      .mockResolvedValueOnce({ id: "second-fast-probe" })
+      .mockResolvedValueOnce(retryProbeTransport)
+      .mockResolvedValueOnce(freshTransport);
+    mocks.createRpcConnection
+      .mockReturnValueOnce({ id: "first-fast" })
+      .mockReturnValueOnce({ id: "second-fast" })
+      .mockReturnValueOnce({ id: "first-retry" });
+    mocks.callRpc
+      .mockRejectedValueOnce(new Error("no response"))
+      .mockRejectedValueOnce(new Error("no response"))
+      .mockResolvedValueOnce({ core: { getDeviceInfo: { name: "minimal-keys" } } });
+
+    await expect(autoConnectUsb()).resolves.toEqual({
+      transport: freshTransport,
+      deviceId: firstDevice.id,
+      deviceLabel: firstDevice.label,
+    });
+
+    expect(mocks.callRpc.mock.calls.map(([, , timeoutMs]) => timeoutMs)).toEqual([1500, 1500, 3000]);
+    expect(mocks.connect.mock.calls.map(([device]) => device.id)).toEqual([
+      firstDevice.id,
+      secondDevice.id,
+      firstDevice.id,
+      firstDevice.id,
+    ]);
+  });
+
+  it("stops after both bounded probe passes when every candidate is silent", async () => {
+    mocks.listDevices.mockResolvedValue([firstDevice, secondDevice]);
+    mocks.connect.mockResolvedValue({});
+    mocks.createRpcConnection.mockReturnValue({});
+    mocks.callRpc.mockRejectedValue(new Error("no response"));
+
+    await expect(autoConnectUsb()).rejects.toMatchObject({ reason: "no-response" });
+
+    expect(mocks.callRpc.mock.calls.map(([, , timeoutMs]) => timeoutMs)).toEqual([1500, 1500, 3000, 3000]);
+  });
+
+  it("does not start the longer pass when a fast-pass probe responded but reopening failed", async () => {
+    mocks.listDevices.mockResolvedValue([firstDevice, secondDevice]);
+    mocks.connect
+      .mockResolvedValueOnce({ id: "first-probe" })
+      .mockRejectedValueOnce(new Error("first reopen failed"))
+      .mockResolvedValueOnce({ id: "second-probe" })
+      .mockRejectedValueOnce(new Error("second reopen failed"))
+      .mockRejectedValue(new Error("unexpected retry connection"));
+    mocks.createRpcConnection.mockReturnValue({});
+    mocks.callRpc.mockResolvedValue({ core: { getDeviceInfo: { name: "minimal-keys" } } });
+
+    await expect(autoConnectUsb()).rejects.toMatchObject({ reason: "no-response" });
+
+    expect(mocks.callRpc.mock.calls.map(([, , timeoutMs]) => timeoutMs)).toEqual([1500, 1500]);
+    expect(mocks.connect).toHaveBeenCalledTimes(4);
+  });
+
+  it("does not retry after a fast-pass success and records probe timing fields", async () => {
+    mocks.listDevices.mockResolvedValue([firstDevice]);
+    mocks.connect.mockResolvedValueOnce({ id: "probe" }).mockResolvedValueOnce({ id: "fresh" });
+    mocks.createRpcConnection.mockReturnValue({});
+    mocks.callRpc.mockResolvedValue({ core: { getDeviceInfo: { name: "minimal-keys" } } });
+
+    await autoConnectUsb();
+
+    expect(mocks.callRpc).toHaveBeenCalledTimes(1);
+    expect(mocks.callRpc).toHaveBeenCalledWith(expect.anything(), { core: { getDeviceInfo: true } }, 1500);
+    expect(mocks.logFrontend).toHaveBeenCalledWith(
+      "info",
+      expect.stringMatching(/pass=1.*timeoutMs=1500.*elapsedMs=\d+/)
+    );
   });
 
   it("reports no-candidates without trying to connect", async () => {

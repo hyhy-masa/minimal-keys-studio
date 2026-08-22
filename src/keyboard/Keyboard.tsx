@@ -57,6 +57,7 @@ import {
 import {
   calculateImportChanges,
   calculateUnappliedLayerCount,
+  type ImportChanges,
 } from "./import-diff";
 import { AutoMouseLayerControl } from "../trackball/AutoMouseLayerControl";
 
@@ -233,8 +234,9 @@ function useLayouts(): [
   ];
 }
 
-// The layer set is fixed when the firmware is built: six numbered layers plus
-// MOUSE. This app does not add, remove, or reorder them.
+// Layers may only be appended while the firmware reports free layer slots.
+// Adding consumes the first empty slot, which is always after the active
+// layers, so it leaves every existing layer index unchanged.
 //
 // That is a deliberate product decision, and it is also what keeps the stored
 // settings honest. The layer references we persist on the keyboard (scroll
@@ -244,10 +246,8 @@ function useLayouts(): [
 // layer moved into it. Deleting also frees a layer id for reuse, which would
 // later let a brand-new layer inherit a setting meant for the deleted one.
 //
-// Holding the layer set still means neither can happen. Turning this on again
-// requires migrating those settings to layer ids first, and clearing a layer's
-// settings when it is deleted.
-const LAYER_SET_EDITABLE: boolean = false;
+// Removing or reordering must stay unavailable until those settings migrate to
+// layer ids, and deletion also clears the deleted layer's settings.
 
 export default function Keyboard() {
   const [
@@ -469,33 +469,6 @@ export default function Keyboard() {
 
   const encoderSummary = useEncoderBindings(behaviorList, selectedLayerIndex);
 
-  const moveLayer = useCallback(
-    (start: number, end: number) => {
-      const doMove = async (startIndex: number, destIndex: number) => {
-        if (!conn.conn) {
-          return;
-        }
-
-        const resp = await call_rpc(conn.conn, {
-          keymap: { moveLayer: { startIndex, destIndex } },
-        });
-
-        if (resp.keymap?.moveLayer?.ok) {
-          setKeymap(resp.keymap?.moveLayer?.ok);
-          setSelectedLayerIndex(destIndex);
-        } else {
-          console.error("Error moving", resp);
-        }
-      };
-
-      undoRedo?.(async () => {
-        await doMove(start, end);
-        return () => doMove(end, start);
-      });
-    },
-    [undoRedo, conn.conn, setKeymap]
-  );
-
   const addLayer = useCallback(() => {
     async function doAdd(): Promise<number> {
       if (!conn.conn || !keymap) {
@@ -672,6 +645,18 @@ export default function Keyboard() {
     completed: number;
     total: number;
   } | null>(null);
+  const [pendingImport, setPendingImport] = useState<{
+    connection: NonNullable<typeof conn.conn>;
+    keymap: Keymap;
+    changes: ImportChanges;
+    importedLayerCount: number;
+    unappliedLayerCount: number;
+  } | null>(null);
+  const importInFlightRef = useRef(false);
+
+  useEffect(() => {
+    setPendingImport(null);
+  }, [conn.conn, keymap]);
 
   const handleExport = useCallback(async () => {
     if (!keymap) return;
@@ -683,6 +668,84 @@ export default function Keyboard() {
       toast("キーマップをエクスポートしました", "success");
     }
   }, [keymap, behaviors, toast]);
+
+  const confirmImport = useCallback(async () => {
+    const pending = pendingImport;
+    if (!pending || importInFlightRef.current) return;
+    setPendingImport(null);
+    if (conn.conn !== pending.connection || keymap !== pending.keymap) return;
+
+    importInFlightRef.current = true;
+    const { changes, unappliedLayerCount } = pending;
+    const writeCount = changes.layerProps.length + changes.bindings.length;
+    setImporting(true);
+    setImportProgress({ completed: 0, total: writeCount });
+    try {
+      if (writeCount === 0) {
+        toast(
+          unappliedLayerCount > 0
+            ? `書き込める範囲に変更はありませんでした。残り${unappliedLayerCount}つのレイヤーは反映されていません`
+            : "変更はありませんでした",
+          unappliedLayerCount > 0 ? "info" : "success",
+        );
+        return;
+      }
+
+      let completed = 0;
+      const advanceProgress = () => {
+        completed += 1;
+        setImportProgress({ completed, total: writeCount });
+      };
+
+      for (const { layerId, name } of changes.layerProps) {
+        const response = await call_rpc(conn.conn, { keymap: { setLayerProps: { layerId, name } } });
+        if (response.keymap?.setLayerProps !== SetLayerPropsResponse.SET_LAYER_PROPS_RESP_OK) {
+          throw new Error(
+            `Layer property write failed at layerId=${layerId}, response=${String(response.keymap?.setLayerProps)}`
+          );
+        }
+        advanceProgress();
+      }
+      for (const { layerId, keyPosition, binding } of changes.bindings) {
+        const response = await call_rpc(conn.conn, { keymap: { setLayerBinding: { layerId, keyPosition, binding } } });
+        if (response.keymap?.setLayerBinding !== SetLayerBindingResponse.SET_LAYER_BINDING_RESP_OK) {
+          throw new Error(
+            `Layer binding write failed at layerId=${layerId}, keyPosition=${keyPosition}, response=${String(response.keymap?.setLayerBinding)}`
+          );
+        }
+        advanceProgress();
+      }
+
+      const resp = await call_rpc(conn.conn, { keymap: { getKeymap: true } }, 15000);
+      const refreshed = resp?.keymap?.getKeymap;
+      if (!refreshed) throw new Error("Keymap response was empty after import");
+      setKeymap(() => refreshed);
+      toast(
+        unappliedLayerCount > 0
+          ? `書き込める${keymap.layers.length}つのレイヤーをインポートしました。残り${unappliedLayerCount}つのレイヤーは反映されていません`
+          : "キーマップをインポートしました",
+        unappliedLayerCount > 0 ? "info" : "success",
+      );
+    } catch (e) {
+      console.error("Import failed:", e);
+      try {
+        const resp = await call_rpc(conn.conn, { keymap: { getKeymap: true } }, 15000);
+        const refreshed = resp?.keymap?.getKeymap;
+        if (!refreshed) throw new Error("Keymap response was empty after import failure");
+        setKeymap(() => refreshed);
+        const detail = e instanceof Error ? ` (${e.message})` : "";
+        toast(`一部だけ書き込まれました。実機の現在状態を読み込みました。元に戻すには「破棄」を押してください${detail}`, "error");
+      } catch (refreshError) {
+        console.error("Failed to refresh keymap after import failure:", refreshError);
+        setKeymap(undefined);
+        toast("一部だけ書き込まれた可能性がありますが、実機の状態を確認できません。編集や保存をせず、「破棄」を押すか再接続してください", "error");
+      }
+    } finally {
+      setImporting(false);
+      setImportProgress(null);
+      importInFlightRef.current = false;
+    }
+  }, [pendingImport, conn.conn, keymap, setKeymap, toast]);
 
   const handleImport = useCallback(async () => {
     if (!keymap || !conn.conn || !layouts) return;
@@ -720,93 +783,14 @@ export default function Keyboard() {
       keymap.layers.length,
       result.layers.length,
     );
-    const writeCount = changes.layerProps.length + changes.bindings.length;
-    const layerLimitWarning = unappliedLayerCount > 0
-      ? `\nこのファイルには${result.layers.length}つのレイヤーがありますが、書き込めるのは${keymap.layers.length}つまでです。残り${unappliedLayerCount}つは反映されません。続けますか？`
-      : "";
-    if (!confirm(`${result.layers.length} レイヤー、${keyCount} キー/レイヤーをインポートします。\n変更のある ${writeCount} か所を書き込みます。\n現在のキーマップを上書きします。${layerLimitWarning || "続けますか？"}`)) {
-      return;
-    }
-
-    setImporting(true);
-    setImportProgress({ completed: 0, total: writeCount });
-    try {
-      if (writeCount === 0) {
-        toast(
-          unappliedLayerCount > 0
-            ? `書き込める範囲に変更はありませんでした。残り${unappliedLayerCount}つのレイヤーは反映されていません`
-            : "変更はありませんでした",
-          unappliedLayerCount > 0 ? "info" : "success",
-        );
-        return;
-      }
-
-      let completed = 0;
-      const advanceProgress = () => {
-        completed += 1;
-        setImportProgress({ completed, total: writeCount });
-      };
-
-      for (const { layerId, name } of changes.layerProps) {
-        await call_rpc(conn.conn, {
-          keymap: { setLayerProps: { layerId, name } },
-        });
-        advanceProgress();
-      }
-      for (const { layerId, keyPosition, binding } of changes.bindings) {
-        await call_rpc(conn.conn, {
-          keymap: { setLayerBinding: { layerId, keyPosition, binding } },
-        });
-        advanceProgress();
-      }
-
-      const resp = await call_rpc(
-        conn.conn,
-        { keymap: { getKeymap: true } },
-        15000
-      );
-      const refreshed = resp?.keymap?.getKeymap;
-      if (!refreshed) {
-        throw new Error("Keymap response was empty after import");
-      }
-      setKeymap(() => refreshed);
-
-      toast(
-        unappliedLayerCount > 0
-          ? `書き込める${keymap.layers.length}つのレイヤーをインポートしました。残り${unappliedLayerCount}つのレイヤーは反映されていません`
-          : "キーマップをインポートしました",
-        unappliedLayerCount > 0 ? "info" : "success",
-      );
-    } catch (e) {
-      console.error("Import failed:", e);
-      try {
-        const resp = await call_rpc(
-          conn.conn,
-          { keymap: { getKeymap: true } },
-          15000,
-        );
-        const refreshed = resp?.keymap?.getKeymap;
-        if (!refreshed) {
-          throw new Error("Keymap response was empty after import failure");
-        }
-        setKeymap(() => refreshed);
-        toast(
-          "一部だけ書き込まれました。実機の現在状態を読み込みました。元に戻すには「破棄」を押してください",
-          "error",
-        );
-      } catch (refreshError) {
-        console.error("Failed to refresh keymap after import failure:", refreshError);
-        setKeymap(undefined);
-        toast(
-          "一部だけ書き込まれた可能性がありますが、実機の状態を確認できません。編集や保存をせず、「破棄」を押すか再接続してください",
-          "error",
-        );
-      }
-    } finally {
-      setImporting(false);
-      setImportProgress(null);
-    }
-  }, [keymap, conn, behaviors, layouts, selectedPhysicalLayoutIndex, toast, setKeymap]);
+    setPendingImport({
+      connection: conn.conn,
+      keymap,
+      changes,
+      importedLayerCount: result.layers.length,
+      unappliedLayerCount,
+    });
+  }, [keymap, conn, behaviors, layouts, selectedPhysicalLayoutIndex, toast]);
 
   if (loadError) {
     return (
@@ -852,16 +836,9 @@ export default function Keyboard() {
               layers={keymap.layers}
               selectedLayerIndex={selectedLayerIndex}
               onLayerClicked={setSelectedLayerIndex}
-              onLayerMoved={moveLayer}
               canAdd={(keymap.availableLayers || 0) > 0}
-              canRemove={(keymap.layers?.length || 0) > 1}
-              canReorder={LAYER_SET_EDITABLE}
-              onAddClicked={LAYER_SET_EDITABLE ? addLayer : undefined}
-              onRemoveClicked={
-                LAYER_SET_EDITABLE
-                  ? () => setShowRemoveLayerConfirm(true)
-                  : undefined
-              }
+              canReorder={false}
+              onAddClicked={addLayer}
               onLayerNameChanged={changeLayerName}
             />
           </div>
@@ -956,6 +933,21 @@ export default function Keyboard() {
           <LoadingSpinner label="設定パネルを準備しています..." />
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingImport !== null}
+        title="キーマップをインポート"
+        destructive
+        confirmLabel="インポートする"
+        onConfirm={confirmImport}
+        onCancel={() => setPendingImport(null)}
+      >
+        <p>
+          {pendingImport
+            ? `${pendingImport.importedLayerCount} レイヤーをインポートします。変更のある ${pendingImport.changes.layerProps.length + pendingImport.changes.bindings.length} か所を書き込みます。現在のキーマップを上書きします。${pendingImport.unappliedLayerCount > 0 ? ` このファイルの残り${pendingImport.unappliedLayerCount}つのレイヤーは反映されません。` : ""}`
+            : ""}
+        </p>
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={showRemoveLayerConfirm}

@@ -73,6 +73,13 @@ function Consumer() {
   return (
     <div>
       <span data-testid="count">{Object.keys(map).length}</span>
+      <span data-testid="names">
+        {Object.keys(map)
+          .map(Number)
+          .sort((a, b) => a - b)
+          .map((id) => `${id}=${map[id].displayName}`)
+          .join(",")}
+      </span>
       <span data-testid="loading">{String(loading)}</span>
       <span data-testid="error">{String(error)}</span>
       <button data-testid="reload" onClick={reload}>
@@ -144,7 +151,11 @@ describe("BehaviorsProvider cache", () => {
     expect(detailCallCount()).toBe(0);
   });
 
-  it("fetches only the missing behaviors when ids differ", async () => {
+  // Previously this expected one fetch: the entries the old id list still
+  // covered were kept and only the new id was asked for. That is what relabelled
+  // a customer's whole keymap — behavior ids are per-build, so an id the device
+  // still reports can mean something else entirely after a firmware update.
+  it("refetches everything when the device reports a different id list", async () => {
     store.set(
       BEHAVIORS_CACHE_KEY,
       JSON.stringify({
@@ -160,10 +171,52 @@ describe("BehaviorsProvider cache", () => {
     await waitForLoaded();
 
     expect(screen.getByTestId("count").textContent).toBe("3");
-    expect(detailCallCount()).toBe(1);
+    expect(detailCallCount()).toBe(3);
 
     const cached = JSON.parse(store.get(BEHAVIORS_CACHE_KEY) ?? "null");
     expect(cached.ids).toEqual([1, 2, 3]);
+  });
+
+  it("never serves a name from a cache the device no longer matches", async () => {
+    // The shape that shipped: same id still present, different meaning.
+    store.set(
+      BEHAVIORS_CACHE_KEY,
+      JSON.stringify({
+        ids: [1, 2, 3],
+        details: [
+          { id: 1, displayName: "Caps Word" },
+          { id: 2, displayName: "Reset" },
+          { id: 3, displayName: "B3" },
+        ],
+      })
+    );
+    mockDevice([1, 2, 4]);
+    renderProvider();
+    await waitForLoaded();
+
+    expect(screen.getByTestId("names").textContent).toBe("1=B1,2=B2,4=B4");
+    expect(detailCallCount()).toBe(3);
+  });
+
+  it("still reuses the cache when the id list is unchanged", async () => {
+    store.set(
+      BEHAVIORS_CACHE_KEY,
+      JSON.stringify({
+        ids: [4, 5],
+        details: [
+          { id: 4, displayName: "Key Press" },
+          { id: 5, displayName: "Transparent" },
+        ],
+      })
+    );
+    mockDevice([4, 5]);
+    renderProvider();
+    await waitForLoaded();
+
+    expect(screen.getByTestId("names").textContent).toBe(
+      "4=Key Press,5=Transparent"
+    );
+    expect(detailCallCount()).toBe(0);
   });
 
   it("falls back to a full fetch when the cache is corrupt", async () => {

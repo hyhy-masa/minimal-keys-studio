@@ -11,6 +11,26 @@ module.exports = {
   parser: "@typescript-eslint/parser",
   plugins: ["react-refresh"],
   rules: {
+    "no-restricted-globals": [
+      "error",
+      {
+        name: "confirm",
+        message: "Use ConfirmDialog for destructive actions.",
+      },
+    ],
+    "no-restricted-properties": [
+      "error",
+      {
+        object: "window",
+        property: "confirm",
+        message: "Use ConfirmDialog for destructive actions.",
+      },
+      {
+        object: "globalThis",
+        property: "confirm",
+        message: "Use ConfirmDialog for destructive actions.",
+      },
+    ],
     "react-refresh/only-export-components": [
       "warn",
       { allowConstantExport: true },
