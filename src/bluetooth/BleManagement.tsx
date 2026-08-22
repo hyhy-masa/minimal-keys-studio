@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "react-aria-components";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
 import { useCustomSubsystem } from "../rpc/useCustomSubsystem";
 import { useToast } from "../misc/Toast";
@@ -21,6 +22,15 @@ export function BleManagement() {
   const [editingName, setEditingName] = useState<number | null>(null);
   const [nameValue, setNameValue] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingUnpair, setPendingUnpair] = useState<{
+    index: number;
+    subsystem: NonNullable<typeof subsystem>;
+  } | null>(null);
+  const unpairInFlightRef = useRef(false);
+
+  useEffect(() => {
+    setPendingUnpair(null);
+  }, [subsystem]);
 
   // Load profiles, split info, output priority
   useEffect(() => {
@@ -92,10 +102,12 @@ export function BleManagement() {
     [subsystem, refreshProfiles, toast]
   );
 
-  const unpairProfile = useCallback(
-    async (index: number) => {
-      if (!subsystem) return;
-      if (!confirm(`プロファイル ${index} のペアリングを解除しますか？`)) return;
+  const confirmUnpairProfile = useCallback(async () => {
+      const pending = pendingUnpair;
+      if (!subsystem || !pending || pending.subsystem !== subsystem || unpairInFlightRef.current) return;
+      const { index } = pending;
+      unpairInFlightRef.current = true;
+      setPendingUnpair(null);
       setLoading(true);
       try {
         await subsystem.callRPC(BLE.encodeUnpairProfile(index));
@@ -105,10 +117,9 @@ export function BleManagement() {
         toast("Failed to unpair profile", "error");
       } finally {
         setLoading(false);
+        unpairInFlightRef.current = false;
       }
-    },
-    [subsystem, refreshProfiles, toast]
-  );
+    }, [pendingUnpair, subsystem, refreshProfiles, toast]);
 
   const saveName = useCallback(
     async (index: number) => {
@@ -259,7 +270,9 @@ export function BleManagement() {
                 <Button
                   className="text-sm rounded bg-error/20 text-error hover:bg-error/30 px-2 py-1"
                   isDisabled={loading}
-                  onPress={() => unpairProfile(profile.index)}
+                  onPress={() => {
+                    if (subsystem) setPendingUnpair({ index: profile.index, subsystem });
+                  }}
                 >
                   ペアリング解除
                 </Button>
@@ -299,6 +312,17 @@ export function BleManagement() {
           </div>
         </section>
       )}
+
+      <ConfirmDialog
+        open={pendingUnpair !== null}
+        title="Bluetoothプロファイルを解除"
+        destructive
+        confirmLabel="解除する"
+        onConfirm={confirmUnpairProfile}
+        onCancel={() => setPendingUnpair(null)}
+      >
+        <p>プロファイル {pendingUnpair?.index} のペアリングを解除します。続けますか？</p>
+      </ConfirmDialog>
     </div>
   );
 }
