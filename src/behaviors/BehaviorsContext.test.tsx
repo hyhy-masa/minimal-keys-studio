@@ -131,7 +131,7 @@ describe("BehaviorsProvider cache", () => {
     expect(cached.details).toHaveLength(3);
   });
 
-  it("skips all detail fetches when the cached ids match", async () => {
+  it("fetches only the probes, not every behaviour, when the cache still matches", async () => {
     store.set(
       BEHAVIORS_CACHE_KEY,
       JSON.stringify({
@@ -148,7 +148,9 @@ describe("BehaviorsProvider cache", () => {
     await waitForLoaded();
 
     expect(screen.getByTestId("count").textContent).toBe("3");
-    expect(detailCallCount()).toBe(0);
+    // Two probes (first and last id) confirm the cache still means what it says.
+    // The win is 2 instead of N, not 0 — see probeConfirmsCache.
+    expect(detailCallCount()).toBe(2);
   });
 
   // Previously this expected one fetch: the entries the old id list still
@@ -198,7 +200,7 @@ describe("BehaviorsProvider cache", () => {
     expect(detailCallCount()).toBe(3);
   });
 
-  it("still reuses the cache when the id list is unchanged", async () => {
+  it("retires a cache whose ids match but whose names no longer do", async () => {
     store.set(
       BEHAVIORS_CACHE_KEY,
       JSON.stringify({
@@ -213,10 +215,12 @@ describe("BehaviorsProvider cache", () => {
     renderProvider();
     await waitForLoaded();
 
-    expect(screen.getByTestId("names").textContent).toBe(
-      "4=Key Press,5=Transparent"
-    );
-    expect(detailCallCount()).toBe(0);
+    // 2026-08-25: this is the shape that showed "Boot" as the name of every letter
+    // key. The id list was untouched, so it passed cacheMatchesDevice; only asking
+    // the device what id 4 is actually called catches it.
+    expect(screen.getByTestId("names").textContent).toBe("4=B4,5=B5");
+    // 1 probe (mismatch, stops there) + 2 real fetches.
+    expect(detailCallCount()).toBe(3);
   });
 
   it("falls back to a full fetch when the cache is corrupt", async () => {

@@ -10,6 +10,7 @@ import { ConnectionContext } from "../rpc/ConnectionContext";
 import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { call_rpc } from "../rpc/logging";
+import type { RpcConnection } from "@zmkfirmware/zmk-studio-ts-client";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -71,7 +72,11 @@ export function useBehaviorsStatus(): {
 // faithful record of what the app believed, which is why re-importing it was
 // rejected binding by binding — Caps Word takes no parameters, and the keycodes
 // carried over were not zero.
-export const BEHAVIORS_CACHE_KEY = "behaviors-cache-v1";
+// v2 (2026-08-25): every v1 cache is retired on sight. A build that kept the id
+// list and changed what the ids mean poisoned caches in the field — one keyboard
+// showed "Boot" as the name of every letter key. Bumping the key is the only way
+// to reach a cache that is already wrong on a user's disk.
+export const BEHAVIORS_CACHE_KEY = "behaviors-cache-v2";
 
 interface BehaviorsCache {
   ids: number[];
@@ -80,8 +85,8 @@ interface BehaviorsCache {
 
 /**
  * The cache is for one firmware build; any change to the id list retires it.
- * A build that keeps the same ids but changes display names or metadata cannot be
- * detected until the firmware exposes a build identifier that can join this cache key.
+ * Necessary but NOT sufficient: a build that keeps the same ids and changes what
+ * they mean passes this check. `probeConfirmsCache` below covers that case.
  */
 function cacheMatchesDevice(
   cache: BehaviorsCache | null,
@@ -92,6 +97,44 @@ function cacheMatchesDevice(
     cache.ids.length === deviceIds.length &&
     cache.ids.every((id, index) => id === deviceIds[index])
   );
+}
+
+/**
+ * Ask the device what one or two behaviours are actually called and compare with what
+ * the cache holds. The id list cannot see a build that renumbered nothing but changed
+ * meanings, and that is exactly what relabelled every letter key as "Boot" (2026-08-25).
+ *
+ * Two probes (first and last id), because a reordering that shifts meanings moves many
+ * entries at once, so the ends catch it. KNOWN LIMIT: a build that changes only an id in
+ * the middle while leaving the first and last identical still passes.
+ *
+ * A probe that does not answer is NOT a mismatch. Throwing the cache away on a transient
+ * RPC failure would make every flaky connection pay for a full re-fetch.
+ */
+async function probeConfirmsCache(
+  conn: RpcConnection,
+  cache: BehaviorsCache,
+  deviceIds: readonly number[]
+): Promise<boolean> {
+  const probeIds = Array.from(
+    new Set([deviceIds[0], deviceIds[deviceIds.length - 1]].filter((id) => id !== undefined))
+  ) as number[];
+
+  for (const behaviorId of probeIds) {
+    const held = cache.details.find((d) => d.id === behaviorId);
+    if (!held) continue;
+    let live;
+    try {
+      const resp = await call_rpc(conn, {
+        behaviors: { getBehaviorDetails: { behaviorId } },
+      });
+      live = resp?.behaviors?.getBehaviorDetails;
+    } catch {
+      return true; // unreachable device: keep the cache, do not punish a flaky link
+    }
+    if (live && live.displayName !== held.displayName) return false;
+  }
+  return true;
 }
 
 function readCache(): BehaviorsCache | null {
@@ -154,7 +197,15 @@ export function BehaviorsProvider({ children }: { children: React.ReactNode }) {
         const behaviorIds = resp.behaviors?.listAllBehaviors?.behaviors ?? [];
 
         const cached = readCache();
-        const reusable = cacheMatchesDevice(cached, behaviorIds);
+        let reusable = cacheMatchesDevice(cached, behaviorIds);
+        if (reusable) {
+          reusable = await probeConfirmsCache(
+            connection.conn,
+            cached!,
+            behaviorIds
+          );
+          if (ignore) return;
+        }
         const cachedById = new Map(
           (reusable ? cached!.details : []).map((d) => [d.id, d])
         );
