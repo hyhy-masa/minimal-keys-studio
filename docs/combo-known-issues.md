@@ -84,7 +84,7 @@ runtime-combos の契約として採用してよい根拠はまだない**（実
 
 ## 誤診の訂正（重要）
 
-- `PAYLOAD 25→128`（`minimal-keys2` `0c5590e`）は `CONFIG_ZMK_STUDIO_RPC_CUSTOM_SUBSYSTEM_REQUEST_PAYLOAD_MAX_BYTES` が **Kconfig 消費者ゼロの no-op**（custom payload は `pb_callback_t` ストリーム式）。前回「25B キャップが 3-4 キーコンボの decode を壊す」は**誤診の可能性が高い**。コンボ保存の真因はバグA（packed decode）。
+- `PAYLOAD 25→128`（`minimal-keys2` `0c5590e`）について: zmk 本体（938664aa）では、この設定は定義だけで、使っている箇所は無い。リクエストの型を定義する zmk-studio-messages（cormoran/89b81d2e）で使われているかは未確認（2026-10-05）。setCombo の本体は最大47バイトで既定の25を超えるため、出荷ファームの128は消さずに残す。
 
 ---
 
@@ -99,10 +99,11 @@ runtime-combos の契約として採用してよい根拠はまだない**（実
    ※ 2026-07-27 に Studio 側の接続固着（グローバルRPC mutex）は根治済みだが、
    バグBは「**キーボードの電源再投入で回復**」する別物であり、未解決の可能性が高い。
 2. バグA（`combos.ts` の packed 対応）を**実機で検証**。
-3. `docs/combo-ui-design.md` に沿って `ComboSettings.tsx` を作り直す（設計は承認済み）。
+3. `docs/combo-ui-design.md` に沿って `ComboSettings.tsx` を作り直す（機能の範囲は 2026-10-05 に承認。画面の配置は未承認で、P4 で確認する）。
    あわせて既存バグ2件を直す:
    - 保存・削除の応答で `success` を確認していない（`resp.error` の有無だけで成功扱い）。
      FWは `success = (rc == 0)` を返す（`custom_handler.c:99-103, 112-115`）。
+     （2026-10-05 補足）今のファームは、処理に失敗すると応答全体を error で返す。この流れでは success=false の応答は返らない。アプリは error と success=false の両方を失敗として扱う。
    - 新規IDを編集開始時に消費するため、キャンセルを繰り返すと欠番が増える
      （`nextIdRef.current++`）。保存直前に採番すること。
 4. `src/App.tsx` の combo スロットを `ComboComingSoon` → `ComboSettings` に戻す。
