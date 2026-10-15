@@ -241,6 +241,7 @@ function AppInner() {
   const [keymapVersion, setKeymapVersion] = useState(0);
   const [availableUpdate, setAvailableUpdate] = useState<ReleaseInfo | null>(null);
   const [isWireless, setIsWireless] = useState<boolean | undefined>(undefined);
+  const [disconnectNotice, setDisconnectNotice] = useState<string>();
 
   const [lockState, setLockState] = useState<LockState>(
     LockState.ZMK_STUDIO_CORE_LOCK_STATE_LOCKED
@@ -402,6 +403,7 @@ function AppInner() {
   const onConnect = useCallback(
     async (t: RpcTransport, isWireless?: boolean): Promise<boolean> => {
       setIsWireless(isWireless);
+      setDisconnectNotice(undefined);
       const ac = new AbortController();
       setConnectionAbort(ac);
       try {
@@ -426,8 +428,13 @@ function AppInner() {
 
     const activeConn = conn.conn;
 
-    registerForceDisconnect(activeConn, () => {
-      toast("デバイスの応答がありません。接続を解除しました", "error");
+    registerForceDisconnect(activeConn, (notice) => {
+      if (notice) {
+        // A toast would sit under the connect dialog's backdrop; show it in the dialog.
+        setDisconnectNotice(notice);
+      } else {
+        toast("デバイスの応答がありません。接続を解除しました", "error");
+      }
       connectionAbort.abort("rpc-timeout");
     });
 
@@ -450,6 +457,7 @@ function AppInner() {
             open={!conn.conn && !fwUpdateOpen}
             transports={TRANSPORTS}
             onTransportCreated={onConnect}
+            notice={disconnectNotice}
           />
           <AboutModal open={showAbout} onClose={() => setShowAbout(false)} />
           <LicenseNoticeModal
@@ -525,7 +533,7 @@ function AppInner() {
               {mountedTabs.has("trackball") && <div className={activeTab === "trackball" ? "h-full" : "hidden"}><TrackballSettings /></div>}
               {mountedTabs.has("encoder") && <div className={activeTab === "encoder" ? "h-full" : "hidden"}><EncoderSettings /></div>}
               {mountedTabs.has("combo") && <div className={activeTab === "combo" ? "h-full" : "hidden"}><ComboSettings onRequestFirmwareUpdate={isFirmwareUpdateEnabled() ? () => setFwUpdateOpen(true) : undefined} /></div>}
-              {mountedTabs.has("bluetooth") && <div className={activeTab === "bluetooth" ? "h-full" : "hidden"}><BleManagement /></div>}
+              {mountedTabs.has("bluetooth") && <div className={activeTab === "bluetooth" ? "h-full" : "hidden"}><BleManagement isWireless={isWireless} /></div>}
               {mountedTabs.has("holdtap") && <div className={activeTab === "holdtap" ? "h-full" : "hidden"}><HoldTapSettings /></div>}
               {mountedTabs.has("battery") && <div className={activeTab === "battery" ? "h-full" : "hidden"}><BatteryHistory /></div>}
               {mountedTabs.has("settings") && <div className={activeTab === "settings" ? "h-full" : "hidden"}><DeviceSettings /></div>}

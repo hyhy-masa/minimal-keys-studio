@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
     subsystemIndex: 2,
     callRPC: (...args: unknown[]) => mocks.replacementCallRPC(...args),
   },
+  forceDisconnect: vi.fn(),
   currentSubsystem: undefined as unknown,
   lastConfirm: undefined as (() => void) | undefined,
 }));
@@ -29,6 +30,16 @@ const profile = {
 vi.mock("../rpc/useCustomSubsystem", () => ({
   useCustomSubsystem: () => mocks.currentSubsystem,
 }));
+
+vi.mock("../rpc/logging", () => {
+  class RpcTimeoutError extends Error {}
+  class RpcWriteTimeoutError extends RpcTimeoutError {}
+  return {
+    RpcTimeoutError,
+    RpcWriteTimeoutError,
+    forceDisconnect: (...args: unknown[]) => mocks.forceDisconnect(...args),
+  };
+});
 
 vi.mock("../misc/Toast", () => ({
   useToast: () => ({ toast: mocks.toast }),
@@ -74,7 +85,19 @@ vi.mock("../proto/ble", () => ({
   decodeResponse: (response: object) => response,
 }));
 
+import type { ReactNode } from "react";
+import type { RpcConnection } from "@zmkfirmware/zmk-studio-ts-client";
+import { ConnectionContext } from "../rpc/ConnectionContext";
+import { RpcTimeoutError, RpcWriteTimeoutError } from "../rpc/logging";
 import { BleManagement } from "./BleManagement";
+
+const fakeConn = {} as RpcConnection;
+
+function ConnectionWrapper({ children }: { children: ReactNode }) {
+  return (
+    <ConnectionContext.Provider value={{ conn: fakeConn }}>{children}</ConnectionContext.Provider>
+  );
+}
 
 function responseFor(request: string) {
   switch (request) {
@@ -89,8 +112,8 @@ function responseFor(request: string) {
   }
 }
 
-async function renderManagement() {
-  const view = render(<BleManagement />);
+async function renderManagement(props: { isWireless?: boolean } = {}) {
+  const view = render(<BleManagement {...props} />, { wrapper: ConnectionWrapper });
   await screen.findByRole("button", { name: "ペアリング解除" });
   mocks.callRPC.mockClear();
   return view;
@@ -149,5 +172,117 @@ describe("BleManagement", () => {
 
     expect(mocks.callRPC).not.toHaveBeenCalledWith("unpair:7");
     expect(mocks.replacementCallRPC).not.toHaveBeenCalledWith("unpair:7");
+  });
+
+  it("disconnects with a reconnect notice when switching the output times out", async () => {
+    await renderManagement();
+    mocks.callRPC.mockRejectedValueOnce(new RpcTimeoutError());
+
+    fireEvent.click(screen.getByRole("button", { name: "BLE" }));
+
+    await waitFor(() => {
+      expect(mocks.forceDisconnect).toHaveBeenCalledTimes(1);
+    });
+    const [conn, notice] = mocks.forceDisconnect.mock.calls[0];
+    expect(conn).toBe(fakeConn);
+    expect(notice).toContain("出力先をBLEに切り替えました");
+    expect(notice).toContain("「ワイヤレスでつなぐ」");
+    expect(mocks.toast).not.toHaveBeenCalledWith(expect.anything(), "error");
+  });
+
+  it("shows an error instead of disconnecting when re-selecting the current output times out", async () => {
+    await renderManagement();
+    mocks.callRPC.mockRejectedValueOnce(new RpcTimeoutError());
+
+    fireEvent.click(screen.getByRole("button", { name: "USB" }));
+
+    await waitFor(() => {
+      expect(mocks.toast).toHaveBeenCalledWith(
+        "出力先を切り替えられませんでした。もう一度お試しください",
+        "error"
+      );
+    });
+    expect(mocks.forceDisconnect).not.toHaveBeenCalled();
+  });
+
+  it("shows an error instead of disconnecting when switching the output fails without a timeout", async () => {
+    await renderManagement();
+    mocks.callRPC.mockRejectedValueOnce(new Error("boom"));
+
+    fireEvent.click(screen.getByRole("button", { name: "BLE" }));
+
+    await waitFor(() => {
+      expect(mocks.toast).toHaveBeenCalledWith(
+        "出力先を切り替えられませんでした。もう一度お試しください",
+        "error"
+      );
+    });
+    expect(mocks.forceDisconnect).not.toHaveBeenCalled();
+  });
+
+  it("tells a wireless user to reconnect over USB when switching the output to USB times out", async () => {
+    await renderManagement({ isWireless: true });
+    mocks.callRPC.mockRejectedValueOnce(new RpcTimeoutError());
+
+    fireEvent.click(screen.getByRole("button", { name: "USB" }));
+
+    await waitFor(() => {
+      expect(mocks.forceDisconnect).toHaveBeenCalledTimes(1);
+    });
+    const [, notice] = mocks.forceDisconnect.mock.calls[0];
+    expect(notice).toContain("出力先をUSBに切り替えました");
+    expect(notice).toContain("「USBでつなぐ」");
+  });
+
+  it("keeps a USB connection and shows an error when re-selecting USB over USB times out", async () => {
+    // The displayed output stays USB here, as when loading the current output failed.
+    await renderManagement({ isWireless: false });
+    mocks.callRPC.mockRejectedValueOnce(new RpcTimeoutError());
+
+    fireEvent.click(screen.getByRole("button", { name: "USB" }));
+
+    await waitFor(() => {
+      expect(mocks.toast).toHaveBeenCalledWith(
+        "出力先を切り替えられませんでした。もう一度お試しください",
+        "error"
+      );
+    });
+    expect(mocks.forceDisconnect).not.toHaveBeenCalled();
+  });
+
+  it("adds nothing when the request could not be written, because the RPC layer already disconnected", async () => {
+    await renderManagement({ isWireless: true });
+    mocks.callRPC.mockRejectedValueOnce(new RpcWriteTimeoutError());
+
+    fireEvent.click(screen.getByRole("button", { name: "USB" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "USB" }).hasAttribute("disabled")).toBe(false);
+    });
+    expect(mocks.forceDisconnect).not.toHaveBeenCalled();
+    expect(mocks.toast).not.toHaveBeenCalled();
+  });
+
+  it("disables the output buttons and ignores presses while a switch waits for a reply", async () => {
+    await renderManagement();
+    let resolveSwitch!: (value: unknown) => void;
+    mocks.callRPC.mockImplementationOnce(
+      () => new Promise((resolve) => { resolveSwitch = resolve; })
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "BLE" }));
+    fireEvent.click(screen.getByRole("button", { name: "BLE" }));
+    fireEvent.click(screen.getByRole("button", { name: "USB" }));
+
+    expect(mocks.callRPC).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("切り替え中…")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "USB" }).hasAttribute("disabled")).toBe(true);
+
+    resolveSwitch({});
+    await waitFor(() => {
+      expect(screen.queryByText("切り替え中…")).toBeNull();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "USB" }));
+    expect(mocks.callRPC).toHaveBeenCalledTimes(2);
   });
 });

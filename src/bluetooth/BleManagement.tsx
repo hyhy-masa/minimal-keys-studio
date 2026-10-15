@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Button } from "react-aria-components";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
+import { ConnectionContext } from "../rpc/ConnectionContext";
+import { forceDisconnect, RpcTimeoutError, RpcWriteTimeoutError } from "../rpc/logging";
 import { useCustomSubsystem } from "../rpc/useCustomSubsystem";
 import { useToast } from "../misc/Toast";
 import * as BLE from "../proto/ble";
@@ -13,8 +15,20 @@ function rpcWithTimeout(label: string, promise: Promise<Uint8Array>, timeoutMs =
   return Promise.race([promise, timeout]);
 }
 
-export function BleManagement() {
+// Whether selecting `priority` moves Studio RPC off the transport this app is connected
+// through. Unknown transport falls back to the displayed priority.
+function switchesTransport(
+  priority: BLE.OutputPriority,
+  isWireless: boolean | undefined,
+  displayed: BLE.OutputPriority
+): boolean {
+  if (isWireless === undefined) return priority !== displayed;
+  return isWireless ? priority === BLE.OutputPriority.USB : priority === BLE.OutputPriority.BLE;
+}
+
+export function BleManagement({ isWireless }: { isWireless?: boolean } = {}) {
   const subsystem = useCustomSubsystem(BLE.SUBSYSTEM_ID);
+  const conn = useContext(ConnectionContext);
   const { toast } = useToast();
   const [profiles, setProfiles] = useState<BLE.ProfileInfo[]>([]);
   const [splitInfo, setSplitInfo] = useState<BLE.SplitInfo | null>(null);
@@ -27,6 +41,7 @@ export function BleManagement() {
     subsystem: NonNullable<typeof subsystem>;
   } | null>(null);
   const unpairInFlightRef = useRef(false);
+  const [switchingOutput, setSwitchingOutput] = useState(false);
 
   useEffect(() => {
     setPendingUnpair(null);
@@ -139,15 +154,42 @@ export function BleManagement() {
   const changeOutputPriority = useCallback(
     async (priority: BLE.OutputPriority) => {
       if (!subsystem) return;
+      // A switch can take the full RPC timeout to resolve; the buttons stay disabled meanwhile.
+      setSwitchingOutput(true);
       try {
         await subsystem.callRPC(BLE.encodeSetOutputPriority(priority));
         setOutputPriority(priority);
       } catch (e) {
+        // Studio RPC follows the active output, so when the switch takes effect the
+        // reply goes out on the other transport and this connection times out.
+        // A write timeout means the request likely never reached the device; the RPC layer
+        // already dropped that connection and told the user, so add nothing here.
+        if (e instanceof RpcWriteTimeoutError) {
+          console.error("[BLE] Output priority request was not written:", e);
+          return;
+        }
+        if (
+          e instanceof RpcTimeoutError &&
+          switchesTransport(priority, isWireless, outputPriority) &&
+          conn.conn
+        ) {
+          console.warn("[BLE] Output priority reply timed out; transport likely switched:", e);
+          setOutputPriority(priority);
+          const connectLabel =
+            priority === BLE.OutputPriority.USB ? "USBでつなぐ" : "ワイヤレスでつなぐ";
+          forceDisconnect(
+            conn.conn,
+            `出力先を${priority === BLE.OutputPriority.USB ? "USB" : "BLE"}に切り替えました。アプリとの接続も切り替わるため、いったん接続を解除しました。「${connectLabel}」でつなぎ直してください。`
+          );
+          return;
+        }
         console.error("[BLE] Failed to set output priority:", e);
-        toast("Failed to set output priority", "error");
+        toast("出力先を切り替えられませんでした。もう一度お試しください", "error");
+      } finally {
+        setSwitchingOutput(false);
       }
     },
-    [subsystem, toast]
+    [subsystem, toast, outputPriority, conn.conn, isWireless]
   );
 
   if (!subsystem) {
@@ -170,15 +212,22 @@ export function BleManagement() {
         <Button
           className={`rounded px-3 py-1 text-sm ${outputPriority === BLE.OutputPriority.USB ? "bg-primary text-primary-content" : "bg-base-300"}`}
           onPress={() => changeOutputPriority(BLE.OutputPriority.USB)}
+          isDisabled={switchingOutput}
         >
           USB
         </Button>
         <Button
           className={`rounded px-3 py-1 text-sm ${outputPriority === BLE.OutputPriority.BLE ? "bg-primary text-primary-content" : "bg-base-300"}`}
           onPress={() => changeOutputPriority(BLE.OutputPriority.BLE)}
+          isDisabled={switchingOutput}
         >
           BLE
         </Button>
+        {switchingOutput && (
+          <span className="text-sm text-base-content/60" role="status">
+            切り替え中…
+          </span>
+        )}
       </section>
 
       {/* Profile List */}

@@ -28,6 +28,8 @@ export type TransportFactory = {
 
 export interface ConnectModalProps {
   open?: boolean;
+  // Shown above the connection methods, e.g. why the previous connection was dropped.
+  notice?: string;
   transports: TransportFactory[];
   onTransportCreated: (t: RpcTransport, isWireless?: boolean) => Promise<boolean>;
 }
@@ -291,7 +293,7 @@ export function ConnectionMethodPanel({
 
       {view === "usb-failed" && failureText && (
         <div className="rounded-lg border border-warning/50 bg-base-200/30 p-4">
-          <p className="text-sm leading-6">{failureText}</p>
+          <p className="text-sm leading-6 whitespace-pre-line">{failureText}</p>
           <button
             className="mt-3 min-h-11 rounded-md bg-base-300 px-3 text-sm font-medium transition-colors hover:bg-base-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-base-100"
             type="button"
@@ -359,6 +361,7 @@ export const ConnectModal = ({
   open,
   transports,
   onTransportCreated,
+  notice,
 }: ConnectModalProps) => {
   const dialog = useModalRef(open || false, false, false);
   const [view, setView] = useState<ConnectionMethodView>("choose");
@@ -432,6 +435,11 @@ export const ConnectModal = ({
           キーボードを接続して設定を始めましょう
         </p>
       </div>
+      {notice && (
+        <div className="mb-4 rounded-lg border border-info/50 bg-base-200/30 p-4" role="status">
+          <p className="text-sm leading-6">{notice}</p>
+        </div>
+      )}
       {haveTransports ? (
         <ConnectionMethodPanel
           view={view}

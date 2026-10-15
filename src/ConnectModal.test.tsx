@@ -143,3 +143,28 @@ describe("ConnectModal manual connection errors", () => {
     expect(screen.queryByText("RPC session disposed")).toBeNull();
   });
 });
+
+describe("ConnectModal disconnect notice", () => {
+  const transports = [{ label: "USB", connect: vi.fn() }];
+
+  it("shows why the previous connection was dropped inside the dialog", () => {
+    render(
+      <ConnectModal
+        open
+        transports={transports}
+        onTransportCreated={vi.fn()}
+        notice="出力先をUSBに切り替えました。「USBでつなぐ」でつなぎ直してください。"
+      />
+    );
+
+    expect(
+      screen.getByText("出力先をUSBに切り替えました。「USBでつなぐ」でつなぎ直してください。")
+    ).toBeInTheDocument();
+  });
+
+  it("shows no notice box when there is no notice", () => {
+    render(<ConnectModal open transports={transports} onTransportCreated={vi.fn()} />);
+
+    expect(screen.queryByText(/出力先を.*に切り替えました/)).toBeNull();
+  });
+});

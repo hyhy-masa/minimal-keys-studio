@@ -14,21 +14,32 @@ export const RPC_WRITE_TIMEOUT_MS = 3000;
 export class RpcTimeoutError extends Error {
   constructor() {
     super("RPC request timed out");
-    Object.setPrototypeOf(this, RpcTimeoutError.prototype);
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 }
 
-const forceDisconnectHandlers = new WeakMap<RpcConnection, () => void>();
+// The request was never fully written, so the device most likely never received it.
+export class RpcWriteTimeoutError extends RpcTimeoutError {}
+
+// The optional notice replaces the default "no response" error shown on disconnect.
+type ForceDisconnectHandler = (notice?: string) => void;
+
+const forceDisconnectHandlers = new WeakMap<RpcConnection, ForceDisconnectHandler>();
 
 export function registerForceDisconnect(
   conn: RpcConnection,
-  fn: (() => void) | null
+  fn: ForceDisconnectHandler | null
 ): void {
   if (fn) {
     forceDisconnectHandlers.set(conn, fn);
   } else {
     forceDisconnectHandlers.delete(conn);
   }
+}
+
+// Drop a connection that is known to be unusable (e.g. Studio RPC moved to another transport).
+export function forceDisconnect(conn: RpcConnection, notice?: string): void {
+  forceDisconnectHandlers.get(conn)?.(notice);
 }
 
 type PendingRequest = {
@@ -82,7 +93,7 @@ class RpcSession {
     });
 
     const writer = this.conn.request_writable.getWriter();
-    const writeTimeoutError = new RpcTimeoutError();
+    const writeTimeoutError = new RpcWriteTimeoutError();
     let writeTimer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([

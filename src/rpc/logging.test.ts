@@ -10,8 +10,10 @@ import {
   callRpcOrNotify,
   call_rpc,
   RPC_WRITE_TIMEOUT_MS,
+  forceDisconnect,
   registerForceDisconnect,
   RpcTimeoutError,
+  RpcWriteTimeoutError,
 } from "./logging";
 
 vi.mock("@zmkfirmware/zmk-studio-ts-client", () => ({
@@ -193,6 +195,8 @@ describe("call_rpc", () => {
     await vi.advanceTimersByTimeAsync(25);
 
     await assertion;
+    // A missing reply must stay distinguishable from a request that was never written.
+    await expect(pending).rejects.not.toBeInstanceOf(RpcWriteTimeoutError);
   });
 
   it("rejects every pending request when the response stream closes", async () => {
@@ -227,11 +231,25 @@ describe("call_rpc", () => {
     registerForceDisconnect(conn, forceDisconnect);
 
     const pending = call_rpc(conn, req);
-    const assertion = expect(pending).rejects.toBeInstanceOf(RpcTimeoutError);
+    const assertion = expect(pending).rejects.toBeInstanceOf(RpcWriteTimeoutError);
     await vi.advanceTimersByTimeAsync(RPC_WRITE_TIMEOUT_MS);
 
     await assertion;
     expect(forceDisconnect).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes a disconnect notice to the handler registered for that connection only", () => {
+    const active = createConnection().conn;
+    const other = createConnection().conn;
+    const activeHandler = vi.fn();
+    const otherHandler = vi.fn();
+    registerForceDisconnect(active, activeHandler);
+    registerForceDisconnect(other, otherHandler);
+
+    forceDisconnect(active, "notice");
+
+    expect(activeHandler).toHaveBeenCalledWith("notice");
+    expect(otherHandler).not.toHaveBeenCalled();
   });
 
   it("does not notify the active connection when a probe connection becomes unusable", async () => {

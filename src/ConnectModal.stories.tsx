@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
 import { ConnectionMethodPanel } from "./ConnectModal";
+import { getAutoConnectFailureText } from "./connect/ja";
 
 const meta = {
   title: "Application/ConnectModal",
@@ -28,8 +29,7 @@ export const UsbSearching: Story = {
 export const UsbFailedWithManualList: Story = {
   args: {
     view: "usb-failed",
-    failureText:
-      "右手側（トラックボールのある方）をつないでください。左手側では設定できません。",
+    failureText: getAutoConnectFailureText("no-response"),
     children: (
       <div className="rounded-lg border border-base-300 bg-base-200/30 p-3 text-sm">
         <p className="font-medium">手動で選ぶ</p>
