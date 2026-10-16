@@ -223,6 +223,76 @@ describe("BehaviorsProvider cache", () => {
     expect(detailCallCount()).toBe(3);
   });
 
+  it("does not read the v1 cache that v0.6.0 wrote", async () => {
+    // v0.6.0 shipped "behaviors-cache-v1"; a poisoned v1 entry must not survive the upgrade.
+    expect(BEHAVIORS_CACHE_KEY).toBe("behaviors-cache-v2");
+    store.set(
+      "behaviors-cache-v1",
+      JSON.stringify({
+        ids: [4, 5],
+        details: [
+          { id: 4, displayName: "Boot" },
+          { id: 5, displayName: "Boot" },
+        ],
+      })
+    );
+    mockDevice([4, 5]);
+    renderProvider();
+    await waitForLoaded();
+
+    expect(screen.getByTestId("names").textContent).toBe("4=B4,5=B5");
+    expect(detailCallCount()).toBe(2);
+  });
+
+  it("retires the cache when only the last probed name changed", async () => {
+    store.set(
+      BEHAVIORS_CACHE_KEY,
+      JSON.stringify({
+        ids: [1, 2, 3],
+        details: [
+          { id: 1, displayName: "B1" },
+          { id: 2, displayName: "B2" },
+          { id: 3, displayName: "Boot" },
+        ],
+      })
+    );
+    mockDevice([1, 2, 3]);
+    renderProvider();
+    await waitForLoaded();
+
+    expect(screen.getByTestId("names").textContent).toBe("1=B1,2=B2,3=B3");
+    // 2 probes (the last one mismatches) + 3 real fetches.
+    expect(detailCallCount()).toBe(5);
+    const cached = JSON.parse(store.get(BEHAVIORS_CACHE_KEY) ?? "null");
+    expect(cached.details.find((d: { id: number }) => d.id === 3).displayName).toBe("B3");
+  });
+
+  it("keeps the cache when a probe cannot reach the device", async () => {
+    store.set(
+      BEHAVIORS_CACHE_KEY,
+      JSON.stringify({
+        ids: [1, 2],
+        details: [
+          { id: 1, displayName: "Cached1" },
+          { id: 2, displayName: "Cached2" },
+        ],
+      })
+    );
+    vi.mocked(call_rpc).mockImplementation(async (_conn, req) => {
+      const r = req as RpcRequest;
+      if (r.behaviors?.listAllBehaviors) {
+        return { behaviors: { listAllBehaviors: { behaviors: [1, 2] } } } as never;
+      }
+      throw new Error("probe timed out");
+    });
+    renderProvider();
+    await waitForLoaded();
+
+    expect(screen.getByTestId("names").textContent).toBe("1=Cached1,2=Cached2");
+    // One probe fails, the cache is trusted, nothing else is fetched.
+    expect(detailCallCount()).toBe(1);
+  });
+
   it("falls back to a full fetch when the cache is corrupt", async () => {
     store.set(BEHAVIORS_CACHE_KEY, "{not json");
     mockDevice([1, 2]);
