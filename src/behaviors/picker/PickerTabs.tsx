@@ -9,16 +9,17 @@ import { ModifiersTab } from "./ModifiersTab";
 import { SystemTab } from "./SystemTab";
 import { JapaneseTab } from "./JapaneseTab";
 
-type TabId = "actions" | "letters" | "layers" | "modifiers" | "japanese" | "system";
+export type PickerTabId = "actions" | "letters" | "layers" | "modifiers" | "japanese" | "system";
 
 interface PickerTabsProps {
   keyPosition: number;
   behaviors: GetBehaviorDetailsResponse[];
   layers: { id: number; index: number; name: string }[];
-  onApplyBinding: (binding: BehaviorBinding) => void;
+  onApplyBinding: (binding: BehaviorBinding, source: PickerTabId) => void;
+  initialTab?: PickerTabId;
 }
 
-const tabs: { id: TabId; label: string }[] = [
+const tabs: { id: PickerTabId; label: string }[] = [
   { id: "actions", label: "ショートカット" },
   { id: "letters", label: "文字・記号" },
   { id: "layers", label: "レイヤー" },
@@ -32,9 +33,11 @@ export function PickerTabs({
   behaviors,
   layers,
   onApplyBinding,
+  initialTab = "actions",
 }: PickerTabsProps) {
   const { osMode } = useOsMode();
-  const [activeTab, setActiveTab] = useState<TabId>("actions");
+  const [activeTab, setActiveTab] = useState<PickerTabId>(initialTab);
+  const applyFromTab = (binding: BehaviorBinding) => onApplyBinding(binding, activeTab);
 
   return (
     <div className="flex flex-col gap-2">
@@ -71,23 +74,23 @@ export function PickerTabs({
             behaviors={behaviors}
             layers={layers}
             osMode={osMode}
-            onApplyBinding={onApplyBinding}
+            onApplyBinding={applyFromTab}
           />
         )}
         {activeTab === "letters" && (
-          <LettersTab behaviors={behaviors} onApplyBinding={onApplyBinding} />
+          <LettersTab behaviors={behaviors} onApplyBinding={applyFromTab} />
         )}
         {activeTab === "layers" && (
-          <LayersTab behaviors={behaviors} layers={layers} onApplyBinding={onApplyBinding} />
+          <LayersTab behaviors={behaviors} layers={layers} onApplyBinding={applyFromTab} />
         )}
         {activeTab === "modifiers" && (
-          <ModifiersTab behaviors={behaviors} layers={layers} osMode={osMode} onApplyBinding={onApplyBinding} />
+          <ModifiersTab behaviors={behaviors} layers={layers} osMode={osMode} onApplyBinding={applyFromTab} />
         )}
         {activeTab === "japanese" && (
-          <JapaneseTab behaviors={behaviors} osMode={osMode} onApplyBinding={onApplyBinding} />
+          <JapaneseTab behaviors={behaviors} osMode={osMode} onApplyBinding={applyFromTab} />
         )}
         {activeTab === "system" && (
-          <SystemTab behaviors={behaviors} onApplyBinding={onApplyBinding} />
+          <SystemTab behaviors={behaviors} onApplyBinding={applyFromTab} />
         )}
       </div>
     </div>

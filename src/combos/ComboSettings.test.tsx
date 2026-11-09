@@ -24,12 +24,18 @@ vi.mock("../misc/Toast", () => ({
 }));
 
 vi.mock("../behaviors/BehaviorsContext", () => ({
-  useBehaviorList: () => [{ id: 3, displayName: "Key Press", metadata: [] }],
+  useBehaviorList: () => [
+    { id: 3, displayName: "Key Press", metadata: [] },
+    { id: 4, displayName: "Momentary Layer", metadata: [] },
+  ],
 }));
 
 vi.mock("../behaviors/BehaviorBindingPicker", () => ({
   BehaviorBindingPicker: ({ onBindingChanged }: { onBindingChanged: (b: object) => void }) => (
-    <button onClick={() => onBindingChanged({ behaviorId: 3, param1: 41, param2: 0 })}>pick-esc</button>
+    <>
+      <button onClick={() => onBindingChanged({ behaviorId: 3, param1: 0x070029, param2: 0 })}>pick-esc</button>
+      <button onClick={() => onBindingChanged({ behaviorId: 4, param1: 1, param2: 0 })}>pick-layer</button>
+    </>
   ),
 }));
 
@@ -124,6 +130,29 @@ function sentCombo(payload: Uint8Array): Map<number, number[]> {
     }
   }
   return out;
+}
+
+/** param1 of the binding inside a set request. */
+function sentParam1(payload: Uint8Array): number | undefined {
+  const outer = _m0.Reader.create(payload);
+  outer.uint32();
+  const setReq = _m0.Reader.create(outer.bytes());
+  setReq.uint32();
+  const r = _m0.Reader.create(setReq.bytes());
+  while (r.pos < r.len) {
+    const tag = r.uint32();
+    if (tag >>> 3 !== 4) {
+      r.skipType(tag & 7);
+      continue;
+    }
+    const b = _m0.Reader.create(r.bytes());
+    while (b.pos < b.len) {
+      const t = b.uint32();
+      if (t >>> 3 === 2) return b.uint32();
+      b.skipType(t & 7);
+    }
+  }
+  return undefined;
 }
 
 const isGetAll = (p: Uint8Array) => p[0] === 26;
@@ -234,6 +263,62 @@ describe("ComboSettings — editing and saving", () => {
     renderTab();
     expect(await screen.findByRole("button", { name: "コンボを追加" })).toBeDisabled();
     expect(screen.getByText(/コンボは最大16件です/)).toBeInTheDocument();
+  });
+
+  it("a modifier picked in the editor is saved with the key", async () => {
+    routeRPC({ list: getAllResp(READY) });
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: "コンボを追加" }));
+    fireEvent.click(screen.getByRole("button", { name: "17" }));
+    fireEvent.click(screen.getByRole("button", { name: "18" }));
+    fireEvent.click(screen.getByRole("button", { name: "⌥ Option" }));
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+    expect(screen.getByText("修飾キーと一緒に送るキーを選んでください。")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "pick-esc" }));
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() => expect(setCalls()).toHaveLength(1));
+    expect(sentParam1(setCalls()[0])).toBe(0x04070029);
+  });
+
+  it("saving waits for a key when a modifier was clicked on a layer action", async () => {
+    routeRPC({ list: getAllResp(READY) });
+    renderTab();
+    await fillNewCombo();
+    fireEvent.click(screen.getByRole("button", { name: "pick-layer" }));
+    expect(screen.getByRole("button", { name: "保存" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "⌥ Option" }));
+    expect(screen.getByRole("button", { name: "保存" })).toBeDisabled();
+    expect(screen.getByText("修飾キーと一緒に送るキーを選んでください。")).toBeInTheDocument();
+  });
+
+  it("picking a layer over a modified key clears the modifier and says so", async () => {
+    routeRPC({ list: getAllResp(READY) });
+    renderTab();
+    await fillNewCombo();
+    fireEvent.click(screen.getByRole("button", { name: "⌥ Option" }));
+    fireEvent.click(screen.getByRole("button", { name: "pick-layer" }));
+    expect(screen.getByRole("button", { name: "⌥ Option" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByText("選んだ内容に合わせて、修飾キーを外しました。")).toBeInTheDocument();
+  });
+
+  it("cancelling with only a modifier chosen still asks before discarding", async () => {
+    routeRPC({ list: getAllResp(READY) });
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: "コンボを追加" }));
+    fireEvent.click(screen.getByRole("button", { name: "⌥ Option" }));
+    fireEvent.click(screen.getByRole("button", { name: "キャンセル" }));
+    expect(screen.getByRole("dialog", { name: "変更を破棄" })).toBeInTheDocument();
+  });
+
+  it("modifiers do not carry from a previous editing session", async () => {
+    routeRPC({ list: getAllResp(READY) });
+    renderTab();
+    fireEvent.click(await screen.findByRole("button", { name: "コンボを追加" }));
+    fireEvent.click(screen.getByRole("button", { name: "⌥ Option" }));
+    fireEvent.click(screen.getByRole("button", { name: "キャンセル" }));
+    fireEvent.click(screen.getByRole("button", { name: "破棄する" }));
+    fireEvent.click(await screen.findByRole("button", { name: "コンボを追加" }));
+    expect(screen.getByRole("button", { name: "⌥ Option" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("2/3: a new combo saves timeout 200 and require_prior_idle 100", async () => {

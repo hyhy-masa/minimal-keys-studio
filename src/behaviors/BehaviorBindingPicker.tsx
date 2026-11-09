@@ -5,16 +5,19 @@ import type {
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { getBehaviorDescription } from "./behavior-descriptions";
 import { formatBindingDetail } from "./binding-display";
-import { PickerTabs } from "./picker/PickerTabs";
+import { PickerTabs, type PickerTabId } from "./picker/PickerTabs";
 import { applyModifierFlags } from "./modifier-flags";
 
 export interface BehaviorBindingPickerProps {
   binding: BehaviorBinding;
   behaviors: GetBehaviorDetailsResponse[];
   layers: { id: number; index: number; name: string }[];
-  onBindingChanged: (binding: BehaviorBinding) => void;
+  onBindingChanged: (binding: BehaviorBinding, source?: PickerTabId) => void;
   keyPosition?: number;
   modifierFlags?: number;
+  /** The combo editor shows its own result line, so it turns this one off. */
+  showCurrent?: boolean;
+  initialTab?: PickerTabId;
 }
 
 export const BehaviorBindingPicker = ({
@@ -24,6 +27,8 @@ export const BehaviorBindingPicker = ({
   onBindingChanged,
   keyPosition,
   modifierFlags = 0,
+  showCurrent = true,
+  initialTab,
 }: BehaviorBindingPickerProps) => {
   const onBindingChangedRef = useRef(onBindingChanged);
   onBindingChangedRef.current = onBindingChanged;
@@ -34,9 +39,9 @@ export const BehaviorBindingPicker = ({
   const modFlagsRef = useRef(modifierFlags);
   modFlagsRef.current = modifierFlags;
 
-  const handleApplyBinding = useCallback((newBinding: BehaviorBinding) => {
+  const handleApplyBinding = useCallback((newBinding: BehaviorBinding, source: PickerTabId) => {
     const applied = applyModifierFlags(newBinding, modFlagsRef.current, behaviorsRef.current);
-    onBindingChangedRef.current(applied);
+    onBindingChangedRef.current(applied, source);
   }, []);
 
   // Current binding display
@@ -50,7 +55,7 @@ export const BehaviorBindingPicker = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {currentBehavior && currentDesc && (
+      {showCurrent && currentBehavior && currentDesc && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-primary/50 bg-primary/5 text-sm">
           <span className="text-primary font-medium">現在の設定:</span>
           <span className="font-bold">{currentDesc.label}</span>
@@ -64,6 +69,7 @@ export const BehaviorBindingPicker = ({
         behaviors={behaviors}
         layers={layers}
         onApplyBinding={handleApplyBinding}
+        initialTab={initialTab}
       />
     </div>
   );

@@ -5,10 +5,13 @@ import { SubsystemUnavailable } from "../misc/SubsystemUnavailable";
 import { useCustomSubsystem } from "../rpc/useCustomSubsystem";
 import { useToast } from "../misc/Toast";
 import * as Combos from "../proto/combos";
-import { BehaviorBindingPicker } from "../behaviors/BehaviorBindingPicker";
+import { ComboActionPicker } from "./ComboActionPicker";
+import { comboShortcutLabel, isKeyPressBinding } from "./combo-shortcut";
 import { useBehaviorList } from "../behaviors/BehaviorsContext";
 import type { BehaviorBinding } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import { formatBindingDetail } from "../behaviors/binding-display";
+import { useOsMode } from "../OsModeContext";
+import type { UserOS } from "../behaviors/use-cases";
 import { getBehaviorDescription } from "../behaviors/behavior-descriptions";
 import { getHidKeyDescription } from "../keyboard/key-descriptions";
 import { hid_usage_page_and_id_from_usage } from "../hid-usages";
@@ -124,6 +127,22 @@ function timeoutHint(ms: number): string {
   return "長い";
 }
 
+function comboActionText(
+  binding: Combos.Binding | null,
+  behaviors: ReturnType<typeof useBehaviorList>,
+  layers: LayerDisplay[],
+  os: UserOS,
+): string | null {
+  if (!binding) return null;
+  if (isKeyPressBinding(binding, behaviors) && binding.param1) {
+    return comboShortcutLabel(binding.param1, os);
+  }
+  const behavior = behaviors.find((b) => b.id === binding.behaviorId);
+  if (!behavior) return null;
+  const detail = formatBindingDetail(behavior.displayName, binding as BehaviorBinding, layers);
+  return `${getBehaviorDescription(behavior.displayName)?.label ?? behavior.displayName}${detail ? ` ${detail}` : ""}`;
+}
+
 function newCombo(): Combos.ComboConfig {
   return {
     comboId: 0, // assigned at save time (nextFreeComboId)
@@ -160,6 +179,9 @@ export function ComboSettings({ onRequestFirmwareUpdate }: ComboSettingsProps = 
   // layerMask 0 means "every layer", so an emptied layer list needs its own
   // flag to be told apart from "all layers".
   const [allLayers, setAllLayers] = useState(true);
+  // Modifiers picked before a plain key exists. They are not in the binding
+  // yet, so saving must wait or they would be dropped without a word.
+  const [pendingModifiers, setPendingModifiers] = useState(0);
 
   const callWithTimeout = useCallback(
     async (label: string, payload: Uint8Array, timeoutMs = 5000) => {
@@ -224,6 +246,7 @@ export function ComboSettings({ onRequestFirmwareUpdate }: ComboSettingsProps = 
     setEditing(combo);
     setEditingOriginal(JSON.stringify(combo));
     setAllLayers(combo.layerMask === 0);
+    setPendingModifiers(0);
     setSaveError(null);
   }, []);
 
@@ -243,17 +266,19 @@ export function ComboSettings({ onRequestFirmwareUpdate }: ComboSettingsProps = 
   }, []);
 
   const handleCancel = useCallback(() => {
-    if (editing && JSON.stringify(editing) !== editingOriginal) {
+    if (editing && (pendingModifiers !== 0 || JSON.stringify(editing) !== editingOriginal)) {
       setConfirmDiscard(true);
       return;
     }
     closeEditor();
-  }, [editing, editingOriginal, closeEditor]);
+  }, [editing, editingOriginal, pendingModifiers, closeEditor]);
 
   const saveBlockReason = !editing
     ? null
     : editing.keyPositions.length < 2
       ? "同時に押すキーを2つ以上選んでください。"
+      : pendingModifiers !== 0 && !isKeyPressBinding(editing.binding, behaviors)
+        ? "修飾キーと一緒に送るキーを選んでください。"
       : !editing.binding || editing.binding.behaviorId === 0
         ? "実行する動作を選んでください。"
         : !allLayers && editing.layerMask === 0
@@ -410,6 +435,8 @@ export function ComboSettings({ onRequestFirmwareUpdate }: ComboSettingsProps = 
         isNew={editingIsNew}
         allLayers={allLayers}
         setAllLayers={setAllLayers}
+        pendingModifiers={pendingModifiers}
+        setPendingModifiers={setPendingModifiers}
         behaviors={behaviors}
         layers={layers}
         keyLabels={keyLabels}
@@ -659,6 +686,8 @@ function ComboEditor({
   isNew,
   allLayers,
   setAllLayers,
+  pendingModifiers,
+  setPendingModifiers,
   behaviors,
   layers,
   keyLabels,
@@ -678,6 +707,8 @@ function ComboEditor({
   isNew: boolean;
   allLayers: boolean;
   setAllLayers: (all: boolean) => void;
+  pendingModifiers: number;
+  setPendingModifiers: (flags: number) => void;
   behaviors: ReturnType<typeof useBehaviorList>;
   layers: LayerDisplay[];
   keyLabels: string[];
@@ -693,21 +724,9 @@ function ComboEditor({
   onKeepEditing: () => void;
 }) {
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(!editing.binding || editing.binding.behaviorId === 0);
 
-  const behavior = editing.binding
-    ? behaviors.find((b) => b.id === editing.binding!.behaviorId)
-    : undefined;
-  const bindingSummary = behavior && editing.binding
-    ? `${getBehaviorDescription(behavior.displayName)?.label ?? behavior.displayName}${(() => {
-        const d = formatBindingDetail(behavior.displayName, {
-          behaviorId: editing.binding.behaviorId,
-          param1: editing.binding.param1,
-          param2: editing.binding.param2,
-        }, layers);
-        return d ? ` ${d}` : "";
-      })()}`
-    : null;
+  const { osMode } = useOsMode();
+  const bindingSummary = comboActionText(editing.binding, behaviors, layers, osMode);
 
   // A combo read without field 7 shows the firmware default it actually runs with.
   const priorIdleShown = editing.requirePriorIdleMs || Combos.DEFAULT_PRIOR_IDLE_MS;
@@ -719,7 +738,7 @@ function ComboEditor({
     setEditing((prev) => (prev ? { ...prev, ...patch } : prev));
 
   return (
-    <div className="p-4 flex flex-col gap-5 overflow-y-auto max-h-full">
+    <div className="p-4 flex flex-col gap-5 overflow-y-auto max-h-full scroll-pt-32 scroll-pb-24">
       <div className="flex items-center gap-3">
         <Button
           className={`flex min-h-11 items-center gap-1 rounded px-2 text-sm text-base-content/70 hover:bg-base-200 ${FOCUS_RING}`}
@@ -777,37 +796,18 @@ function ComboEditor({
 
       <section className="flex flex-col gap-2">
         <h3 className="text-sm font-medium">2. 実行する動作</h3>
-        {!pickerOpen && (
-          <div className="flex items-center justify-between rounded border border-base-300 px-3 py-2">
-            <span className="text-sm font-medium">{bindingSummary ?? "未選択"}</span>
-            <Button
-              className={`min-h-11 rounded px-3 text-sm text-primary hover:bg-primary/10 ${FOCUS_RING}`}
-              onPress={() => setPickerOpen(true)}
-            >
-              変更する
-            </Button>
-          </div>
-        )}
-        {pickerOpen && (
-          behaviors.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-sm text-base-content/60">
-                {bindingSummary ? `選択中: ${bindingSummary}` : "動作を選ぶ"}
-              </p>
-              <BehaviorBindingPicker
-                binding={editing.binding
-                  ? { behaviorId: editing.binding.behaviorId, param1: editing.binding.param1, param2: editing.binding.param2 }
-                  : { behaviorId: 0, param1: 0, param2: 0 }}
-                behaviors={behaviors}
-                layers={layers}
-                onBindingChanged={(b: BehaviorBinding) =>
-                  update({ binding: { behaviorId: b.behaviorId, param1: b.param1 ?? 0, param2: b.param2 ?? 0 } })
-                }
-              />
-            </div>
-          ) : (
-            <p className="text-base-content/50 text-sm">動作の一覧を読み込み中...</p>
-          )
+        {behaviors.length > 0 ? (
+          <ComboActionPicker
+            binding={editing.binding}
+            pendingModifiers={pendingModifiers}
+            onPendingModifiersChange={setPendingModifiers}
+            onBindingChange={(binding) => update({ binding })}
+            behaviors={behaviors}
+            layers={layers}
+            otherActionLabel={bindingSummary}
+          />
+        ) : (
+          <p className="text-base-content/50 text-sm">動作の一覧を読み込み中...</p>
         )}
       </section>
 
@@ -887,7 +887,7 @@ function ComboEditor({
         )}
       </section>
 
-      <div className="flex flex-col items-end gap-2 pt-2">
+      <div className="sticky bottom-0 z-10 flex flex-col items-end gap-2 border-t border-base-300 bg-base-100 py-2">
         {saveBlockReason && <p className="text-sm text-base-content/60">{saveBlockReason}</p>}
         <div className="flex gap-2">
           <Button
@@ -936,18 +936,7 @@ function ComboCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const behavior = combo.binding
-    ? behaviors.find((b) => b.id === combo.binding!.behaviorId)
-    : null;
-  const desc = behavior ? getBehaviorDescription(behavior.displayName) : null;
-  const detail = behavior && combo.binding
-    ? formatBindingDetail(behavior.displayName, {
-        behaviorId: combo.binding.behaviorId,
-        param1: combo.binding.param1,
-        param2: combo.binding.param2,
-      }, layers)
-    : "";
-
+  const { osMode } = useOsMode();
   const keysDisplay = combo.keyPositions
     .map((p) => getKeyLabel(p, keyLabels))
     .join(" + ");
@@ -956,7 +945,7 @@ function ComboCard({
     : Combos.layerIndicesFromMask(combo.layerMask)
         .map((i) => layers.find((l) => l.index === i)?.name ?? `レイヤー${i}`)
         .join("・");
-  const actionText = `${desc?.label ?? "未設定"}${detail ? ` ${detail}` : ""}`;
+  const actionText = comboActionText(combo.binding, behaviors, layers, osMode) ?? "未設定";
 
   return (
     <div className="flex flex-col gap-1 px-3 py-2 rounded-lg border bg-base-100">

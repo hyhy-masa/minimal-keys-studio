@@ -30,6 +30,7 @@ const commonItems: JpFunctionItem[] = [
   { label: "無変換", description: "無変換キー", hidId: 139 },
   { label: "かな", description: "カタカナ/ひらがな切替", hidId: 136 },
   { label: "¥", description: "円記号・バックスラッシュ", hidId: 137 },
+  { label: "ろ", description: "JIS配列の「ろ」キー（\\ と _）", hidId: 135 },
 ];
 
 interface JapaneseTabProps {
