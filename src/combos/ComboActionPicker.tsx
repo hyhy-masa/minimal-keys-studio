@@ -67,6 +67,8 @@ interface ComboActionPickerProps {
   layers: { id: number; index: number; name: string }[];
   /** Text for an action that is not a plain key, such as switching layers. */
   otherActionLabel?: string | null;
+  /** The macro editor offers keys only, so the hint must not promise layer actions. */
+  keysOnly?: boolean;
 }
 
 export function ComboActionPicker({
@@ -77,6 +79,7 @@ export function ComboActionPicker({
   behaviors,
   layers,
   otherActionLabel,
+  keysOnly = false,
 }: ComboActionPickerProps) {
   const { osMode } = useOsMode();
   const [notice, setNotice] = useState<string | null>(null);
@@ -214,8 +217,10 @@ export function ComboActionPicker({
       )}
 
       <div className="flex min-w-0 flex-col gap-1.5">
-        <h4 className="text-sm font-medium">ほかのキー・動作</h4>
-        <p className="text-sm text-base-content/60">文字やショートカット、レイヤー操作も選べます。</p>
+        <h4 className="text-sm font-medium">{keysOnly ? "ほかのキー" : "ほかのキー・動作"}</h4>
+        <p className="text-sm text-base-content/60">
+          {keysOnly ? "文字やショートカットも選べます。" : "文字やショートカット、レイヤー操作も選べます。"}
+        </p>
         <BehaviorBindingPicker
           binding={binding ?? { behaviorId: 0, param1: 0, param2: 0 }}
           behaviors={behaviors}

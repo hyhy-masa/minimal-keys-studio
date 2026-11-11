@@ -14,6 +14,10 @@ import { getHidKeyDescription, getMouseKeyDescription } from "./key-descriptions
 import { hid_usage_page_and_id_from_usage } from "../hid-usages";
 import type { ReactNode } from "react";
 import { formatModifierKeycode } from "./key-label-utils";
+import { useMacros } from "../macros/MacrosContext";
+import { macroTooltipData } from "../macros/macro-labels";
+import { loadTextLayout } from "../macros/macro-text";
+import { slotLabel } from "../macros/macro-model";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -134,6 +138,10 @@ function getKeyDisplay(
       };
     }
 
+    case "Macro":
+      // param1 is the 0-based slot; the name is in the tooltip (keycaps are small).
+      return { header: "Macro", children: <span>{slotLabel(binding.param1)}</span> };
+
     case "None":
       return { header: "None", children: <span></span> };
 
@@ -173,6 +181,7 @@ export const Keymap = ({
   encoderRotationLabel,
 }: KeymapProps) => {
   const { osMode } = useOsMode();
+  const { macros } = useMacros();
 
   if (!keymap.layers[selectedLayerIndex]) {
     return <></>;
@@ -213,7 +222,10 @@ export const Keymap = ({
       rx: (k.rx || 0) / 100.0,
       ry: (k.ry || 0) / 100.0,
       children,
-      tooltipData: resolveTooltipData(binding, behaviorList, i, os),
+      tooltipData:
+        displayName === "Macro"
+          ? macroTooltipData(binding.param1, macros, os, loadTextLayout())
+          : resolveTooltipData(binding, behaviorList, i, os),
     };
   });
 

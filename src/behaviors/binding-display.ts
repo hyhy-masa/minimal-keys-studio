@@ -51,6 +51,10 @@ export function formatBindingDetail(
       const page = rawPage & 0xff;
       return getHidKeyDescription(page, id).roleName;
     }
+    case "Macro": {
+      // param1 is the 0-based macro slot; customers see M1, M2…
+      return `M${binding.param1 + 1}`;
+    }
     case "Bluetooth": {
       const ops = ["BT_CLR", "BT_NXT", "BT_PRV", "BT_SEL 0", "BT_SEL 1", "BT_SEL 2", "BT_SEL 3", "BT_SEL 4"];
       return ops[binding.param1] ?? `BT ${binding.param1}`;

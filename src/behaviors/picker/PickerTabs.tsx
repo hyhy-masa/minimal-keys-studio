@@ -8,8 +8,10 @@ import { LayersTab } from "./LayersTab";
 import { ModifiersTab } from "./ModifiersTab";
 import { SystemTab } from "./SystemTab";
 import { JapaneseTab } from "./JapaneseTab";
+import { MacroTab } from "./MacroTab";
+import { findMacroBehavior } from "../../macros/macro-labels";
 
-export type PickerTabId = "actions" | "letters" | "layers" | "modifiers" | "japanese" | "system";
+export type PickerTabId = "actions" | "letters" | "layers" | "modifiers" | "japanese" | "system" | "macro";
 
 interface PickerTabsProps {
   keyPosition: number;
@@ -28,6 +30,9 @@ const tabs: { id: PickerTabId; label: string }[] = [
   { id: "system", label: "システム" },
 ];
 
+// Shown only when the firmware has the runtime macro behavior.
+const macroTab = { id: "macro" as const, label: "マクロ" };
+
 export function PickerTabs({
   keyPosition,
   behaviors,
@@ -38,6 +43,7 @@ export function PickerTabs({
   const { osMode } = useOsMode();
   const [activeTab, setActiveTab] = useState<PickerTabId>(initialTab);
   const applyFromTab = (binding: BehaviorBinding) => onApplyBinding(binding, activeTab);
+  const visibleTabs = findMacroBehavior(behaviors) ? [...tabs, macroTab] : tabs;
 
   return (
     <div className="flex flex-col gap-2">
@@ -48,10 +54,10 @@ export function PickerTabs({
         「修飾キー」以降がウィンドウの外に隠れ、ウィンドウを広げても戻って
         こなかった（親の箱に min-w-0 が無く、幅の変化がここまで伝わって
         いなかった）。隠れる作りをやめ、狭いときは折り返す。
-        タブは6つしかないので、折り返しても2段で収まる。
+        タブは最大7つ（マクロ込み）なので、折り返しても2段で収まる。
       */}
       <div className="flex flex-wrap gap-0.5 bg-base-200 p-1 rounded-lg">
-        {tabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             className={`px-3 py-1.5 text-sm rounded-md transition-all whitespace-nowrap ${
@@ -91,6 +97,9 @@ export function PickerTabs({
         )}
         {activeTab === "system" && (
           <SystemTab behaviors={behaviors} onApplyBinding={applyFromTab} />
+        )}
+        {activeTab === "macro" && (
+          <MacroTab behaviors={behaviors} onApplyBinding={applyFromTab} />
         )}
       </div>
     </div>

@@ -7,6 +7,9 @@ import { getBehaviorDescription } from "./behavior-descriptions";
 import { formatBindingDetail } from "./binding-display";
 import { PickerTabs, type PickerTabId } from "./picker/PickerTabs";
 import { applyModifierFlags } from "./modifier-flags";
+import { useMacros } from "../macros/MacrosContext";
+import { macroBindingLabel } from "../macros/macro-labels";
+import { MACRO_BEHAVIOR_NAME } from "../proto/macros";
 
 export interface BehaviorBindingPickerProps {
   binding: BehaviorBinding;
@@ -49,9 +52,12 @@ export const BehaviorBindingPicker = ({
   const currentDesc = currentBehavior
     ? getBehaviorDescription(currentBehavior.displayName)
     : null;
-  const bindingDetail = currentBehavior
-    ? formatBindingDetail(currentBehavior.displayName, binding, layers)
-    : "";
+  const { macros } = useMacros();
+  const bindingDetail = !currentBehavior
+    ? ""
+    : currentBehavior.displayName === MACRO_BEHAVIOR_NAME
+      ? macroBindingLabel(binding.param1, macros)
+      : formatBindingDetail(currentBehavior.displayName, binding, layers);
 
   return (
     <div className="flex flex-col gap-2">

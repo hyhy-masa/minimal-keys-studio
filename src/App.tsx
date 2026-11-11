@@ -8,6 +8,7 @@ import {
   BatteryMedium,
   SlidersHorizontal,
   Combine,
+  ListVideo,
 } from "lucide-react";
 
 import { create_rpc_connection } from "@zmkfirmware/zmk-studio-ts-client";
@@ -41,6 +42,8 @@ import { BatteryHistory } from "./battery/BatteryHistory";
 import { DeviceSettings } from "./settings/DeviceSettings";
 import { HoldTapSettings } from "./holdtap/HoldTapSettings";
 import { ComboSettings } from "./combos/ComboSettings";
+import { MacroSettings } from "./macros/MacroSettings";
+import { MacrosProvider } from "./macros/MacrosProvider";
 import { isFirmwareUpdateEnabled } from "./firmware-update/isTauri";
 import { BehaviorsProvider } from "./behaviors/BehaviorsContext";
 import { CustomSubsystemsProvider } from "./rpc/CustomSubsystemsProvider";
@@ -197,7 +200,7 @@ async function connect(
   return true;
 }
 
-type ActiveTab = "keymap" | "trackball" | "encoder" | "combo" | "bluetooth" | "battery" | "holdtap" | "settings";
+type ActiveTab = "keymap" | "trackball" | "encoder" | "combo" | "macro" | "bluetooth" | "battery" | "holdtap" | "settings";
 
 type TabDef = { id: ActiveTab; label: string; icon: React.ReactNode };
 type TabGroup = { tabs: TabDef[] };
@@ -209,6 +212,7 @@ const TAB_GROUPS: TabGroup[] = [
       { id: "holdtap", label: "長押し設定", icon: <Timer className="w-4 h-4" /> },
       { id: "encoder", label: "エンコーダー", icon: <RotateCw className="w-4 h-4" /> },
       { id: "combo", label: "コンボ", icon: <Combine className="w-4 h-4" /> },
+      { id: "macro", label: "マクロ", icon: <ListVideo className="w-4 h-4" /> },
     ],
   },
   {
@@ -447,6 +451,7 @@ function AppInner() {
         <UndoRedoContext.Provider value={doIt}>
           <BehaviorsProvider>
           <CustomSubsystemsProvider>
+          <MacrosProvider>
           <UnlockModal />
           <TourPromptDialog
             open={promptOpen}
@@ -533,6 +538,7 @@ function AppInner() {
               {mountedTabs.has("trackball") && <div className={activeTab === "trackball" ? "h-full" : "hidden"}><TrackballSettings /></div>}
               {mountedTabs.has("encoder") && <div className={activeTab === "encoder" ? "h-full" : "hidden"}><EncoderSettings /></div>}
               {mountedTabs.has("combo") && <div className={activeTab === "combo" ? "h-full" : "hidden"}><ComboSettings onRequestFirmwareUpdate={isFirmwareUpdateEnabled() ? () => setFwUpdateOpen(true) : undefined} /></div>}
+              {mountedTabs.has("macro") && <div className={activeTab === "macro" ? "h-full" : "hidden"}><MacroSettings onRequestFirmwareUpdate={isFirmwareUpdateEnabled() ? () => setFwUpdateOpen(true) : undefined} onGoToKeymap={() => setActiveTab("keymap")} /></div>}
               {mountedTabs.has("bluetooth") && <div className={activeTab === "bluetooth" ? "h-full" : "hidden"}><BleManagement isWireless={isWireless} /></div>}
               {mountedTabs.has("holdtap") && <div className={activeTab === "holdtap" ? "h-full" : "hidden"}><HoldTapSettings /></div>}
               {mountedTabs.has("battery") && <div className={activeTab === "battery" ? "h-full" : "hidden"}><BatteryHistory /></div>}
@@ -543,6 +549,7 @@ function AppInner() {
               onShowLicenseNotice={() => setShowLicenseNotice(true)}
             />
           </div>
+        </MacrosProvider>
         </CustomSubsystemsProvider>
         </BehaviorsProvider>
         </UndoRedoContext.Provider>

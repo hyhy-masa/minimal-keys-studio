@@ -23,6 +23,9 @@ import { ConfirmDialog } from "../ConfirmDialog";
 import { Switch } from "../misc/Switch";
 import { Tooltip } from "../misc/Tooltip";
 import { MINIMAL_KEYS_KEY_COUNT, MINIMAL_KEYS_POSITIONS } from "../keyboard/minimal-keys-layout";
+import { useMacros } from "../macros/MacrosContext";
+import { macroBindingLabel } from "../macros/macro-labels";
+import type { StoredMacro } from "../macros/macro-client";
 
 interface LayerDisplay {
   id: number;
@@ -132,6 +135,7 @@ function comboActionText(
   behaviors: ReturnType<typeof useBehaviorList>,
   layers: LayerDisplay[],
   os: UserOS,
+  macros: StoredMacro[] = [],
 ): string | null {
   if (!binding) return null;
   if (isKeyPressBinding(binding, behaviors) && binding.param1) {
@@ -139,7 +143,9 @@ function comboActionText(
   }
   const behavior = behaviors.find((b) => b.id === binding.behaviorId);
   if (!behavior) return null;
-  const detail = formatBindingDetail(behavior.displayName, binding as BehaviorBinding, layers);
+  const detail = behavior.displayName === "Macro"
+    ? macroBindingLabel(binding.param1, macros)
+    : formatBindingDetail(behavior.displayName, binding as BehaviorBinding, layers);
   return `${getBehaviorDescription(behavior.displayName)?.label ?? behavior.displayName}${detail ? ` ${detail}` : ""}`;
 }
 
@@ -726,7 +732,8 @@ function ComboEditor({
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const { osMode } = useOsMode();
-  const bindingSummary = comboActionText(editing.binding, behaviors, layers, osMode);
+  const { macros } = useMacros();
+  const bindingSummary = comboActionText(editing.binding, behaviors, layers, osMode, macros);
 
   // A combo read without field 7 shows the firmware default it actually runs with.
   const priorIdleShown = editing.requirePriorIdleMs || Combos.DEFAULT_PRIOR_IDLE_MS;
@@ -937,6 +944,7 @@ function ComboCard({
   onDelete: () => void;
 }) {
   const { osMode } = useOsMode();
+  const { macros } = useMacros();
   const keysDisplay = combo.keyPositions
     .map((p) => getKeyLabel(p, keyLabels))
     .join(" + ");
@@ -945,7 +953,7 @@ function ComboCard({
     : Combos.layerIndicesFromMask(combo.layerMask)
         .map((i) => layers.find((l) => l.index === i)?.name ?? `レイヤー${i}`)
         .join("・");
-  const actionText = comboActionText(combo.binding, behaviors, layers, osMode) ?? "未設定";
+  const actionText = comboActionText(combo.binding, behaviors, layers, osMode, macros) ?? "未設定";
 
   return (
     <div className="flex flex-col gap-1 px-3 py-2 rounded-lg border bg-base-100">
