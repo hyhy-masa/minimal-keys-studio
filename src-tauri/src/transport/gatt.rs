@@ -179,14 +179,29 @@ pub async fn gatt_connect(
 
     let write_app_handle = app_handle.clone();
     let write_task = tauri::async_runtime::spawn(async move {
-        while let Some(data) = recv.next().await {
-            if let Err(error) = characteristic.write(&data).await {
-                crate::frontend_log::diagnostic(format!("[BLE] Write failed: {:?}", error));
-                let state = write_app_handle.state::<super::commands::ActiveConnection>();
-                if state.close_if_current(generation).await {
-                    emit_disconnected(&write_app_handle, generation);
+        'frames: while let Some(data) = recv.next().await {
+            // One RPC frame can be longer than a single ATT write. The keyboard
+            // does not accept long (prepared) writes, so a frame over the limit
+            // fails and the link is dropped - which is what saving a macro over
+            // Bluetooth did on v0.9.0 (frames of ~100 bytes against a limit of
+            // about 60). The firmware joins writes into one stream
+            // (gatt_rpc_transport.c write_rpc_req), so slicing is safe.
+            let chunk_len = ble_write_chunk_len(characteristic.max_write_len().ok());
+            for piece in data.chunks(chunk_len) {
+                if let Err(error) = characteristic.write(piece).await {
+                    crate::frontend_log::diagnostic(format!(
+                        "[BLE] Write failed ({} of {} bytes, chunk {}): {:?}",
+                        piece.len(),
+                        data.len(),
+                        chunk_len,
+                        error
+                    ));
+                    let state = write_app_handle.state::<super::commands::ActiveConnection>();
+                    if state.close_if_current(generation).await {
+                        emit_disconnected(&write_app_handle, generation);
+                    }
+                    break 'frames;
                 }
-                break;
             }
         }
     });
@@ -208,6 +223,20 @@ pub async fn gatt_connect(
         generation
     ));
     Ok(super::commands::ConnectionHandle { generation })
+}
+
+/// ATT_MTU 23 minus the 3-byte write header: every link can carry this much.
+const BLE_MIN_WRITE_LEN: usize = 20;
+
+/// Bytes per ATT write. `reported` is what the OS says fits in one packet
+/// (CoreBluetooth: maximumWriteValueLength(.withoutResponse) = ATT_MTU - 3;
+/// WinRT: MaxPduSize - 3). Anything missing or implausibly small falls back to
+/// the size every link supports.
+fn ble_write_chunk_len(reported: Option<usize>) -> usize {
+    match reported {
+        Some(n) if n >= BLE_MIN_WRITE_LEN => n,
+        _ => BLE_MIN_WRITE_LEN,
+    }
 }
 
 const ADAPTER_TIMEOUT: Duration = Duration::from_secs(2);
@@ -267,4 +296,32 @@ pub async fn gatt_list_devices() -> Result<Vec<super::commands::AvailableDevice>
     }
 
     Ok(devices)
+}
+
+#[cfg(test)]
+mod write_chunk_tests {
+    use super::*;
+
+    #[test]
+    fn uses_the_reported_length() {
+        assert_eq!(ble_write_chunk_len(Some(62)), 62);
+        assert_eq!(ble_write_chunk_len(Some(244)), 244);
+    }
+
+    #[test]
+    fn falls_back_to_the_minimum() {
+        assert_eq!(ble_write_chunk_len(None), BLE_MIN_WRITE_LEN);
+        assert_eq!(ble_write_chunk_len(Some(0)), BLE_MIN_WRITE_LEN);
+        assert_eq!(ble_write_chunk_len(Some(19)), BLE_MIN_WRITE_LEN);
+    }
+
+    #[test]
+    fn a_macro_frame_is_cut_into_pieces_that_fit() {
+        // An append_steps frame is about 100 bytes; the keyboard takes about 60.
+        let frame = vec![0u8; 101];
+        let pieces: Vec<&[u8]> = frame.chunks(ble_write_chunk_len(Some(62))).collect();
+        assert_eq!(pieces.len(), 2);
+        assert!(pieces.iter().all(|p| p.len() <= 62));
+        assert_eq!(pieces.iter().map(|p| p.len()).sum::<usize>(), 101);
+    }
 }

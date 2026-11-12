@@ -24,6 +24,16 @@ class GattWriteQueue {
   }
 }
 
+/** ATT_MTU 23 minus the 3-byte write header: every link can carry this much. */
+export const BLE_SAFE_WRITE_LEN = 20;
+
+/** Splits one RPC frame into writes of at most `size` bytes, in order. */
+export function splitForBleWrite(data: Uint8Array, size = BLE_SAFE_WRITE_LEN): Uint8Array[] {
+  const out: Uint8Array[] = [];
+  for (let i = 0; i < data.length; i += size) out.push(data.subarray(i, i + size));
+  return out.length > 0 ? out : [data];
+}
+
 /**
  * Writes data with retry logic and exponential backoff.
  */
@@ -132,7 +142,15 @@ function setupStreams(
 
   const writable = new WritableStream<Uint8Array>({
     write(chunk) {
-      return writeQueue.enqueue(() => writeWithRetry(characteristic, chunk));
+      // Web Bluetooth cannot report the ATT MTU, and the keyboard rejects long
+      // (prepared) writes, so frames go out in pieces every link can carry.
+      // The firmware joins them back into one stream. See gatt.rs for the
+      // macro save that failed on v0.9.0.
+      const pieces = splitForBleWrite(chunk);
+      return pieces.reduce<Promise<void>>(
+        (prev, piece) => prev.then(() => writeQueue.enqueue(() => writeWithRetry(characteristic, piece))),
+        Promise.resolve(),
+      );
     },
   });
 
